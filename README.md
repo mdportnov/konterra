@@ -1,36 +1,105 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Konterra
+
+Personal network CRM with interactive 3D globe — visualize, manage, and grow your social capital worldwide.
+
+![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)
+![React](https://img.shields.io/badge/React-19-61dafb?logo=react)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-3178c6?logo=typescript)
+![Tailwind](https://img.shields.io/badge/Tailwind-v4-06b6d4?logo=tailwindcss)
+
+## Features
+
+- **3D Globe** — interactive WebGL globe powered by `react-globe.gl` and Three.js with contact pins, clusters, country density heatmap, and animated connection arcs
+- **Contact Management** — full CRUD for contacts with name, company, role, location, tags, rating (1-5 tier system), relationship types, social links, and notes
+- **Country & City Browsing** — drill-down from countries to cities to contacts; click any country on the globe to view, mark as visited, or add contacts
+- **Visited Countries** — track countries you've visited with teal highlights on the globe and a toggle in settings
+- **Advanced Filtering** — filter contacts on the globe by rating, tags, relationship type, and country; collapsible filter panel with badge counts
+- **Contacts Browser** — slide-in panel with Contacts/Places tabs, search, tag/rating/relationship filters
+- **Dashboard** — stat cards, network health score with arc gauge, reconnect alerts for stale contacts and overdue follow-ups, top countries chart, activity timeline
+- **Contact Detail** — full profile view with interactions history, connected contacts graph, edit/delete
+- **Profile Management** — inline-editable display name in settings
+- **Dark/Light/System Theme** — glass-morphism UI with oklch color tokens
+- **Responsive** — works down to 640px viewport width
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Framework | Next.js 16 (App Router) |
+| UI | React 19, Tailwind CSS v4, shadcn/ui (new-york) |
+| 3D | react-globe.gl, Three.js |
+| Auth | NextAuth.js v5 (Credentials) |
+| Database | Neon PostgreSQL, Drizzle ORM |
+| Geocoding | Nominatim (free, no API key) |
+| Icons | Lucide |
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js 20+
+- Neon database ([neon.tech](https://neon.tech))
+
+### Setup
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone <repo-url> && cd konterra
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Create `.env.local` from the example:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+cp .env.example .env.local
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Fill in the environment variables:
 
-## Learn More
+```
+DATABASE_URL=postgresql://...
+AUTH_SECRET=<generate with `npx auth secret`>
+```
 
-To learn more about Next.js, take a look at the following resources:
+Push the database schema and start:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm run db:push
+npm run dev
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Open [http://localhost:3000](http://localhost:3000).
 
-## Deploy on Vercel
+## Scripts
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+| Command | Description |
+|---|---|
+| `npm run dev` | Start dev server (Turbopack) |
+| `npm run build` | Production build |
+| `npm run start` | Serve production build |
+| `npm run lint` | ESLint |
+| `npm run db:generate` | Generate Drizzle migrations |
+| `npm run db:push` | Push schema to database |
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Project Structure
+
+```
+app/
+  (auth)/          Login page
+  (dashboard)/     Main globe page
+  api/             REST endpoints (contacts, interactions, profile, visited-countries)
+components/
+  dashboard/       Dashboard panel + widgets (stats, chart, timeline, health, alerts)
+  globe/           Globe canvas, panels (detail, edit, settings, browser, popup), controls
+  ui/              shadcn/ui primitives
+lib/
+  constants/       UI tokens (glass, z-index, transitions), rating labels
+  db/              Drizzle schema
+  store.ts         In-memory data store (contacts, interactions, users, visited countries)
+  metrics.ts       Network health score, stale contacts, follow-up calculations
+hooks/             useHotkey, useClickOutside
+types/             Display options
+```
+
+## License
+
+Private.
