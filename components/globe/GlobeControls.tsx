@@ -4,17 +4,18 @@ import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { Separator } from '@/components/ui/separator'
 import { ThemeToggle } from '@/components/theme-toggle'
-import { Settings, Plus, LayoutDashboard } from 'lucide-react'
+import { Settings, Plus, LayoutDashboard, Network } from 'lucide-react'
 import { GLASS, Z } from '@/lib/constants/ui'
 
 interface GlobeControlsProps {
   onAddContact?: () => void
   onSettings?: () => void
+  onInsights?: () => void
   isMobile?: boolean
   onSwitchToDashboard?: () => void
 }
 
-export default function GlobeControls({ onAddContact, onSettings, isMobile, onSwitchToDashboard }: GlobeControlsProps) {
+export default function GlobeControls({ onAddContact, onSettings, onInsights, isMobile, onSwitchToDashboard }: GlobeControlsProps) {
   const btnSize = isMobile ? 'h-10 w-10' : 'h-8 w-8'
   const iconSize = isMobile ? 'h-5 w-5' : 'h-4 w-4'
 
@@ -55,6 +56,20 @@ export default function GlobeControls({ onAddContact, onSettings, isMobile, onSw
             </Button>
           </TooltipTrigger>
           <TooltipContent>Add Contact</TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              size="icon"
+              variant="ghost"
+              className={`${btnSize} !text-muted-foreground hover:!text-foreground hover:!bg-accent`}
+              onClick={onInsights}
+            >
+              <Network className={iconSize} />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Connection Insights</TooltipContent>
         </Tooltip>
 
         <Tooltip>

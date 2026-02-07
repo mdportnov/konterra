@@ -12,23 +12,25 @@ import ContactEditPanel from '@/components/globe/ContactEditPanel'
 import ContactsBrowserPanel from '@/components/globe/ContactsBrowserPanel'
 import SettingsPanel from '@/components/globe/SettingsPanel'
 import ImportDialog from '@/components/import/ImportDialog'
-import type { Contact, ContactConnection, Tag } from '@/lib/db/schema'
+import ConnectionInsightsPanel from '@/components/insights/ConnectionInsightsPanel'
+import type { Contact, ContactConnection, Tag, Interaction, Favor } from '@/lib/db/schema'
 import type { ConnectedContact } from '@/components/globe/ContactDetail'
 import CountryPopup from '@/components/globe/CountryPopup'
 import { PANEL_WIDTH } from '@/lib/constants/ui'
 import { displayDefaults } from '@/types/display'
 import type { DisplayOptions } from '@/types/display'
 import { useIsMobile } from '@/hooks/use-mobile'
-import { fetchContacts, fetchConnections, fetchVisitedCountries, fetchTags } from '@/lib/api'
+import { fetchContacts, fetchConnections, fetchVisitedCountries, fetchTags, fetchRecentInteractions, fetchAllFavors } from '@/lib/api'
 
 const GlobeCanvas = dynamic(() => import('@/components/globe/GlobeCanvas'), { ssr: false })
 
-type ActivePanel = 'detail' | 'edit' | 'settings' | 'browser' | null
+type ActivePanel = 'detail' | 'edit' | 'settings' | 'browser' | 'insights' | null
 
 function slugToState(slug?: string[]): { panel: ActivePanel; contactId: string | null; isNew: boolean } {
   if (!slug || slug.length === 0) return { panel: null, contactId: null, isNew: false }
   if (slug[0] === 'settings') return { panel: 'settings', contactId: null, isNew: false }
   if (slug[0] === 'contacts') return { panel: 'browser', contactId: null, isNew: false }
+  if (slug[0] === 'insights') return { panel: 'insights', contactId: null, isNew: false }
   if (slug[0] === 'contact') {
     if (slug[1] === 'new') return { panel: 'edit', contactId: null, isNew: true }
     if (slug[2] === 'edit') return { panel: 'edit', contactId: slug[1], isNew: false }
@@ -43,6 +45,7 @@ function stateToUrl(panel: ActivePanel, contactId?: string | null): string {
     case 'edit': return contactId ? `/contact/${contactId}/edit` : '/contact/new'
     case 'settings': return '/settings'
     case 'browser': return '/contacts'
+    case 'insights': return '/insights'
     default: return '/'
   }
 }
@@ -83,6 +86,8 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
   const [mobileView, setMobileView] = useState<'globe' | 'dashboard'>('dashboard')
   const [importDialogOpen, setImportDialogOpen] = useState(false)
   const [dashboardExpanded, setDashboardExpanded] = useState(false)
+  const [allInteractions, setAllInteractions] = useState<(Interaction & { contactName: string })[]>([])
+  const [allFavors, setAllFavors] = useState<Favor[]>([])
 
   useEffect(() => {
     return () => {
@@ -200,6 +205,18 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
       .then((data) => {
         if (Array.isArray(data)) setUserTags(data)
       })
+      .catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    fetchRecentInteractions()
+      .then(setAllInteractions)
+      .catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    fetchAllFavors()
+      .then(setAllFavors)
       .catch(() => {})
   }, [])
 
@@ -401,6 +418,26 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
     )
   }, [])
 
+  const handleOpenInsights = useCallback(() => {
+    setActivePanel('insights')
+    pushUrl('/insights')
+    if (isMobile) setMobileView('globe')
+  }, [isMobile])
+
+  const handleCloseInsights = useCallback(() => {
+    setActivePanel(null)
+    pushUrl('/')
+  }, [])
+
+  const handleInsightsContactClick = useCallback((contact: Contact) => {
+    setSelectedContact(contact)
+    setActivePanel('detail')
+    pushUrl(stateToUrl('detail', contact.id))
+    if (contact.lat != null && contact.lng != null) {
+      setFlyTarget({ lat: contact.lat, lng: contact.lng, ts: Date.now() })
+    }
+  }, [])
+
   const openDashboard = useCallback(() => setDashboardExpanded(true), [])
   const closeDashboard = useCallback(() => setDashboardExpanded(false), [])
 
@@ -413,6 +450,11 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
     handleAddContact()
     setDashboardExpanded(false)
   }, [handleAddContact])
+
+  const handleDashOpenInsights = useCallback(() => {
+    handleOpenInsights()
+    setDashboardExpanded(false)
+  }, [handleOpenInsights])
 
   const showDashboard = !isMobile || mobileView === 'dashboard'
   const showGlobe = !isMobile || mobileView === 'globe'
@@ -477,9 +519,27 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
         onSelectContact={handleBrowserSelectContact}
       />
 
+      <GlobePanel
+        open={activePanel === 'insights'}
+        side="right"
+        width={PANEL_WIDTH.dashboard.min}
+        glass="panel"
+        onClose={handleCloseInsights}
+      >
+        <ConnectionInsightsPanel
+          contacts={contacts}
+          connections={connections}
+          interactions={allInteractions}
+          favors={allFavors}
+          onContactClick={handleInsightsContactClick}
+          loading={loading}
+        />
+      </GlobePanel>
+
       <GlobeControls
         onAddContact={handleAddContact}
         onSettings={handleOpenSettings}
+        onInsights={handleOpenInsights}
         isMobile={isMobile}
         onSwitchToDashboard={() => setMobileView('dashboard')}
       />
@@ -531,10 +591,12 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
         >
           <DashboardPanel
             contacts={contacts}
+            connections={connections}
             selectedContact={selectedContact}
             onContactClick={handleContactClick}
             onAddContact={handleAddContact}
             onOpenContactsBrowser={handleOpenContactsBrowser}
+            onOpenInsights={handleOpenInsights}
             isMobile={isMobile}
             onSwitchToGlobe={() => setMobileView('globe')}
             contactsLoading={loading}
@@ -564,10 +626,12 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
       >
         <DashboardPanel
           contacts={contacts}
+          connections={connections}
           selectedContact={selectedContact}
           onContactClick={handleContactClick}
           onAddContact={handleAddContact}
           onOpenContactsBrowser={handleOpenContactsBrowser}
+          onOpenInsights={handleOpenInsights}
           isMobile={isMobile}
           collapsed
           onToggleCollapse={openDashboard}
@@ -585,10 +649,12 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
       >
         <DashboardPanel
           contacts={contacts}
+          connections={connections}
           selectedContact={selectedContact}
           onContactClick={handleDashContactClick}
           onAddContact={handleDashAddContact}
           onOpenContactsBrowser={handleOpenContactsBrowser}
+          onOpenInsights={handleDashOpenInsights}
           isMobile={isMobile}
           collapsed={false}
           onToggleCollapse={closeDashboard}

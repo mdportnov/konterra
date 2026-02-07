@@ -19,15 +19,18 @@ import ActivityTimeline from './widgets/ActivityTimeline'
 import ReconnectAlerts from './widgets/ReconnectAlerts'
 import NetworkHealth from './widgets/NetworkHealth'
 import FavorLedger from './widgets/FavorLedger'
+import ConnectionInsightsSummary from './widgets/ConnectionInsightsSummary'
 import { fetchRecentInteractions, fetchAllFavors } from '@/lib/api'
-import type { Contact, Interaction, Favor } from '@/lib/db/schema'
+import type { Contact, ContactConnection, Interaction, Favor } from '@/lib/db/schema'
 
 interface DashboardPanelProps {
   contacts: Contact[]
+  connections?: ContactConnection[]
   selectedContact: Contact | null
   onContactClick: (contact: Contact) => void
   onAddContact: () => void
   onOpenContactsBrowser?: () => void
+  onOpenInsights?: () => void
   isMobile?: boolean
   onSwitchToGlobe?: () => void
   contactsLoading?: boolean
@@ -37,10 +40,12 @@ interface DashboardPanelProps {
 
 export default function DashboardPanel({
   contacts,
+  connections = [],
   selectedContact,
   onContactClick,
   onAddContact,
   onOpenContactsBrowser,
+  onOpenInsights,
   isMobile,
   onSwitchToGlobe,
   contactsLoading = false,
@@ -194,6 +199,14 @@ export default function DashboardPanel({
               <NetworkHealth contacts={contacts} interactions={recentInteractions} loading={contactsLoading || interactionsLoading} />
               <ReconnectAlerts contacts={contacts} onContactClick={onContactClick} loading={contactsLoading} />
               <FavorLedger favors={favors} contacts={contacts} onContactClick={onContactClick} loading={contactsLoading || favorsLoading} />
+              <ConnectionInsightsSummary
+                contacts={contacts}
+                connections={connections}
+                interactions={recentInteractions}
+                favors={favors}
+                onOpenInsights={onOpenInsights || (() => {})}
+                loading={contactsLoading || interactionsLoading || favorsLoading}
+              />
               <TopCountriesChart contacts={contacts} loading={contactsLoading} />
               <ActivityTimeline
                 interactions={recentInteractions}
