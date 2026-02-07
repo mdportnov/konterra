@@ -1,133 +1,33 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import {
-  Loader2,
-  Mail,
-  Phone,
-  Linkedin,
-  Twitter,
-  Send,
-  Instagram,
-  Github,
-  Globe,
-  User,
-  MapPin,
-  Tag as TagIcon,
-  StickyNote,
-  Handshake,
-  Info,
-  Star,
-  ArrowLeft,
-  Brain,
-  Target,
-  ChevronRight,
-  Search,
-  Check,
-  ChevronsUpDown,
-  X,
-  Plus,
+  Loader2, Mail, Phone, Linkedin, Twitter, Send, Instagram, Github, Globe,
+  User, MapPin, Tag as TagIcon, StickyNote, Handshake, Info, Star,
+  ArrowLeft, Brain, Target,
 } from 'lucide-react'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
 import { StarRating } from '@/components/ui/star-rating'
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
-import { Calendar } from '@/components/ui/calendar'
-import { CalendarIcon } from 'lucide-react'
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
 import { RATING_LABELS } from '@/lib/constants/rating'
 import { GenderToggle } from '@/components/ui/gender-toggle'
 import GlobePanel from '@/components/globe/GlobePanel'
 import { PANEL_WIDTH } from '@/lib/constants/ui'
+import {
+  COMMUNICATION_STYLES, PREFERRED_CHANNELS, RESPONSE_SPEEDS,
+  LOYALTY_INDICATORS, FINANCIAL_CAPACITIES, RELATIONSHIP_TYPES,
+} from '@/lib/validation'
 import type { Contact, Tag as DbTag } from '@/lib/db/schema'
-
-const TIMEZONES = [
-  'UTC-12:00', 'UTC-11:00', 'UTC-10:00', 'UTC-09:30', 'UTC-09:00',
-  'UTC-08:00', 'UTC-07:00', 'UTC-06:00', 'UTC-05:00', 'UTC-04:00',
-  'UTC-03:30', 'UTC-03:00', 'UTC-02:00', 'UTC-01:00', 'UTC+00:00',
-  'UTC+01:00', 'UTC+02:00', 'UTC+03:00', 'UTC+03:30', 'UTC+04:00',
-  'UTC+04:30', 'UTC+05:00', 'UTC+05:30', 'UTC+05:45', 'UTC+06:00',
-  'UTC+06:30', 'UTC+07:00', 'UTC+08:00', 'UTC+08:45', 'UTC+09:00',
-  'UTC+09:30', 'UTC+10:00', 'UTC+10:30', 'UTC+11:00', 'UTC+12:00',
-  'UTC+12:45', 'UTC+13:00', 'UTC+14:00',
-] as const
-
-const TIMEZONE_LABELS: Record<string, string> = {
-  'UTC-12:00': 'UTC-12 (Baker Island)',
-  'UTC-11:00': 'UTC-11 (Samoa)',
-  'UTC-10:00': 'UTC-10 (Hawaii)',
-  'UTC-09:00': 'UTC-9 (Alaska)',
-  'UTC-08:00': 'UTC-8 (Los Angeles)',
-  'UTC-07:00': 'UTC-7 (Denver)',
-  'UTC-06:00': 'UTC-6 (Chicago)',
-  'UTC-05:00': 'UTC-5 (New York)',
-  'UTC-04:00': 'UTC-4 (Santiago)',
-  'UTC-03:00': 'UTC-3 (Buenos Aires)',
-  'UTC-02:00': 'UTC-2 (South Georgia)',
-  'UTC-01:00': 'UTC-1 (Azores)',
-  'UTC+00:00': 'UTC+0 (London)',
-  'UTC+01:00': 'UTC+1 (Berlin, Paris)',
-  'UTC+02:00': 'UTC+2 (Kyiv, Cairo)',
-  'UTC+03:00': 'UTC+3 (Moscow, Istanbul)',
-  'UTC+03:30': 'UTC+3:30 (Tehran)',
-  'UTC+04:00': 'UTC+4 (Dubai)',
-  'UTC+04:30': 'UTC+4:30 (Kabul)',
-  'UTC+05:00': 'UTC+5 (Karachi)',
-  'UTC+05:30': 'UTC+5:30 (Mumbai)',
-  'UTC+05:45': 'UTC+5:45 (Kathmandu)',
-  'UTC+06:00': 'UTC+6 (Dhaka)',
-  'UTC+06:30': 'UTC+6:30 (Yangon)',
-  'UTC+07:00': 'UTC+7 (Bangkok)',
-  'UTC+08:00': 'UTC+8 (Singapore)',
-  'UTC+09:00': 'UTC+9 (Tokyo)',
-  'UTC+09:30': 'UTC+9:30 (Adelaide)',
-  'UTC+10:00': 'UTC+10 (Sydney)',
-  'UTC+11:00': 'UTC+11 (Solomon Is.)',
-  'UTC+12:00': 'UTC+12 (Auckland)',
-  'UTC+13:00': 'UTC+13 (Samoa)',
-  'UTC+14:00': 'UTC+14 (Kiribati)',
-}
-
-const LANGUAGES = [
-  'Afrikaans', 'Albanian', 'Amharic', 'Arabic', 'Armenian', 'Azerbaijani',
-  'Basque', 'Belarusian', 'Bengali', 'Bosnian', 'Bulgarian', 'Burmese',
-  'Cantonese', 'Catalan', 'Chinese (Mandarin)', 'Croatian', 'Czech',
-  'Danish', 'Dutch', 'English', 'Estonian', 'Filipino', 'Finnish', 'French',
-  'Galician', 'Georgian', 'German', 'Greek', 'Gujarati', 'Hausa', 'Hebrew',
-  'Hindi', 'Hungarian', 'Icelandic', 'Igbo', 'Indonesian', 'Irish', 'Italian',
-  'Japanese', 'Javanese', 'Kannada', 'Kazakh', 'Khmer', 'Korean', 'Kurdish',
-  'Kyrgyz', 'Lao', 'Latvian', 'Lithuanian', 'Luxembourgish', 'Macedonian',
-  'Malagasy', 'Malay', 'Malayalam', 'Maltese', 'Mandarin', 'Marathi',
-  'Mongolian', 'Nepali', 'Norwegian', 'Pashto', 'Persian', 'Polish',
-  'Portuguese', 'Punjabi', 'Romanian', 'Russian', 'Serbian', 'Sinhala',
-  'Slovak', 'Slovenian', 'Somali', 'Spanish', 'Swahili', 'Swedish',
-  'Tagalog', 'Tamil', 'Telugu', 'Thai', 'Tibetan', 'Turkish', 'Ukrainian',
-  'Urdu', 'Uzbek', 'Vietnamese', 'Welsh', 'Wolof', 'Xhosa', 'Yoruba', 'Zulu',
-] as const
-
-const RELATIONSHIP_TYPES = ['friend', 'business', 'investor', 'conference', 'mentor', 'colleague', 'family', 'dating'] as const
-
-const COMMUNICATION_STYLES = ['direct', 'diplomatic', 'analytical', 'expressive'] as const
-const PREFERRED_CHANNELS = ['email', 'call', 'text', 'in-person', 'linkedin'] as const
-const RESPONSE_SPEEDS = ['immediate', 'same-day', 'slow', 'unreliable'] as const
-const LOYALTY_INDICATORS = ['proven', 'likely', 'neutral', 'unreliable', 'unknown'] as const
-const FINANCIAL_CAPACITIES = ['bootstrapper', 'funded', 'wealthy', 'institutional'] as const
-
-interface ContactEditPanelProps {
-  contact: Contact | null
-  open: boolean
-  onSaved: (contact: Contact) => void
-  onCancel: () => void
-  availableTags?: DbTag[]
-  onTagCreated?: (tag: DbTag) => void
-}
+import {
+  SectionLabel, FieldRow, SelectField, RangeField, PrefixInput,
+  DatePickerField, CollapsibleSection, TimezoneSelect, LanguageMultiSelect, TagSelector,
+} from './contact-edit'
 
 const socialFields = [
   { key: 'email', label: 'Email', icon: Mail, type: 'email', placeholder: 'name@example.com' },
@@ -263,6 +163,15 @@ function buildFormData(contact: Contact | null): FormData {
 function splitCommaSeparated(value: string): string[] | undefined {
   const arr = value.split(',').map((s) => s.trim()).filter(Boolean)
   return arr.length > 0 ? arr : undefined
+}
+
+interface ContactEditPanelProps {
+  contact: Contact | null
+  open: boolean
+  onSaved: (contact: Contact) => void
+  onCancel: () => void
+  availableTags?: DbTag[]
+  onTagCreated?: (tag: DbTag) => void
 }
 
 export default function ContactEditPanel({ contact, open, onSaved, onCancel, availableTags = [], onTagCreated }: ContactEditPanelProps) {
@@ -482,21 +391,13 @@ export default function ContactEditPanel({ contact, open, onSaved, onCancel, ava
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="relationshipType" className="text-xs text-muted-foreground">Type</Label>
-                <select
-                  id="relationshipType"
-                  name="relationshipType"
-                  value={formData.relationshipType}
-                  onChange={(e) => handleSelectChange('relationshipType', e.target.value)}
-                  className="flex h-8 w-full rounded-md border border-input bg-muted/50 px-3 py-1 text-sm text-foreground cursor-pointer"
-                >
-                  <option value="">Select...</option>
-                  {RELATIONSHIP_TYPES.map((t) => (
-                    <option key={t} value={t} className="bg-popover text-popover-foreground">{t}</option>
-                  ))}
-                </select>
-              </div>
+              <SelectField
+                label="Type"
+                name="relationshipType"
+                value={formData.relationshipType}
+                onChange={handleSelectChange}
+                options={RELATIONSHIP_TYPES}
+              />
               <FieldRow label="Met At" name="metAt" value={formData.metAt} onChange={handleChange} placeholder="ETHDenver 2024" />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -533,14 +434,14 @@ export default function ContactEditPanel({ contact, open, onSaved, onCancel, ava
                       placeholder={f.placeholder}
                     />
                   ) : (
-                    <Input
+                    <input
                       id={f.key}
                       name={f.key}
                       type={f.type}
-                      value={formData[f.key as keyof FormData]}
+                      value={formData[f.key as keyof FormData] as string}
                       onChange={handleChange}
                       placeholder={f.placeholder}
-                      className="bg-muted/50 border-input text-foreground placeholder:text-muted-foreground/40 h-8 text-sm focus-visible:ring-orange-500/30 focus-visible:border-orange-500/50"
+                      className="flex h-8 w-full rounded-md border border-input bg-muted/50 px-3 py-1 text-sm text-foreground placeholder:text-muted-foreground/40 focus-visible:ring-1 focus-visible:ring-orange-500/30 focus-visible:border-orange-500/50 outline-none"
                     />
                   )}
                 </div>
@@ -595,28 +496,20 @@ export default function ContactEditPanel({ contact, open, onSaved, onCancel, ava
                 value={formData.birthday}
                 onChange={(v) => setFormData((prev) => ({ ...prev, birthday: v }))}
               />
-              <div className="space-y-1.5">
-                <Label htmlFor="personalInterests" className="text-xs text-muted-foreground">Personal Interests</Label>
-                <Input
-                  id="personalInterests"
-                  name="personalInterests"
-                  value={formData.personalInterests}
-                  onChange={handleChange}
-                  placeholder="surfing, chess, cooking"
-                  className="bg-muted/50 border-input text-foreground placeholder:text-muted-foreground/40 h-8 text-sm focus-visible:ring-orange-500/30 focus-visible:border-orange-500/50"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="professionalGoals" className="text-xs text-muted-foreground">Professional Goals</Label>
-                <Input
-                  id="professionalGoals"
-                  name="professionalGoals"
-                  value={formData.professionalGoals}
-                  onChange={handleChange}
-                  placeholder="raise Series A, scale team"
-                  className="bg-muted/50 border-input text-foreground placeholder:text-muted-foreground/40 h-8 text-sm focus-visible:ring-orange-500/30 focus-visible:border-orange-500/50"
-                />
-              </div>
+              <FieldRow
+                label="Personal Interests"
+                name="personalInterests"
+                value={formData.personalInterests}
+                onChange={handleChange}
+                placeholder="surfing, chess, cooking"
+              />
+              <FieldRow
+                label="Professional Goals"
+                name="professionalGoals"
+                value={formData.professionalGoals}
+                onChange={handleChange}
+                placeholder="raise Series A, scale team"
+              />
             </div>
           </CollapsibleSection>
 
@@ -643,37 +536,27 @@ export default function ContactEditPanel({ contact, open, onSaved, onCancel, ava
                   options={PREFERRED_CHANNELS}
                 />
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <SelectField
-                  label="Response Speed"
-                  name="responseSpeed"
-                  value={formData.responseSpeed}
-                  onChange={handleSelectChange}
-                  options={RESPONSE_SPEEDS}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="motivations" className="text-xs text-muted-foreground">Motivations</Label>
-                <Input
-                  id="motivations"
-                  name="motivations"
-                  value={formData.motivations}
-                  onChange={handleChange}
-                  placeholder="wealth, impact, recognition"
-                  className="bg-muted/50 border-input text-foreground placeholder:text-muted-foreground/40 h-8 text-sm focus-visible:ring-orange-500/30 focus-visible:border-orange-500/50"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="painPoints" className="text-xs text-muted-foreground">Pain Points</Label>
-                <Input
-                  id="painPoints"
-                  name="painPoints"
-                  value={formData.painPoints}
-                  onChange={handleChange}
-                  placeholder="hiring, fundraising, burnout"
-                  className="bg-muted/50 border-input text-foreground placeholder:text-muted-foreground/40 h-8 text-sm focus-visible:ring-orange-500/30 focus-visible:border-orange-500/50"
-                />
-              </div>
+              <SelectField
+                label="Response Speed"
+                name="responseSpeed"
+                value={formData.responseSpeed}
+                onChange={handleSelectChange}
+                options={RESPONSE_SPEEDS}
+              />
+              <FieldRow
+                label="Motivations"
+                name="motivations"
+                value={formData.motivations}
+                onChange={handleChange}
+                placeholder="wealth, impact, recognition"
+              />
+              <FieldRow
+                label="Pain Points"
+                name="painPoints"
+                value={formData.painPoints}
+                onChange={handleChange}
+                placeholder="hiring, fundraising, burnout"
+              />
             </div>
           </CollapsibleSection>
 
@@ -749,549 +632,5 @@ export default function ContactEditPanel({ contact, open, onSaved, onCancel, ava
         </Button>
       </div>
     </GlobePanel>
-  )
-}
-
-function SectionLabel({ icon: Icon, text }: { icon: React.ComponentType<{ className?: string }>; text: string }) {
-  return (
-    <div className="flex items-center gap-2">
-      <Icon className="h-3.5 w-3.5 text-muted-foreground/60" />
-      <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{text}</span>
-    </div>
-  )
-}
-
-function FieldRow({
-  label,
-  name,
-  value,
-  onChange,
-  placeholder,
-  required,
-  type,
-}: {
-  label: string
-  name: string
-  value: string
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void
-  placeholder?: string
-  required?: boolean
-  type?: string
-}) {
-  return (
-    <div className="space-y-1.5">
-      <Label htmlFor={name} className="text-xs text-muted-foreground">{label}</Label>
-      <Input
-        id={name}
-        name={name}
-        type={type}
-        value={value}
-        onChange={onChange}
-        placeholder={placeholder}
-        required={required}
-        className="bg-muted/50 border-input text-foreground placeholder:text-muted-foreground/40 h-8 text-sm focus-visible:ring-orange-500/30 focus-visible:border-orange-500/50"
-      />
-    </div>
-  )
-}
-
-function SelectField({
-  label,
-  name,
-  value,
-  onChange,
-  options,
-}: {
-  label: string
-  name: string
-  value: string
-  onChange: (name: string, value: string) => void
-  options: readonly string[]
-}) {
-  return (
-    <div className="space-y-1.5">
-      <Label htmlFor={name} className="text-xs text-muted-foreground">{label}</Label>
-      <select
-        id={name}
-        name={name}
-        value={value}
-        onChange={(e) => onChange(name, e.target.value)}
-        className="flex h-8 w-full rounded-md border border-input bg-muted/50 px-3 py-1 text-sm text-foreground cursor-pointer"
-      >
-        <option value="">Select...</option>
-        {options.map((opt) => (
-          <option key={opt} value={opt} className="bg-popover text-popover-foreground">{opt}</option>
-        ))}
-      </select>
-    </div>
-  )
-}
-
-function RangeField({
-  label,
-  name,
-  value,
-  min,
-  max,
-  onChange,
-}: {
-  label: string
-  name: string
-  value: number
-  min: number
-  max: number
-  onChange: (value: number) => void
-}) {
-  return (
-    <div className="space-y-1.5">
-      <div className="flex items-center justify-between">
-        <Label htmlFor={name} className="text-xs text-muted-foreground">{label}</Label>
-        <span className="text-xs text-muted-foreground tabular-nums">{value}/{max}</span>
-      </div>
-      <input
-        id={name}
-        name={name}
-        type="range"
-        min={min}
-        max={max}
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-        className="w-full h-2 rounded-full appearance-none cursor-pointer bg-muted accent-orange-500"
-      />
-    </div>
-  )
-}
-
-function PrefixInput({
-  id,
-  prefix,
-  value,
-  onChange,
-  placeholder,
-}: {
-  id: string
-  prefix: string
-  value: string
-  onChange: (value: string) => void
-  placeholder?: string
-}) {
-  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
-    const pasted = e.clipboardData.getData('text')
-    if (pasted && pasted !== value) {
-      e.preventDefault()
-      onChange(pasted)
-    }
-  }
-
-  return (
-    <div className="flex h-8 w-full rounded-md border border-input bg-muted/50 text-sm focus-within:ring-1 focus-within:ring-orange-500/30 focus-within:border-orange-500/50 overflow-hidden">
-      <span className="flex items-center pl-2.5 text-muted-foreground/50 text-sm select-none shrink-0 pointer-events-none">
-        {prefix}
-      </span>
-      <input
-        id={id}
-        type="text"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        onPaste={handlePaste}
-        placeholder={placeholder}
-        className="flex-1 bg-transparent text-foreground placeholder:text-muted-foreground/40 h-full pr-2.5 text-sm outline-none min-w-0"
-      />
-    </div>
-  )
-}
-
-function DatePickerField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
-  const [open, setOpen] = useState(false)
-
-  const date = value ? new Date(value + 'T00:00:00') : undefined
-  const valid = date && !isNaN(date.getTime()) ? date : undefined
-
-  const formatDate = (d: Date) =>
-    d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-
-  return (
-    <div className="space-y-1.5">
-      <Label className="text-xs text-muted-foreground">{label}</Label>
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <button
-            type="button"
-            className="flex h-8 w-full items-center justify-between rounded-md border border-input bg-muted/50 px-3 text-sm cursor-pointer hover:bg-accent/50 transition-colors"
-          >
-            <span className={valid ? 'text-foreground' : 'text-muted-foreground/40'}>
-              {valid ? formatDate(valid) : 'Pick a date...'}
-            </span>
-            <CalendarIcon className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0 ml-1" />
-          </button>
-        </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" side="bottom" align="start">
-          <Calendar
-            mode="single"
-            selected={valid}
-            defaultMonth={valid || new Date()}
-            onSelect={(d) => {
-              if (d) {
-                const y = d.getFullYear()
-                const m = String(d.getMonth() + 1).padStart(2, '0')
-                const day = String(d.getDate()).padStart(2, '0')
-                onChange(`${y}-${m}-${day}`)
-              } else {
-                onChange('')
-              }
-              setOpen(false)
-            }}
-            captionLayout="dropdown"
-            fromYear={1930}
-            toYear={2035}
-          />
-          {value && (
-            <div className="border-t border-border px-3 py-2">
-              <button
-                type="button"
-                onClick={() => { onChange(''); setOpen(false) }}
-                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Clear date
-              </button>
-            </div>
-          )}
-        </PopoverContent>
-      </Popover>
-    </div>
-  )
-}
-
-function CollapsibleSection({
-  title,
-  icon: Icon,
-  expanded,
-  onToggle,
-  children,
-}: {
-  title: string
-  icon: React.ComponentType<{ className?: string }>
-  expanded: boolean
-  onToggle: () => void
-  children: React.ReactNode
-}) {
-  return (
-    <div>
-      <button
-        type="button"
-        onClick={onToggle}
-        className="w-full flex items-center gap-2 py-1 hover:opacity-80 transition-opacity cursor-pointer"
-      >
-        <ChevronRight className={`h-3 w-3 text-muted-foreground/60 transition-transform duration-200 ${expanded ? 'rotate-90' : ''}`} />
-        <Icon className="h-3.5 w-3.5 text-muted-foreground/60" />
-        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{title}</span>
-      </button>
-      <div
-        className="grid transition-[grid-template-rows,opacity] duration-200 ease-[cubic-bezier(0.32,0.72,0,1)]"
-        style={{
-          gridTemplateRows: expanded ? '1fr' : '0fr',
-          opacity: expanded ? 1 : 0,
-        }}
-      >
-        <div className="overflow-hidden">
-          <div className="mt-2">{children}</div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function TimezoneSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  const [open, setOpen] = useState(false)
-  const [search, setSearch] = useState('')
-  const inputRef = useRef<HTMLInputElement>(null)
-
-  const filtered = search
-    ? TIMEZONES.filter((tz) => {
-        const label = TIMEZONE_LABELS[tz] || tz
-        return label.toLowerCase().includes(search.toLowerCase()) || tz.toLowerCase().includes(search.toLowerCase())
-      })
-    : [...TIMEZONES]
-
-  return (
-    <div className="space-y-1.5">
-      <Label className="text-xs text-muted-foreground">Timezone</Label>
-      <Popover open={open} onOpenChange={(v) => { setOpen(v); if (v) setTimeout(() => inputRef.current?.focus(), 0) }}>
-        <PopoverTrigger asChild>
-          <button
-            type="button"
-            className="flex h-8 w-full items-center justify-between rounded-md border border-input bg-muted/50 px-3 text-sm text-foreground cursor-pointer hover:bg-accent/50 transition-colors"
-          >
-            <span className={value ? 'truncate' : 'text-muted-foreground/40 truncate'}>
-              {value ? (TIMEZONE_LABELS[value] || value) : 'Select...'}
-            </span>
-            <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0 ml-1" />
-          </button>
-        </PopoverTrigger>
-        <PopoverContent className="w-[260px] p-0" side="bottom" align="start">
-          <div className="flex items-center border-b border-border px-2">
-            <Search className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />
-            <input
-              ref={inputRef}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search timezone..."
-              className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground/40 h-9 px-2 outline-none"
-            />
-            {search && (
-              <button type="button" onClick={() => setSearch('')} className="text-muted-foreground/50 hover:text-muted-foreground">
-                <X className="h-3.5 w-3.5" />
-              </button>
-            )}
-          </div>
-          <ScrollArea className="h-[200px]">
-            <div className="p-1">
-              {value && (
-                <button
-                  type="button"
-                  onClick={() => { onChange(''); setOpen(false); setSearch('') }}
-                  className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-xs text-muted-foreground hover:bg-accent cursor-pointer"
-                >
-                  Clear
-                </button>
-              )}
-              {filtered.map((tz) => {
-                const label = TIMEZONE_LABELS[tz] || tz
-                const selected = value === tz
-                return (
-                  <button
-                    key={tz}
-                    type="button"
-                    onClick={() => { onChange(tz); setOpen(false); setSearch('') }}
-                    className={`flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-xs cursor-pointer transition-colors ${
-                      selected ? 'bg-accent text-foreground' : 'text-foreground hover:bg-accent/50'
-                    }`}
-                  >
-                    <Check className={`h-3 w-3 shrink-0 ${selected ? 'opacity-100' : 'opacity-0'}`} />
-                    <span className="truncate">{label}</span>
-                  </button>
-                )
-              })}
-              {filtered.length === 0 && (
-                <p className="text-xs text-muted-foreground/60 text-center py-4">No timezones found</p>
-              )}
-            </div>
-          </ScrollArea>
-        </PopoverContent>
-      </Popover>
-    </div>
-  )
-}
-
-function TagSelector({
-  value,
-  onChange,
-  availableTags,
-  onTagCreated,
-}: {
-  value: string
-  onChange: (v: string) => void
-  availableTags: DbTag[]
-  onTagCreated?: (tag: DbTag) => void
-}) {
-  const [newTagInput, setNewTagInput] = useState('')
-  const [creating, setCreating] = useState(false)
-
-  const selected = value ? value.split(',').map((s) => s.trim()).filter(Boolean) : []
-  const selectedSet = new Set(selected)
-
-  const toggle = (tagName: string) => {
-    const next = new Set(selectedSet)
-    if (next.has(tagName)) next.delete(tagName)
-    else next.add(tagName)
-    onChange(Array.from(next).join(', '))
-  }
-
-  const handleCreateTag = async () => {
-    const name = newTagInput.trim()
-    if (!name) return
-    setCreating(true)
-    try {
-      const res = await fetch('/api/tags', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name }),
-      })
-      if (res.ok) {
-        const tag = await res.json()
-        onTagCreated?.(tag)
-        const next = new Set(selectedSet)
-        next.add(name)
-        onChange(Array.from(next).join(', '))
-        setNewTagInput('')
-      }
-    } catch {
-      // silent
-    } finally {
-      setCreating(false)
-    }
-  }
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault()
-      handleCreateTag()
-    }
-  }
-
-  const unselectedTags = availableTags.filter((t) => !selectedSet.has(t.name))
-
-  return (
-    <div className="space-y-2">
-      {selected.length > 0 && (
-        <div className="flex flex-wrap gap-1">
-          {selected.map((tag) => (
-            <Badge
-              key={tag}
-              className="cursor-pointer text-[10px] bg-orange-500/20 text-orange-600 dark:text-orange-300 border-orange-500/30 hover:bg-orange-500/30 gap-1"
-              onClick={() => toggle(tag)}
-            >
-              {tag}
-              <X className="h-2.5 w-2.5" />
-            </Badge>
-          ))}
-        </div>
-      )}
-      {unselectedTags.length > 0 && (
-        <div className="flex flex-wrap gap-1">
-          {unselectedTags.map((tag) => (
-            <Badge
-              key={tag.id}
-              variant="outline"
-              className="cursor-pointer text-[10px] border-border text-muted-foreground/50 hover:bg-muted hover:text-muted-foreground"
-              onClick={() => toggle(tag.name)}
-            >
-              {tag.name}
-            </Badge>
-          ))}
-        </div>
-      )}
-      <div className="flex gap-1.5">
-        <Input
-          value={newTagInput}
-          onChange={(e) => setNewTagInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="New tag..."
-          className="bg-muted/50 border-input text-foreground placeholder:text-muted-foreground/40 h-7 text-xs focus-visible:ring-orange-500/30 focus-visible:border-orange-500/50 flex-1"
-        />
-        <Button
-          type="button"
-          size="sm"
-          variant="ghost"
-          className="h-7 px-2 text-[10px] text-muted-foreground hover:text-foreground"
-          disabled={!newTagInput.trim() || creating}
-          onClick={handleCreateTag}
-        >
-          <Plus className="h-3 w-3" />
-        </Button>
-      </div>
-    </div>
-  )
-}
-
-function LanguageMultiSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  const [open, setOpen] = useState(false)
-  const [search, setSearch] = useState('')
-  const inputRef = useRef<HTMLInputElement>(null)
-
-  const selected = value ? value.split(',').map((s) => s.trim()).filter(Boolean) : []
-  const selectedSet = new Set(selected)
-
-  const filtered = search
-    ? LANGUAGES.filter((l) => l.toLowerCase().includes(search.toLowerCase()))
-    : [...LANGUAGES]
-
-  const toggle = (lang: string) => {
-    const next = new Set(selectedSet)
-    if (next.has(lang)) next.delete(lang)
-    else next.add(lang)
-    onChange(Array.from(next).join(', '))
-  }
-
-  const remove = (lang: string) => {
-    const next = selected.filter((s) => s !== lang)
-    onChange(next.join(', '))
-  }
-
-  return (
-    <div className="space-y-1.5">
-      <Label className="text-xs text-muted-foreground">Languages</Label>
-      <Popover open={open} onOpenChange={(v) => { setOpen(v); if (v) setTimeout(() => inputRef.current?.focus(), 0) }}>
-        <PopoverTrigger asChild>
-          <button
-            type="button"
-            className="flex h-auto min-h-8 w-full items-center gap-1 flex-wrap rounded-md border border-input bg-muted/50 px-2 py-1 text-sm text-foreground cursor-pointer hover:bg-accent/50 transition-colors"
-          >
-            {selected.length > 0 ? (
-              <>
-                {selected.map((lang) => (
-                  <Badge
-                    key={lang}
-                    variant="secondary"
-                    className="text-[10px] h-5 gap-0.5 px-1.5 bg-accent"
-                  >
-                    {lang}
-                    <span
-                      role="button"
-                      tabIndex={0}
-                      onClick={(e) => { e.stopPropagation(); remove(lang) }}
-                      onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); remove(lang) } }}
-                      className="ml-0.5 hover:text-foreground text-muted-foreground cursor-pointer"
-                    >
-                      <X className="h-2.5 w-2.5" />
-                    </span>
-                  </Badge>
-                ))}
-              </>
-            ) : (
-              <span className="text-muted-foreground/40 px-1">Select...</span>
-            )}
-            <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0 ml-auto" />
-          </button>
-        </PopoverTrigger>
-        <PopoverContent className="w-[220px] p-0" side="bottom" align="start">
-          <div className="flex items-center border-b border-border px-2">
-            <Search className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />
-            <input
-              ref={inputRef}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search language..."
-              className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground/40 h-9 px-2 outline-none"
-            />
-            {search && (
-              <button type="button" onClick={() => setSearch('')} className="text-muted-foreground/50 hover:text-muted-foreground">
-                <X className="h-3.5 w-3.5" />
-              </button>
-            )}
-          </div>
-          <ScrollArea className="h-[200px]">
-            <div className="p-1 space-y-0.5">
-              {filtered.map((lang) => (
-                <label
-                  key={lang}
-                  className="flex items-center gap-2 rounded-sm px-2 py-1.5 text-xs cursor-pointer hover:bg-accent/50 transition-colors"
-                >
-                  <Checkbox
-                    checked={selectedSet.has(lang)}
-                    onCheckedChange={() => toggle(lang)}
-                    className="h-3.5 w-3.5"
-                  />
-                  <span className="text-foreground">{lang}</span>
-                </label>
-              ))}
-              {filtered.length === 0 && (
-                <p className="text-xs text-muted-foreground/60 text-center py-4">No languages found</p>
-              )}
-            </div>
-          </ScrollArea>
-        </PopoverContent>
-      </Popover>
-    </div>
   )
 }

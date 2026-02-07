@@ -1,53 +1,31 @@
-import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { getContactById, updateContact, deleteContact } from '@/lib/db/queries'
 import { geocode } from '@/lib/geocoding'
 import { validateContact, safeParseBody } from '@/lib/validation'
-
-function toDateOrNull(v: unknown): Date | null {
-  if (!v) return null
-  if (v instanceof Date) return v
-  const d = new Date(v as string)
-  return isNaN(d.getTime()) ? null : d
-}
-
-function toStringOrNull(v: unknown): string | null {
-  if (typeof v === 'string' && v.trim() !== '') return v.trim()
-  return null
-}
+import { toStringOrNull, toDateOrNull, unauthorized, badRequest, notFound, success } from '@/lib/api-utils'
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  if (!session?.user?.id) return unauthorized()
 
   const { id } = await params
   const contact = await getContactById(id, session.user.id)
 
-  if (!contact) {
-    return NextResponse.json({ error: 'Not found' }, { status: 404 })
-  }
+  if (!contact) return notFound('Contact')
 
-  return NextResponse.json(contact)
+  return success(contact)
 }
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  if (!session?.user?.id) return unauthorized()
 
   const { id } = await params
   const body = await safeParseBody(req)
-  if (!body) {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
-  }
+  if (!body) return badRequest('Invalid JSON body')
 
   const validationError = validateContact(body, false)
-  if (validationError) {
-    return NextResponse.json({ error: validationError }, { status: 400 })
-  }
+  if (validationError) return badRequest(validationError)
 
   let { lat, lng } = body as { lat?: number; lng?: number }
 
@@ -110,20 +88,16 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   const contact = await updateContact(id, session.user.id, updates)
 
-  if (!contact) {
-    return NextResponse.json({ error: 'Not found' }, { status: 404 })
-  }
+  if (!contact) return notFound('Contact')
 
-  return NextResponse.json(contact)
+  return success(contact)
 }
 
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  if (!session?.user?.id) return unauthorized()
 
   const { id } = await params
   await deleteContact(id, session.user.id)
-  return NextResponse.json({ success: true })
+  return success({ success: true })
 }
