@@ -1,6 +1,6 @@
 import { db } from './index'
-import { users, contacts, interactions, contactConnections, introductions, favors, visitedCountries, waitlist } from './schema'
-import { eq, and, or, desc, sql } from 'drizzle-orm'
+import { users, contacts, interactions, contactConnections, introductions, favors, visitedCountries, waitlist, tags } from './schema'
+import { eq, and, or, desc, sql, arrayContains } from 'drizzle-orm'
 import type { NewContact, NewContactConnection, NewIntroduction, NewFavor } from './schema'
 
 export async function getUserByEmail(email: string) {
@@ -304,4 +304,77 @@ export async function verifyContactOwnership(contactId: string, userId: string):
     columns: { id: true },
   })
   return !!contact
+}
+
+export async function getTagsByUserId(userId: string) {
+  return db.query.tags.findMany({
+    where: eq(tags.userId, userId),
+    orderBy: (tags, { asc }) => [asc(tags.name)],
+  })
+}
+
+export async function createTag(userId: string, name: string, color?: string) {
+  const [tag] = await db
+    .insert(tags)
+    .values({ userId, name, color: color || null })
+    .onConflictDoNothing({ target: [tags.userId, tags.name] })
+    .returning()
+  if (!tag) {
+    return db.query.tags.findFirst({
+      where: and(eq(tags.userId, userId), eq(tags.name, name)),
+    })
+  }
+  return tag
+}
+
+export async function deleteTag(id: string, userId: string) {
+  const tag = await db.query.tags.findFirst({
+    where: and(eq(tags.id, id), eq(tags.userId, userId)),
+  })
+  if (!tag) return
+
+  const userContacts = await db.query.contacts.findMany({
+    where: and(eq(contacts.userId, userId), arrayContains(contacts.tags, [tag.name])),
+    columns: { id: true, tags: true },
+  })
+
+  await db.transaction(async (tx) => {
+    for (const c of userContacts) {
+      const updated = (c.tags || []).filter((t) => t !== tag.name)
+      await tx
+        .update(contacts)
+        .set({ tags: updated.length > 0 ? updated : null })
+        .where(eq(contacts.id, c.id))
+    }
+    await tx.delete(tags).where(and(eq(tags.id, id), eq(tags.userId, userId)))
+  })
+
+  return tag
+}
+
+export async function renameTag(id: string, userId: string, newName: string) {
+  const tag = await db.query.tags.findFirst({
+    where: and(eq(tags.id, id), eq(tags.userId, userId)),
+  })
+  if (!tag) return null
+
+  const oldName = tag.name
+
+  const userContacts = await db.query.contacts.findMany({
+    where: and(eq(contacts.userId, userId), arrayContains(contacts.tags, [oldName])),
+    columns: { id: true, tags: true },
+  })
+
+  return db.transaction(async (tx) => {
+    for (const c of userContacts) {
+      const updated = (c.tags || []).map((t) => (t === oldName ? newName : t))
+      await tx.update(contacts).set({ tags: updated }).where(eq(contacts.id, c.id))
+    }
+    const [updated] = await tx
+      .update(tags)
+      .set({ name: newName })
+      .where(and(eq(tags.id, id), eq(tags.userId, userId)))
+      .returning()
+    return updated
+  })
 }

@@ -210,6 +210,17 @@ export const favors = pgTable('favors', {
   index('favors_contact_id_idx').on(t.contactId),
 ])
 
+export const tags = pgTable('tags', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: text('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  name: text('name').notNull(),
+  color: text('color'),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (t) => [
+  index('tags_user_id_idx').on(t.userId),
+  uniqueIndex('tags_user_name_idx').on(t.userId, t.name),
+])
+
 export const visitedCountries = pgTable('visited_countries', {
   id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
   userId: text('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
@@ -223,6 +234,8 @@ export const visitedCountries = pgTable('visited_countries', {
 export type User = typeof users.$inferSelect
 export type Contact = typeof contacts.$inferSelect
 export type NewContact = typeof contacts.$inferInsert
+export type Tag = typeof tags.$inferSelect
+export type NewTag = typeof tags.$inferInsert
 export type Interaction = typeof interactions.$inferSelect
 export type ContactConnection = typeof contactConnections.$inferSelect
 export type NewContactConnection = typeof contactConnections.$inferInsert
