@@ -1,4 +1,4 @@
-import type { Contact, ContactConnection, Interaction, Favor } from '@/lib/db/schema'
+import type { Contact, ContactConnection, Interaction, Favor, Tag } from '@/lib/db/schema'
 
 interface PaginatedResponse<T> {
   data: T[]
@@ -52,4 +52,8 @@ export async function fetchContactConnections(contactId: string, signal?: AbortS
 
 export async function fetchContactFavors(contactId: string, signal?: AbortSignal): Promise<Favor[]> {
   return apiFetch<Favor[]>(`/api/contacts/${contactId}/favors`, signal)
+}
+
+export async function fetchTags(signal?: AbortSignal): Promise<Tag[]> {
+  return apiFetch<Tag[]>('/api/tags', signal)
 }

@@ -12,14 +12,14 @@ import ContactEditPanel from '@/components/globe/ContactEditPanel'
 import ContactsBrowserPanel from '@/components/globe/ContactsBrowserPanel'
 import SettingsPanel from '@/components/globe/SettingsPanel'
 import ImportDialog from '@/components/import/ImportDialog'
-import type { Contact, ContactConnection } from '@/lib/db/schema'
+import type { Contact, ContactConnection, Tag } from '@/lib/db/schema'
 import type { ConnectedContact } from '@/components/globe/ContactDetail'
 import CountryPopup from '@/components/globe/CountryPopup'
 import { PANEL_WIDTH } from '@/lib/constants/ui'
 import { displayDefaults } from '@/types/display'
 import type { DisplayOptions } from '@/types/display'
 import { useIsMobile } from '@/hooks/use-mobile'
-import { fetchContacts, fetchConnections, fetchVisitedCountries } from '@/lib/api'
+import { fetchContacts, fetchConnections, fetchVisitedCountries, fetchTags } from '@/lib/api'
 
 const GlobeCanvas = dynamic(() => import('@/components/globe/GlobeCanvas'), { ssr: false })
 
@@ -77,6 +77,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
   const [countryPopupOpen, setCountryPopupOpen] = useState(false)
   const [visitedCountries, setVisitedCountries] = useState<Set<string>>(new Set())
   const [connections, setConnections] = useState<ContactConnection[]>([])
+  const [userTags, setUserTags] = useState<Tag[]>([])
   const countryClosingTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const isMobile = useIsMobile()
   const [mobileView, setMobileView] = useState<'globe' | 'dashboard'>('dashboard')
@@ -124,8 +125,9 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
   const allTags = useMemo(() => {
     const s = new Set<string>()
     contacts.forEach((c) => c.tags?.forEach((t) => s.add(t)))
+    userTags.forEach((t) => s.add(t.name))
     return Array.from(s).sort()
-  }, [contacts])
+  }, [contacts, userTags])
 
   const allRelTypes = useMemo(() => {
     const s = new Set<string>()
@@ -191,6 +193,14 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
         if (Array.isArray(data)) setConnections(data)
       })
       .catch(() => toast.error('Failed to load connections'))
+  }, [])
+
+  useEffect(() => {
+    fetchTags()
+      .then((data) => {
+        if (Array.isArray(data)) setUserTags(data)
+      })
+      .catch(() => {})
   }, [])
 
   const handleContactClick = useCallback((contact: Contact) => {
@@ -373,6 +383,24 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
     pushUrl('/contact/new')
   }, [closeCountryPopup])
 
+  const handleTagCreated = useCallback((tag: Tag) => {
+    setUserTags((prev) => {
+      if (prev.some((t) => t.id === tag.id)) return prev
+      return [...prev, tag].sort((a, b) => a.name.localeCompare(b.name))
+    })
+  }, [])
+
+  const handleTagDeleted = useCallback((tagId: string, tagName: string) => {
+    setUserTags((prev) => prev.filter((t) => t.id !== tagId))
+    setContacts((prev) =>
+      prev.map((c) => {
+        if (!c.tags?.includes(tagName)) return c
+        const updated = c.tags.filter((t) => t !== tagName)
+        return { ...c, tags: updated.length > 0 ? updated : null }
+      })
+    )
+  }, [])
+
   const openDashboard = useCallback(() => setDashboardExpanded(true), [])
   const closeDashboard = useCallback(() => setDashboardExpanded(false), [])
 
@@ -418,6 +446,8 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
         open={activePanel === 'edit'}
         onSaved={handleContactSaved}
         onCancel={handleCancelEdit}
+        availableTags={userTags}
+        onTagCreated={handleTagCreated}
       />
 
       <SettingsPanel
@@ -466,6 +496,9 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
         countries={allCountries}
         activeCountries={activeCountries}
         onCountriesChange={setActiveCountries}
+        userTags={userTags}
+        onTagCreated={handleTagCreated}
+        onTagDeleted={handleTagDeleted}
       />
 
       {countryPopup && (

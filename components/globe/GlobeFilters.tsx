@@ -1,16 +1,19 @@
 'use client'
 
 import { useRef, useState, useCallback, useMemo } from 'react'
-import { Filter, X, Star } from 'lucide-react'
+import { Filter, X, Star, Plus } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Checkbox } from '@/components/ui/checkbox'
 import { GLASS, Z } from '@/lib/constants/ui'
 import { RATING_LABELS } from '@/lib/constants/rating'
 import { useClickOutside } from '@/hooks/use-click-outside'
 import { useHotkey } from '@/hooks/use-hotkey'
+import { toast } from 'sonner'
+import type { Tag } from '@/lib/db/schema'
 
 const RATING_LEVELS = [5, 4, 3, 2, 1] as const
 
@@ -26,6 +29,9 @@ interface GlobeFiltersProps {
   countries: string[]
   activeCountries: Set<string>
   onCountriesChange: (countries: Set<string>) => void
+  userTags?: Tag[]
+  onTagCreated?: (tag: Tag) => void
+  onTagDeleted?: (tagId: string, tagName: string) => void
 }
 
 export default function GlobeFilters({
@@ -40,8 +46,14 @@ export default function GlobeFilters({
   countries,
   activeCountries,
   onCountriesChange,
+  userTags = [],
+  onTagCreated,
+  onTagDeleted,
 }: GlobeFiltersProps) {
   const [open, setOpen] = useState(false)
+  const [managingTags, setManagingTags] = useState(false)
+  const [newTagName, setNewTagName] = useState('')
+  const [creatingTag, setCreatingTag] = useState(false)
   const panelRef = useRef<HTMLDivElement>(null)
 
   const close = useCallback(() => setOpen(false), [])
@@ -103,6 +115,49 @@ export default function GlobeFilters({
     count += activeCountries.size
     return count
   }, [ratings, activeTags, activeRelTypes, activeCountries])
+
+  const handleCreateTag = useCallback(async () => {
+    const name = newTagName.trim()
+    if (!name) return
+    setCreatingTag(true)
+    try {
+      const res = await fetch('/api/tags', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      })
+      if (res.ok) {
+        const tag = await res.json()
+        onTagCreated?.(tag)
+        setNewTagName('')
+        toast.success(`Tag "${name}" created`)
+      } else {
+        const err = await res.json().catch(() => ({}))
+        toast.error(err.error || 'Failed to create tag')
+      }
+    } catch {
+      toast.error('Failed to create tag')
+    } finally {
+      setCreatingTag(false)
+    }
+  }, [newTagName, onTagCreated])
+
+  const handleDeleteTag = useCallback(async (tagId: string, tagName: string) => {
+    try {
+      const res = await fetch(`/api/tags/${tagId}`, { method: 'DELETE' })
+      if (res.ok) {
+        onTagDeleted?.(tagId, tagName)
+        const next = new Set(activeTags)
+        next.delete(tagName)
+        onTagsChange(next)
+        toast.success(`Tag "${tagName}" deleted`)
+      } else {
+        toast.error('Failed to delete tag')
+      }
+    } catch {
+      toast.error('Failed to delete tag')
+    }
+  }, [activeTags, onTagsChange, onTagDeleted])
 
   const clearAll = useCallback(() => {
     onRatingsChange(new Set([1, 2, 3, 4, 5]))
@@ -192,10 +247,10 @@ export default function GlobeFilters({
               )}
             </div>
 
-            {tags.length > 0 && (
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-[10px] text-muted-foreground">Tags</span>
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[10px] text-muted-foreground">Tags</span>
+                <div className="flex items-center gap-2">
                   {activeTags.size > 0 && (
                     <button
                       onClick={() => onTagsChange(new Set())}
@@ -204,25 +259,80 @@ export default function GlobeFilters({
                       Clear
                     </button>
                   )}
-                </div>
-                <div className="flex flex-wrap gap-1">
-                  {tags.map((tag) => (
-                    <Badge
-                      key={tag}
-                      variant={activeTags.has(tag) ? 'default' : 'outline'}
-                      className={`cursor-pointer text-[10px] ${
-                        activeTags.has(tag)
-                          ? 'bg-orange-500/20 text-orange-600 dark:text-orange-300 border-orange-500/30 hover:bg-orange-500/30'
-                          : 'border-border text-muted-foreground/50 hover:bg-muted hover:text-muted-foreground'
-                      }`}
-                      onClick={() => toggleTag(tag)}
-                    >
-                      {tag}
-                    </Badge>
-                  ))}
+                  <button
+                    onClick={() => setManagingTags(!managingTags)}
+                    className={`text-[10px] transition-colors ${
+                      managingTags
+                        ? 'text-orange-500 hover:text-orange-600'
+                        : 'text-muted-foreground/60 hover:text-muted-foreground'
+                    }`}
+                  >
+                    {managingTags ? 'Done' : 'Manage'}
+                  </button>
                 </div>
               </div>
-            )}
+              {tags.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {tags.map((tag) => {
+                    const userTag = userTags.find((t) => t.name === tag)
+                    return (
+                      <div key={tag} className="relative group">
+                        <Badge
+                          variant={activeTags.has(tag) ? 'default' : 'outline'}
+                          className={`cursor-pointer text-[10px] ${
+                            activeTags.has(tag)
+                              ? 'bg-orange-500/20 text-orange-600 dark:text-orange-300 border-orange-500/30 hover:bg-orange-500/30'
+                              : 'border-border text-muted-foreground/50 hover:bg-muted hover:text-muted-foreground'
+                          } ${managingTags && userTag ? 'pr-5' : ''}`}
+                          onClick={() => toggleTag(tag)}
+                        >
+                          {tag}
+                        </Badge>
+                        {managingTags && userTag && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleDeleteTag(userTag.id, userTag.name)
+                            }}
+                            className="absolute -top-1 -right-1 h-3.5 w-3.5 rounded-full bg-red-500/80 hover:bg-red-500 text-white flex items-center justify-center transition-colors"
+                          >
+                            <X className="h-2 w-2" />
+                          </button>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+              {tags.length === 0 && !managingTags && (
+                <p className="text-[10px] text-muted-foreground/40">No tags yet</p>
+              )}
+              {managingTags && (
+                <div className="flex gap-1 mt-2">
+                  <Input
+                    value={newTagName}
+                    onChange={(e) => setNewTagName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        handleCreateTag()
+                      }
+                    }}
+                    placeholder="New tag..."
+                    className="bg-muted/50 border-input text-foreground placeholder:text-muted-foreground/40 h-6 text-[10px] focus-visible:ring-orange-500/30 focus-visible:border-orange-500/50 flex-1"
+                  />
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                    disabled={!newTagName.trim() || creatingTag}
+                    onClick={handleCreateTag}
+                  >
+                    <Plus className="h-3 w-3" />
+                  </Button>
+                </div>
+              )}
+            </div>
 
             {relationshipTypes.length > 0 && (
               <div>
