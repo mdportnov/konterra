@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { SessionProvider } from 'next-auth/react'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 
 type Theme = 'light' | 'dark' | 'system'
 
@@ -68,8 +69,10 @@ function ThemeProvider({ children }: { children: React.ReactNode }) {
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <SessionProvider>
-      <ThemeProvider>{children}</ThemeProvider>
-    </SessionProvider>
+    <ErrorBoundary>
+      <SessionProvider>
+        <ThemeProvider>{children}</ThemeProvider>
+      </SessionProvider>
+    </ErrorBoundary>
   )
 }

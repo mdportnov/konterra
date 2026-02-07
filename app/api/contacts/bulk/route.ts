@@ -2,24 +2,13 @@ import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { createContactsBulk, updateContact } from '@/lib/db/queries'
 import { validateContact, safeParseBody } from '@/lib/validation'
+import { toStringOrNull, toDateOrNull, unauthorized, badRequest } from '@/lib/api-utils'
 import type { NewContact } from '@/lib/db/schema'
 
 interface BulkItem {
   action: 'create' | 'update' | 'skip'
   contact: Record<string, unknown>
   existingId?: string
-}
-
-function toStringOrNull(v: unknown): string | null {
-  if (typeof v === 'string' && v.trim() !== '') return v.trim()
-  return null
-}
-
-function toDateOrNull(v: unknown): Date | null {
-  if (!v) return null
-  if (v instanceof Date) return v
-  const d = new Date(v as string)
-  return isNaN(d.getTime()) ? null : d
 }
 
 function buildNewContactData(userId: string, c: Record<string, unknown>): NewContact {
@@ -85,14 +74,10 @@ function buildUpdateData(c: Record<string, unknown>): Partial<NewContact> {
 
 export async function POST(req: Request) {
   const session = await auth()
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  if (!session?.user?.id) return unauthorized()
 
   const body = await safeParseBody(req)
-  if (!body || !Array.isArray(body.items)) {
-    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
-  }
+  if (!body || !Array.isArray(body.items)) return badRequest('Invalid request body')
 
   const items = body.items as BulkItem[]
   if (items.length > 500) {

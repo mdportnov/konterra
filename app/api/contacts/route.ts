@@ -1,50 +1,29 @@
-import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { getContactsByUserId, createContact } from '@/lib/db/queries'
 import { geocode } from '@/lib/geocoding'
 import { validateContact, safeParseBody } from '@/lib/validation'
+import { toStringOrNull, toDateOrNull, parsePagination, unauthorized, badRequest, success } from '@/lib/api-utils'
 
 export async function GET(req: Request) {
   const session = await auth()
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  if (!session?.user?.id) return unauthorized()
 
   const { searchParams } = new URL(req.url)
-  const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10) || 1)
-  const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '50', 10) || 50))
+  const { page, limit } = parsePagination(searchParams)
 
   const result = await getContactsByUserId(session.user.id, page, limit)
-  return NextResponse.json(result)
-}
-
-function toDateOrNull(v: unknown): Date | null {
-  if (!v) return null
-  if (v instanceof Date) return v
-  const d = new Date(v as string)
-  return isNaN(d.getTime()) ? null : d
-}
-
-function toStringOrNull(v: unknown): string | null {
-  if (typeof v === 'string' && v.trim() !== '') return v.trim()
-  return null
+  return success(result)
 }
 
 export async function POST(req: Request) {
   const session = await auth()
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  if (!session?.user?.id) return unauthorized()
 
   const body = await safeParseBody(req)
-  if (!body) {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
-  }
+  if (!body) return badRequest('Invalid JSON body')
 
   const validationError = validateContact(body)
-  if (validationError) {
-    return NextResponse.json({ error: validationError }, { status: 400 })
-  }
+  if (validationError) return badRequest(validationError)
 
   let { lat, lng } = body as { lat?: number; lng?: number }
 
@@ -96,5 +75,5 @@ export async function POST(req: Request) {
     nextFollowUp: toDateOrNull(body.nextFollowUp),
   })
 
-  return NextResponse.json(contact, { status: 201 })
+  return success(contact, 201)
 }

@@ -1,0 +1,16 @@
+export const LANGUAGES = [
+  'Afrikaans', 'Albanian', 'Amharic', 'Arabic', 'Armenian', 'Azerbaijani',
+  'Basque', 'Belarusian', 'Bengali', 'Bosnian', 'Bulgarian', 'Burmese',
+  'Cantonese', 'Catalan', 'Chinese (Mandarin)', 'Croatian', 'Czech',
+  'Danish', 'Dutch', 'English', 'Estonian', 'Filipino', 'Finnish', 'French',
+  'Galician', 'Georgian', 'German', 'Greek', 'Gujarati', 'Hausa', 'Hebrew',
+  'Hindi', 'Hungarian', 'Icelandic', 'Igbo', 'Indonesian', 'Irish', 'Italian',
+  'Japanese', 'Javanese', 'Kannada', 'Kazakh', 'Khmer', 'Korean', 'Kurdish',
+  'Kyrgyz', 'Lao', 'Latvian', 'Lithuanian', 'Luxembourgish', 'Macedonian',
+  'Malagasy', 'Malay', 'Malayalam', 'Maltese', 'Mandarin', 'Marathi',
+  'Mongolian', 'Nepali', 'Norwegian', 'Pashto', 'Persian', 'Polish',
+  'Portuguese', 'Punjabi', 'Romanian', 'Russian', 'Serbian', 'Sinhala',
+  'Slovak', 'Slovenian', 'Somali', 'Spanish', 'Swahili', 'Swedish',
+  'Tagalog', 'Tamil', 'Telugu', 'Thai', 'Tibetan', 'Turkish', 'Ukrainian',
+  'Urdu', 'Uzbek', 'Vietnamese', 'Welsh', 'Wolof', 'Xhosa', 'Yoruba', 'Zulu',
+] as const
