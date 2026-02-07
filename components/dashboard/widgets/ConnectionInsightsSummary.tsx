@@ -76,7 +76,7 @@ export default function ConnectionInsightsSummary({
       </div>
       <button
         onClick={onOpenInsights}
-        className={`${GLASS.control} rounded-xl p-3 space-y-2 w-full text-left hover:bg-accent/50 transition-colors group`}
+        className={`${GLASS.control} rounded-xl p-3 space-y-2 w-full text-left hover:bg-accent/50 transition-colors group focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring`}
       >
         <div className="flex items-start justify-between gap-2">
           <p className="text-[11px] text-muted-foreground leading-relaxed flex-1">

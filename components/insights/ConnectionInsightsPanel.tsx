@@ -81,7 +81,7 @@ function Section({ title, icon: Icon, badge, children, defaultOpen = true }: {
     <div className="space-y-2">
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center gap-2 group"
+        className="w-full flex items-center gap-2 group rounded-md focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
       >
         <Icon className="h-3.5 w-3.5 text-muted-foreground group-hover:text-foreground transition-colors" />
         <span className="text-xs font-medium text-muted-foreground/60 uppercase tracking-wider group-hover:text-muted-foreground transition-colors">
@@ -94,7 +94,17 @@ function Section({ title, icon: Icon, badge, children, defaultOpen = true }: {
         )}
         <ChevronDown className={`h-3 w-3 ml-auto text-muted-foreground/40 transition-transform duration-200 ${open ? '' : '-rotate-90'}`} />
       </button>
-      {open && children}
+      <div
+        className="grid transition-[grid-template-rows,opacity] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]"
+        style={{
+          gridTemplateRows: open ? '1fr' : '0fr',
+          opacity: open ? 1 : 0,
+        }}
+      >
+        <div className="overflow-hidden">
+          {children}
+        </div>
+      </div>
     </div>
   )
 }
@@ -129,7 +139,7 @@ function ContactRow({ contact, onClick, right }: {
   return (
     <button
       onClick={onClick}
-      className="w-full text-left flex items-center gap-2.5 p-2 rounded-lg hover:bg-muted/50 transition-colors"
+      className="w-full text-left flex items-center gap-2.5 p-2 rounded-lg hover:bg-muted/50 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
     >
       <Avatar className="h-7 w-7 shrink-0">
         <AvatarImage src={contact.photo || undefined} />
@@ -237,6 +247,18 @@ export default function ConnectionInsightsPanel({
   )
 
   if (loading) return <LoadingSkeleton />
+
+  if (contacts.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full p-8 text-center">
+        <Users className="h-10 w-10 text-muted-foreground/20 mb-3" />
+        <p className="text-sm font-medium text-muted-foreground">No contacts yet</p>
+        <p className="text-xs text-muted-foreground/60 mt-1">
+          Add contacts to start seeing network insights
+        </p>
+      </div>
+    )
+  }
 
   const maxTypeCount = typeBreakdown.length > 0 ? typeBreakdown[0].count : 1
   const maxStrengthCount = Math.max(...strengthDist.map((s) => s.count), 1)
@@ -354,7 +376,7 @@ export default function ConnectionInsightsPanel({
 
         <Separator className="bg-border" />
 
-        <Section title="Network Hubs" icon={Crown} badge={hubs.length}>
+        <Section title="Network Hubs" icon={Crown} badge={hubs.length || undefined}>
           {hubs.length === 0 ? (
             <p className="text-[11px] text-muted-foreground/40 py-1">No hubs detected</p>
           ) : (
@@ -405,7 +427,7 @@ export default function ConnectionInsightsPanel({
           </Section>
         )}
 
-        <Section title="Clusters" icon={Users} badge={clusters.length} defaultOpen={false}>
+        <Section title="Clusters" icon={Users} badge={clusters.length || undefined} defaultOpen={false}>
           {clusters.length === 0 ? (
             <p className="text-[11px] text-muted-foreground/40 py-1">No clusters detected</p>
           ) : (
@@ -453,7 +475,7 @@ export default function ConnectionInsightsPanel({
 
         <Separator className="bg-border" />
 
-        <Section title="Introduction Suggestions" icon={Handshake} badge={suggestions.length}>
+        <Section title="Introduction Suggestions" icon={Handshake} badge={suggestions.length || undefined}>
           {suggestions.length === 0 ? (
             <p className="text-[11px] text-muted-foreground/40 py-1">No suggestions available</p>
           ) : (
@@ -576,13 +598,21 @@ function ClusterCard({ cluster, onContactClick }: {
           <span className="text-[10px] text-muted-foreground/60">{cluster.sharedCountry}</span>
         </div>
       )}
-      {expanded && (
-        <div className="space-y-0.5 pt-1">
-          {displayContacts.map((c) => (
-            <ContactRow key={c.id} contact={c} onClick={() => onContactClick(c)} />
-          ))}
+      <div
+        className="grid transition-[grid-template-rows,opacity] duration-200 ease-[cubic-bezier(0.32,0.72,0,1)]"
+        style={{
+          gridTemplateRows: expanded ? '1fr' : '0fr',
+          opacity: expanded ? 1 : 0,
+        }}
+      >
+        <div className="overflow-hidden">
+          <div className="space-y-0.5 pt-1">
+            {displayContacts.map((c) => (
+              <ContactRow key={c.id} contact={c} onClick={() => onContactClick(c)} />
+            ))}
+          </div>
         </div>
-      )}
+      </div>
     </div>
   )
 }
@@ -594,7 +624,10 @@ function IntroductionCard({ suggestion, onContactClick }: {
   return (
     <div className={`${GLASS.control} rounded-lg p-2.5 space-y-1.5`}>
       <div className="flex items-center gap-2">
-        <button onClick={() => onContactClick(suggestion.contactA)} className="flex items-center gap-1.5 min-w-0">
+        <button
+          onClick={() => onContactClick(suggestion.contactA)}
+          className="flex items-center gap-1.5 min-w-0 flex-1 rounded-md p-0.5 -m-0.5 hover:bg-muted/50 transition-colors"
+        >
           <Avatar className="h-6 w-6 shrink-0">
             <AvatarImage src={suggestion.contactA.photo || undefined} />
             <AvatarFallback className="text-[9px] bg-muted text-muted-foreground">
@@ -604,7 +637,10 @@ function IntroductionCard({ suggestion, onContactClick }: {
           <span className="text-xs text-foreground font-medium truncate">{suggestion.contactA.name}</span>
         </button>
         <ArrowRightLeft className="h-3 w-3 text-muted-foreground/40 shrink-0" />
-        <button onClick={() => onContactClick(suggestion.contactB)} className="flex items-center gap-1.5 min-w-0">
+        <button
+          onClick={() => onContactClick(suggestion.contactB)}
+          className="flex items-center gap-1.5 min-w-0 flex-1 rounded-md p-0.5 -m-0.5 hover:bg-muted/50 transition-colors"
+        >
           <Avatar className="h-6 w-6 shrink-0">
             <AvatarImage src={suggestion.contactB.photo || undefined} />
             <AvatarFallback className="text-[9px] bg-muted text-muted-foreground">
@@ -633,7 +669,7 @@ function RiskCard({ risk, onContactClick }: {
   return (
     <button
       onClick={() => onContactClick(risk.contact)}
-      className={`w-full text-left p-2.5 rounded-lg border ${style.border} ${style.bg} hover:brightness-110 transition-all`}
+      className={`w-full text-left p-2.5 rounded-lg border ${style.border} ${style.bg} hover:brightness-110 transition-all focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring`}
     >
       <div className="flex items-start gap-2">
         <div className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${style.dot}`} />
@@ -655,29 +691,37 @@ function WeakConnectionCard({ alert, onContactClick }: {
   alert: WeakConnectionAlert
   onContactClick: (contact: Contact) => void
 }) {
-  const issueStyles: Record<string, { icon: string; color: string }> = {
-    no_recent_interaction: { icon: 'clock', color: 'text-red-400' },
-    low_strength: { icon: 'signal', color: 'text-amber-400' },
-    one_directional: { icon: 'arrow', color: 'text-blue-400' },
+  const issueColor: Record<string, string> = {
+    no_recent_interaction: 'text-red-400',
+    low_strength: 'text-amber-400',
+    one_directional: 'text-blue-400',
   }
-  const style = issueStyles[alert.issue] || { icon: 'circle', color: 'text-muted-foreground' }
+  const color = issueColor[alert.issue] || 'text-muted-foreground'
 
   return (
-    <div className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted/30 transition-colors">
-      <button onClick={() => onContactClick(alert.source)} className="flex items-center gap-1.5 min-w-0 flex-1">
-        <Avatar className="h-5 w-5 shrink-0">
-          <AvatarImage src={alert.source.photo || undefined} />
-          <AvatarFallback className="text-[8px] bg-muted text-muted-foreground">
-            {initials(alert.source.name)}
-          </AvatarFallback>
-        </Avatar>
-        <span className="text-[11px] text-foreground truncate">{alert.source.name}</span>
-      </button>
-      <Triangle className={`h-2.5 w-2.5 rotate-90 shrink-0 ${style.color}`} />
-      <button onClick={() => onContactClick(alert.target)} className="flex items-center gap-1.5 min-w-0 flex-1">
-        <span className="text-[11px] text-foreground truncate">{alert.target.name}</span>
-      </button>
-      <span className={`text-[9px] ${style.color} shrink-0 max-w-[80px] truncate`}>{alert.detail}</span>
+    <div className="p-2 rounded-lg hover:bg-muted/30 transition-colors space-y-1.5">
+      <div className="flex items-center gap-2">
+        <button onClick={() => onContactClick(alert.source)} className="flex items-center gap-1.5 min-w-0 flex-1">
+          <Avatar className="h-5 w-5 shrink-0">
+            <AvatarImage src={alert.source.photo || undefined} />
+            <AvatarFallback className="text-[8px] bg-muted text-muted-foreground">
+              {initials(alert.source.name)}
+            </AvatarFallback>
+          </Avatar>
+          <span className="text-[11px] text-foreground truncate">{alert.source.name}</span>
+        </button>
+        <Triangle className={`h-2.5 w-2.5 rotate-90 shrink-0 ${color}`} />
+        <button onClick={() => onContactClick(alert.target)} className="flex items-center gap-1.5 min-w-0 flex-1">
+          <Avatar className="h-5 w-5 shrink-0">
+            <AvatarImage src={alert.target.photo || undefined} />
+            <AvatarFallback className="text-[8px] bg-muted text-muted-foreground">
+              {initials(alert.target.name)}
+            </AvatarFallback>
+          </Avatar>
+          <span className="text-[11px] text-foreground truncate">{alert.target.name}</span>
+        </button>
+      </div>
+      <p className={`text-[9px] ${color} pl-7`}>{alert.detail}</p>
     </div>
   )
 }

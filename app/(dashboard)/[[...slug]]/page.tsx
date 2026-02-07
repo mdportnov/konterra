@@ -539,6 +539,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
       <GlobeControls
         onAddContact={handleAddContact}
         onSettings={handleOpenSettings}
+        onInsights={handleOpenInsights}
         isMobile={isMobile}
         onSwitchToDashboard={() => setMobileView('dashboard')}
       />
