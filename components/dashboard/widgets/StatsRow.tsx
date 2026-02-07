@@ -2,15 +2,17 @@
 
 import { useMemo } from 'react'
 import { Users, Globe, MapPin, Star } from 'lucide-react'
+import { Skeleton } from '@/components/ui/skeleton'
 import { GLASS } from '@/lib/constants/ui'
 import type { Contact } from '@/lib/db/schema'
 
 interface StatsRowProps {
   contacts: Contact[]
   onContactsClick?: () => void
+  loading?: boolean
 }
 
-export default function StatsRow({ contacts, onContactsClick }: StatsRowProps) {
+export default function StatsRow({ contacts, onContactsClick, loading }: StatsRowProps) {
   const stats = useMemo(() => {
     const countries = new Set<string>()
     const cities = new Set<string>()
@@ -40,6 +42,22 @@ export default function StatsRow({ contacts, onContactsClick }: StatsRowProps) {
     { label: 'Cities', value: stats.cities, icon: MapPin },
     { label: 'Avg Rating', value: stats.avgRating, icon: Star },
   ]
+
+  if (loading) {
+    return (
+      <div className="grid grid-cols-2 gap-2">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className={`${GLASS.control} rounded-xl p-3 flex items-center gap-3`}>
+            <Skeleton className="h-8 w-8 rounded-lg" />
+            <div className="space-y-1.5">
+              <Skeleton className="h-5 w-10" />
+              <Skeleton className="h-3 w-14" />
+            </div>
+          </div>
+        ))}
+      </div>
+    )
+  }
 
   return (
     <div className="grid grid-cols-2 gap-2">

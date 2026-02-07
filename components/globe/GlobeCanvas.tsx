@@ -4,7 +4,7 @@ import { useRef, useEffect, useState, useCallback, useMemo } from 'react'
 import dynamic from 'next/dynamic'
 import { feature } from 'topojson-client'
 import { MeshPhongMaterial, Color } from 'three'
-import type { Contact } from '@/lib/db/schema'
+import type { Contact, ContactConnection } from '@/lib/db/schema'
 import { countryNames } from './data/country-centroids'
 import type { DisplayOptions } from '@/types/display'
 import ClusterPopup from './ClusterPopup'
@@ -50,36 +50,52 @@ interface GlobeCanvasProps {
   onCountryClick?: (country: string, event: { x: number; y: number }) => void
   display: DisplayOptions
   visitedCountries?: Set<string>
+  connections?: ContactConnection[]
 }
 
 const EMPTY_ARCS: GlobeArc[] = []
 const EXIT_MS = 150
 
 function ContactDensityLegend({ isDark, visitedCountries }: { isDark: boolean; visitedCountries?: Set<string> }) {
-  const tiers = [
-    { label: '1-2 contacts', color: isDark ? 'rgba(234, 88, 12, 0.35)' : 'rgba(234, 88, 12, 0.25)' },
-    { label: '3-5 contacts', color: isDark ? 'rgba(234, 88, 12, 0.55)' : 'rgba(234, 88, 12, 0.4)' },
-    { label: '5+ contacts', color: isDark ? 'rgba(234, 88, 12, 0.75)' : 'rgba(234, 88, 12, 0.55)' },
-  ]
-
   const hasVisited = visitedCountries && visitedCountries.size > 0
 
   return (
     <div className={`absolute top-4 right-4 ${GLASS.control} rounded-lg px-2.5 py-2 flex flex-col gap-1`}>
-      {tiers.map((t) => (
-        <div key={t.label} className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: t.color }} />
-          <span className="text-[10px] text-muted-foreground">{t.label}</span>
-        </div>
-      ))}
+      <div className="flex items-center gap-1.5">
+        <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? 'rgba(234, 88, 12, 0.35)' : 'rgba(234, 88, 12, 0.25)' }} />
+        <span className="text-[10px] text-muted-foreground">1-2 contacts</span>
+      </div>
+      <div className="flex items-center gap-1.5">
+        <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? 'rgba(234, 88, 12, 0.55)' : 'rgba(234, 88, 12, 0.4)' }} />
+        <span className="text-[10px] text-muted-foreground">3-5 contacts</span>
+      </div>
+      <div className="flex items-center gap-1.5">
+        <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? 'rgba(234, 88, 12, 0.75)' : 'rgba(234, 88, 12, 0.55)' }} />
+        <span className="text-[10px] text-muted-foreground">5+ contacts</span>
+      </div>
       {hasVisited && (
-        <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? 'rgba(20, 184, 166, 0.25)' : 'rgba(20, 184, 166, 0.15)', border: `1.5px solid ${isDark ? 'rgba(20, 184, 166, 0.6)' : 'rgba(20, 184, 166, 0.45)'}` }} />
-          <span className="text-[10px] text-muted-foreground">Visited</span>
-        </div>
+        <>
+          <div className="flex items-center gap-1.5">
+            <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? 'rgba(20, 184, 166, 0.25)' : 'rgba(20, 184, 166, 0.15)', border: `1.5px solid ${isDark ? 'rgba(20, 184, 166, 0.6)' : 'rgba(20, 184, 166, 0.45)'}` }} />
+            <span className="text-[10px] text-muted-foreground">Visited only</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? 'rgba(180, 120, 40, 0.4)' : 'rgba(180, 120, 40, 0.3)', border: `1.5px solid ${isDark ? 'rgba(20, 184, 166, 0.8)' : 'rgba(20, 184, 166, 0.6)'}` }} />
+            <span className="text-[10px] text-muted-foreground">Visited + contacts</span>
+          </div>
+        </>
       )}
     </div>
   )
+}
+
+const CONNECTION_COLORS: Record<string, string> = {
+  knows: 'rgba(251, 146, 60, 0.5)',
+  introduced_by: 'rgba(168, 85, 247, 0.5)',
+  works_with: 'rgba(59, 130, 246, 0.5)',
+  reports_to: 'rgba(239, 68, 68, 0.5)',
+  invested_in: 'rgba(34, 197, 94, 0.5)',
+  referred_by: 'rgba(236, 72, 153, 0.5)',
 }
 
 export default function GlobeCanvas({
@@ -90,6 +106,7 @@ export default function GlobeCanvas({
   onCountryClick,
   display,
   visitedCountries,
+  connections = [],
 }: GlobeCanvasProps) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const globeRef = useRef<any>(null)
@@ -266,33 +283,32 @@ export default function GlobeCanvas({
     const noMainArcs = display.arcMode === 'off'
     if (noMainArcs && !selectedContact) return EMPTY_ARCS
 
-    const valid = contacts.filter((c) => c.lat && c.lng)
+    const contactMap = new Map(contacts.filter((c) => c.lat && c.lng).map((c) => [c.id, c]))
     const result: GlobeArc[] = []
     const selectedId = selectedContact?.id
 
-    for (let i = 0; i < valid.length; i++) {
-      for (let j = i + 1; j < valid.length; j++) {
-        const shared = valid[i].tags?.filter((t) => valid[j].tags?.includes(t)) || []
-        if (shared.length === 0) continue
+    for (const conn of connections) {
+      const source = contactMap.get(conn.sourceContactId)
+      const target = contactMap.get(conn.targetContactId)
+      if (!source || !target) continue
 
-        const involvesSelected = selectedId != null &&
-          (valid[i].id === selectedId || valid[j].id === selectedId)
+      const involvesSelected = selectedId != null &&
+        (source.id === selectedId || target.id === selectedId)
 
-        if (noMainArcs && !involvesSelected) continue
+      if (noMainArcs && !involvesSelected) continue
 
-        result.push({
-          startLat: valid[i].lat!,
-          startLng: valid[i].lng!,
-          endLat: valid[j].lat!,
-          endLng: valid[j].lng!,
-          color: involvesSelected
-            ? 'rgba(56, 189, 248, 0.6)'
-            : 'rgba(251, 146, 60, 0.4)',
-        })
-      }
+      result.push({
+        startLat: source.lat!,
+        startLng: source.lng!,
+        endLat: target.lat!,
+        endLng: target.lng!,
+        color: involvesSelected
+          ? 'rgba(56, 189, 248, 0.6)'
+          : CONNECTION_COLORS[conn.connectionType] || 'rgba(251, 146, 60, 0.4)',
+      })
     }
     return result
-  }, [contacts, display.arcMode, selectedContact])
+  }, [contacts, connections, display.arcMode, selectedContact])
 
   const handlePointClick = useCallback(
     (point: object, event: MouseEvent) => {
@@ -377,6 +393,11 @@ export default function GlobeCanvas({
     if (name) {
       const count = countryContactCount.get(name) || 0
       const isVisited = visitedCountries?.has(name)
+      if (count > 0 && isVisited) {
+        if (count > 5) return isDark ? 'rgba(200, 100, 20, 0.75)' : 'rgba(200, 100, 20, 0.55)'
+        if (count >= 3) return isDark ? 'rgba(200, 100, 20, 0.55)' : 'rgba(200, 100, 20, 0.4)'
+        return isDark ? 'rgba(180, 120, 40, 0.4)' : 'rgba(180, 120, 40, 0.3)'
+      }
       if (count > 5) return isDark ? 'rgba(234, 88, 12, 0.75)' : 'rgba(234, 88, 12, 0.55)'
       if (count >= 3) return isDark ? 'rgba(234, 88, 12, 0.55)' : 'rgba(234, 88, 12, 0.4)'
       if (count >= 1) return isDark ? 'rgba(234, 88, 12, 0.35)' : 'rgba(234, 88, 12, 0.25)'
@@ -396,11 +417,14 @@ export default function GlobeCanvas({
       const name = countryNames[String(f.id)]
       if (name) {
         const isVisited = visitedCountries?.has(name)
+        const hasContacts = (countryContactCount.get(name) || 0) > 0
+        if (isVisited && hasContacts) return isDark ? 'rgba(20, 184, 166, 0.8)' : 'rgba(20, 184, 166, 0.6)'
         if (isVisited) return isDark ? 'rgba(20, 184, 166, 0.6)' : 'rgba(20, 184, 166, 0.45)'
+        if (hasContacts) return isDark ? 'rgba(234, 88, 12, 0.5)' : 'rgba(234, 88, 12, 0.35)'
       }
       return isDark ? 'rgba(40, 70, 130, 0.35)' : 'rgba(100, 130, 180, 0.3)'
     },
-    [isDark, visitedCountries]
+    [isDark, visitedCountries, countryContactCount]
   )
 
   const getPointColor = useCallback((point: object) => (point as GlobePoint).color, [])

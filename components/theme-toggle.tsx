@@ -5,11 +5,19 @@ import { Moon, Sun, Monitor } from 'lucide-react'
 import { useTheme } from '@/components/providers'
 
 export function ThemeToggle() {
-  const { theme, setTheme } = useTheme()
+  const { theme, mounted, setTheme } = useTheme()
 
   const cycle = () => {
     const next = theme === 'light' ? 'dark' : theme === 'dark' ? 'system' : 'light'
     setTheme(next)
+  }
+
+  if (!mounted) {
+    return (
+      <Button variant="secondary" size="icon" className="shadow-lg" disabled>
+        <Sun className="h-4 w-4" />
+      </Button>
+    )
   }
 
   return (

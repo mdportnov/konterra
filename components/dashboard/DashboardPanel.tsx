@@ -7,7 +7,9 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
-import { Search, X, MapPin, Building2, ChevronDown, Plus } from 'lucide-react'
+import { Search, X, MapPin, Building2, ChevronDown, Plus, Globe as GlobeIcon } from 'lucide-react'
+import { Skeleton } from '@/components/ui/skeleton'
+import { toast } from 'sonner'
 import { GLASS, PANEL_WIDTH } from '@/lib/constants/ui'
 import { useHotkey } from '@/hooks/use-hotkey'
 import StatsRow from './widgets/StatsRow'
@@ -15,7 +17,9 @@ import TopCountriesChart from './widgets/TopCountriesChart'
 import ActivityTimeline from './widgets/ActivityTimeline'
 import ReconnectAlerts from './widgets/ReconnectAlerts'
 import NetworkHealth from './widgets/NetworkHealth'
-import type { Contact, Interaction } from '@/lib/db/schema'
+import FavorLedger from './widgets/FavorLedger'
+import { fetchRecentInteractions, fetchAllFavors } from '@/lib/api'
+import type { Contact, Interaction, Favor } from '@/lib/db/schema'
 
 interface DashboardPanelProps {
   contacts: Contact[]
@@ -23,6 +27,9 @@ interface DashboardPanelProps {
   onContactClick: (contact: Contact) => void
   onAddContact: () => void
   onOpenContactsBrowser?: () => void
+  isMobile?: boolean
+  onSwitchToGlobe?: () => void
+  contactsLoading?: boolean
 }
 
 export default function DashboardPanel({
@@ -31,6 +38,9 @@ export default function DashboardPanel({
   onContactClick,
   onAddContact,
   onOpenContactsBrowser,
+  isMobile,
+  onSwitchToGlobe,
+  contactsLoading = false,
 }: DashboardPanelProps) {
   const [search, setSearch] = useState('')
   const [selectedTags, setSelectedTags] = useState<string[]>([])
@@ -38,13 +48,20 @@ export default function DashboardPanel({
   const [tagsExpanded, setTagsExpanded] = useState(false)
   const [countriesExpanded, setCountriesExpanded] = useState(false)
   const [recentInteractions, setRecentInteractions] = useState<(Interaction & { contactName: string })[]>([])
+  const [favors, setFavors] = useState<Favor[]>([])
+  const [interactionsLoading, setInteractionsLoading] = useState(true)
+  const [favorsLoading, setFavorsLoading] = useState(true)
   const searchRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    fetch('/api/interactions')
-      .then((r) => r.json())
+    fetchRecentInteractions()
       .then(setRecentInteractions)
-      .catch(() => {})
+      .catch(() => toast.error('Failed to load interactions'))
+      .finally(() => setInteractionsLoading(false))
+    fetchAllFavors()
+      .then(setFavors)
+      .catch(() => toast.error('Failed to load favors'))
+      .finally(() => setFavorsLoading(false))
   }, [])
 
   useHotkey('k', () => searchRef.current?.focus(), { meta: true })
@@ -94,43 +111,57 @@ export default function DashboardPanel({
 
   return (
     <div
-      className={`h-full w-[55%] shrink-0 ${GLASS.panel} border-r border-border flex flex-col overflow-hidden`}
-      style={{ minWidth: PANEL_WIDTH.dashboard.min, maxWidth: PANEL_WIDTH.dashboard.max }}
+      className={`h-full ${isMobile ? 'w-full' : 'w-[55%]'} shrink-0 ${GLASS.panel} border-r border-border flex flex-col overflow-hidden`}
+      style={isMobile ? undefined : { minWidth: PANEL_WIDTH.dashboard.min, maxWidth: PANEL_WIDTH.dashboard.max }}
     >
-      <ScrollArea className="flex-1">
-        <div className="p-5 space-y-6">
+      <ScrollArea className="flex-1 overflow-hidden">
+        <div className="p-4 md:p-5 space-y-5 md:space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-lg font-semibold text-foreground">Network Globe</h1>
-              <p className="text-xs text-muted-foreground">Your social capital command center</p>
+              <h1 className="text-lg font-semibold text-foreground">Konterra</h1>
+              <p className="text-xs text-muted-foreground">Your network command center</p>
             </div>
-            <Button
-              size="sm"
-              onClick={onAddContact}
-              className="bg-orange-500 hover:bg-orange-600 text-white"
-            >
-              <Plus className="h-4 w-4 mr-1" />
-              Add
-            </Button>
+            <div className="flex items-center gap-2">
+              {isMobile && onSwitchToGlobe && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={onSwitchToGlobe}
+                  className="border-border text-muted-foreground"
+                >
+                  <GlobeIcon className="h-4 w-4 mr-1" />
+                  Globe
+                </Button>
+              )}
+              <Button
+                size="sm"
+                onClick={onAddContact}
+                className="bg-orange-500 hover:bg-orange-600 text-white"
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                Add
+              </Button>
+            </div>
           </div>
 
-          <StatsRow contacts={contacts} onContactsClick={onOpenContactsBrowser} />
+          <StatsRow contacts={contacts} onContactsClick={onOpenContactsBrowser} loading={contactsLoading} />
 
-          <NetworkHealth contacts={contacts} interactions={recentInteractions} />
+          <NetworkHealth contacts={contacts} interactions={recentInteractions} loading={contactsLoading || interactionsLoading} />
 
-          <ReconnectAlerts contacts={contacts} onContactClick={onContactClick} />
+          <ReconnectAlerts contacts={contacts} onContactClick={onContactClick} loading={contactsLoading} />
 
-          <TopCountriesChart contacts={contacts} />
+          <FavorLedger favors={favors} contacts={contacts} onContactClick={onContactClick} loading={contactsLoading || favorsLoading} />
 
-          {recentInteractions.length > 0 && (
-            <ActivityTimeline
-              interactions={recentInteractions}
-              onContactClick={(contactId) => {
-                const c = contacts.find((x) => x.id === contactId)
-                if (c) onContactClick(c)
-              }}
-            />
-          )}
+          <TopCountriesChart contacts={contacts} loading={contactsLoading} />
+
+          <ActivityTimeline
+            interactions={recentInteractions}
+            onContactClick={(contactId) => {
+              const c = contacts.find((x) => x.id === contactId)
+              if (c) onContactClick(c)
+            }}
+            loading={interactionsLoading}
+          />
 
           <Separator className="bg-border" />
 
@@ -160,7 +191,7 @@ export default function DashboardPanel({
                     onClick={() => setTagsExpanded(!tagsExpanded)}
                     className="flex items-center gap-1 text-xs text-muted-foreground mb-1.5 hover:text-foreground/70"
                   >
-                    <ChevronDown className={`h-3 w-3 transition-transform ${tagsExpanded ? '' : '-rotate-90'}`} />
+                    <ChevronDown className={`h-3 w-3 transition-transform duration-200 ${tagsExpanded ? '' : '-rotate-90'}`} />
                     Tags
                   </button>
                   {tagsExpanded && (
@@ -190,7 +221,7 @@ export default function DashboardPanel({
                     onClick={() => setCountriesExpanded(!countriesExpanded)}
                     className="flex items-center gap-1 text-xs text-muted-foreground mb-1.5 hover:text-foreground/70"
                   >
-                    <ChevronDown className={`h-3 w-3 transition-transform ${countriesExpanded ? '' : '-rotate-90'}`} />
+                    <ChevronDown className={`h-3 w-3 transition-transform duration-200 ${countriesExpanded ? '' : '-rotate-90'}`} />
                     Countries
                   </button>
                   {countriesExpanded && (
@@ -228,7 +259,18 @@ export default function DashboardPanel({
             </div>
 
             <div className="space-y-1">
-              {filteredContacts.map((contact) => {
+              {contactsLoading ? Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="p-3 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <Skeleton className="h-9 w-9 rounded-full shrink-0" />
+                    <div className="flex-1 space-y-1.5">
+                      <Skeleton className="h-4 w-28" />
+                      <Skeleton className="h-3 w-20" />
+                      <Skeleton className="h-3 w-32" />
+                    </div>
+                  </div>
+                </div>
+              )) : filteredContacts.map((contact) => {
                 const initials = contact.name
                   .split(' ')
                   .map((n) => n[0])

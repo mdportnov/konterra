@@ -10,6 +10,7 @@ import {
   StickyNote,
   Video,
 } from 'lucide-react'
+import { Skeleton } from '@/components/ui/skeleton'
 import type { Interaction } from '@/lib/db/schema'
 
 const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -50,14 +51,38 @@ function relativeDate(date: Date | string): string {
 interface ActivityTimelineProps {
   interactions: (Interaction & { contactName: string })[]
   onContactClick?: (contactId: string) => void
+  loading?: boolean
 }
 
-export default function ActivityTimeline({ interactions, onContactClick }: ActivityTimelineProps) {
-  if (interactions.length === 0) return null
+export default function ActivityTimeline({ interactions, onContactClick, loading }: ActivityTimelineProps) {
+  if (loading) {
+    return (
+      <div className="space-y-2">
+        <Skeleton className="h-3.5 w-24" />
+        <div className="space-y-1">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="flex items-start gap-2.5 py-1.5">
+              <Skeleton className="h-[26px] w-[26px] rounded-md shrink-0" />
+              <div className="flex-1 space-y-1.5">
+                <div className="flex items-center gap-1.5">
+                  <Skeleton className="h-3.5 w-20" />
+                  <Skeleton className="h-3 w-12" />
+                </div>
+                <Skeleton className="h-3 w-36" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-2">
       <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Recent Activity</span>
+      {interactions.length === 0 ? (
+        <p className="text-[11px] text-muted-foreground/40 py-1">No recent activity</p>
+      ) : (
       <div className="space-y-1">
         {interactions.map((item) => {
           const Icon = ICONS[item.type] || StickyNote
@@ -86,6 +111,7 @@ export default function ActivityTimeline({ interactions, onContactClick }: Activ
           )
         })}
       </div>
+      )}
     </div>
   )
 }

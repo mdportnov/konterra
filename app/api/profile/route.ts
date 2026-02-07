@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
-import { getUser, updateUser } from '@/lib/store'
+import { getUserById, updateUserProfile } from '@/lib/db/queries'
 
 export async function GET() {
   const session = await auth()
@@ -8,10 +8,11 @@ export async function GET() {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const stored = getUser(session.user.id)
+  const user = await getUserById(session.user.id)
   return NextResponse.json({
-    name: stored?.name ?? session.user.name ?? '',
-    image: stored?.image ?? session.user.image ?? null,
+    name: user?.name ?? session.user.name ?? '',
+    email: user?.email ?? session.user.email ?? '',
+    image: user?.image ?? null,
   })
 }
 
@@ -31,6 +32,14 @@ export async function PATCH(req: Request) {
     data.image = typeof body.image === 'string' ? body.image : null
   }
 
-  const updated = updateUser(session.user.id, data)
-  return NextResponse.json(updated)
+  if (Object.keys(data).length === 0) {
+    return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 })
+  }
+
+  const updated = await updateUserProfile(session.user.id, data)
+  if (!updated) {
+    return NextResponse.json({ error: 'User not found' }, { status: 404 })
+  }
+
+  return NextResponse.json({ name: updated.name, image: updated.image })
 }

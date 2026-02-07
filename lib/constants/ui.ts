@@ -22,9 +22,10 @@ export const Z = {
 } as const
 
 export const TRANSITION = {
-  panel: 'transition-transform duration-300 ease-out',
+  panel: 'transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]',
   fade: 'transition-opacity duration-200 ease-out',
   color: 'transition-colors duration-150',
+  layout: 'transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]',
 } as const
 
 export const PANEL_WIDTH = {

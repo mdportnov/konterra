@@ -1,4 +1,4 @@
-import type { Contact, Interaction } from './db/schema'
+import type { Contact, Interaction, Favor } from './db/schema'
 
 export function totalContacts(contacts: Contact[]): number {
   return contacts.length
@@ -118,4 +118,92 @@ export function monthlyTrend(interactions: Interaction[], months: number = 6): {
   }
 
   return result
+}
+
+export function computeRelationshipStrength(
+  contact: Contact,
+  interactions: Interaction[],
+  contactFavors: Favor[]
+): number {
+  if (!contact) return 0
+
+  const now = Date.now()
+  const thirtyDays = 30 * 86400000
+  const sixtyDays = 60 * 86400000
+  const ninetyDays = 90 * 86400000
+
+  const recent30 = interactions.filter((i) => now - new Date(i.date).getTime() < thirtyDays).length
+  const recent60 = interactions.filter((i) => now - new Date(i.date).getTime() < sixtyDays).length
+  const recent90 = interactions.filter((i) => now - new Date(i.date).getTime() < ninetyDays).length
+
+  const frequencyScore = Math.min((recent30 * 3 + recent60 * 2 + recent90) / 15, 1) * 30
+
+  const types = new Set(interactions.map((i) => i.type))
+  const diversityScore = Math.min(types.size / 4, 1) * 15
+
+  const given = contactFavors.filter((f) => f.direction === 'given').length
+  const received = contactFavors.filter((f) => f.direction === 'received').length
+  const favorBalance = Math.min((given + received) / 4, 1) * 15
+
+  const lastInteraction = interactions[0]
+  let recencyScore = 0
+  if (lastInteraction) {
+    const daysSince = (now - new Date(lastInteraction.date).getTime()) / 86400000
+    if (daysSince < 7) recencyScore = 20
+    else if (daysSince < 30) recencyScore = 15
+    else if (daysSince < 60) recencyScore = 10
+    else if (daysSince < 90) recencyScore = 5
+  }
+
+  const ratingScore = ((contact.rating || 0) / 5) * 20
+
+  return Math.round(Math.min(frequencyScore + diversityScore + favorBalance + recencyScore + ratingScore, 100))
+}
+
+export type Trajectory = 'growing' | 'stable' | 'cooling' | 'cold'
+
+export function computeTrajectory(interactions: Interaction[]): Trajectory {
+  const now = Date.now()
+  const thirtyDays = 30 * 86400000
+
+  const recent = interactions.filter((i) => now - new Date(i.date).getTime() < thirtyDays).length
+  const previous = interactions.filter((i) => {
+    const t = now - new Date(i.date).getTime()
+    return t >= thirtyDays && t < thirtyDays * 2
+  }).length
+
+  if (recent === 0 && previous === 0) return 'cold'
+  if (recent > previous) return 'growing'
+  if (recent === previous) return 'stable'
+  return 'cooling'
+}
+
+export function trajectoryIcon(trajectory: Trajectory): string {
+  switch (trajectory) {
+    case 'growing': return '\u2191'
+    case 'stable': return '\u2192'
+    case 'cooling': return '\u2198'
+    case 'cold': return '\u2193'
+  }
+}
+
+export function trajectoryColor(trajectory: Trajectory): string {
+  switch (trajectory) {
+    case 'growing': return 'text-green-500'
+    case 'stable': return 'text-blue-400'
+    case 'cooling': return 'text-amber-500'
+    case 'cold': return 'text-red-400'
+  }
+}
+
+export function upcomingBirthdays(contacts: Contact[], daysAhead: number = 7): Contact[] {
+  const now = new Date()
+  return contacts.filter((c) => {
+    if (!c.birthday) return false
+    const bd = new Date(c.birthday)
+    const thisYear = new Date(now.getFullYear(), bd.getMonth(), bd.getDate())
+    if (thisYear < now) thisYear.setFullYear(thisYear.getFullYear() + 1)
+    const diff = (thisYear.getTime() - now.getTime()) / 86400000
+    return diff >= 0 && diff <= daysAhead
+  })
 }

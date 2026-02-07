@@ -131,3 +131,9 @@
   background-color: #050816;
 }
 
+@layer base {
+  [data-slot="scroll-area-viewport"] > div {
+    transition: height 200ms ease-out;
+  }
+}
+

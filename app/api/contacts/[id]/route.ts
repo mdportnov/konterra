@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
-import { getContact, updateContact, deleteContactById } from '@/lib/store'
+import { getContactById, updateContact, deleteContact } from '@/lib/db/queries'
 import { geocode } from '@/lib/geocoding'
+import { validateContact, safeParseBody } from '@/lib/validation'
 
 function toDateOrNull(v: unknown): Date | null {
   if (!v) return null
@@ -22,7 +23,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   }
 
   const { id } = await params
-  const contact = getContact(id, session.user.id)
+  const contact = await getContactById(id, session.user.id)
 
   if (!contact) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
@@ -38,8 +39,17 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   }
 
   const { id } = await params
-  const body = await req.json()
-  let { lat, lng } = body
+  const body = await safeParseBody(req)
+  if (!body) {
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
+  }
+
+  const validationError = validateContact(body, false)
+  if (validationError) {
+    return NextResponse.json({ error: validationError }, { status: 400 })
+  }
+
+  let { lat, lng } = body as { lat?: number; lng?: number }
 
   if ((body.city || body.country) && (!lat || !lng)) {
     const locationQuery = [body.city, body.country].filter(Boolean).join(', ')
@@ -80,10 +90,25 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (body.metDate !== undefined) updates.metDate = toDateOrNull(body.metDate)
   if (body.nextFollowUp !== undefined) updates.nextFollowUp = toDateOrNull(body.nextFollowUp)
   if (body.lastContactedAt !== undefined) updates.lastContactedAt = toDateOrNull(body.lastContactedAt)
+  if (body.communicationStyle !== undefined) updates.communicationStyle = toStringOrNull(body.communicationStyle)
+  if (body.preferredChannel !== undefined) updates.preferredChannel = toStringOrNull(body.preferredChannel)
+  if (body.responseSpeed !== undefined) updates.responseSpeed = toStringOrNull(body.responseSpeed)
+  if (body.timezone !== undefined) updates.timezone = toStringOrNull(body.timezone)
+  if (body.language !== undefined) updates.language = toStringOrNull(body.language)
+  if (body.birthday !== undefined) updates.birthday = toDateOrNull(body.birthday)
+  if (body.personalInterests !== undefined) updates.personalInterests = Array.isArray(body.personalInterests) ? body.personalInterests : null
+  if (body.professionalGoals !== undefined) updates.professionalGoals = Array.isArray(body.professionalGoals) ? body.professionalGoals : null
+  if (body.painPoints !== undefined) updates.painPoints = Array.isArray(body.painPoints) ? body.painPoints : null
+  if (body.influenceLevel !== undefined) updates.influenceLevel = typeof body.influenceLevel === 'number' ? body.influenceLevel : null
+  if (body.networkReach !== undefined) updates.networkReach = typeof body.networkReach === 'number' ? body.networkReach : null
+  if (body.trustLevel !== undefined) updates.trustLevel = typeof body.trustLevel === 'number' ? body.trustLevel : null
+  if (body.loyaltyIndicator !== undefined) updates.loyaltyIndicator = toStringOrNull(body.loyaltyIndicator)
+  if (body.financialCapacity !== undefined) updates.financialCapacity = toStringOrNull(body.financialCapacity)
+  if (body.motivations !== undefined) updates.motivations = Array.isArray(body.motivations) ? body.motivations : null
   updates.lat = lat ?? null
   updates.lng = lng ?? null
 
-  const contact = updateContact(id, session.user.id, updates)
+  const contact = await updateContact(id, session.user.id, updates)
 
   if (!contact) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
@@ -99,6 +124,6 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
   }
 
   const { id } = await params
-  deleteContactById(id, session.user.id)
+  await deleteContact(id, session.user.id)
   return NextResponse.json({ success: true })
 }

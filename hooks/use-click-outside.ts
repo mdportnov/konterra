@@ -7,16 +7,20 @@ export function useClickOutside(
   enabled = true
 ) {
   const startPos = useRef<{ x: number; y: number } | null>(null)
+  const ready = useRef(false)
 
   useEffect(() => {
+    ready.current = false
     if (!enabled) return
+
+    const timer = requestAnimationFrame(() => { ready.current = true })
 
     const onDown = (e: PointerEvent) => {
       startPos.current = { x: e.clientX, y: e.clientY }
     }
 
     const onUp = (e: PointerEvent) => {
-      if (!startPos.current) return
+      if (!ready.current || !startPos.current) return
       const dx = e.clientX - startPos.current.x
       const dy = e.clientY - startPos.current.y
       const wasDrag = Math.sqrt(dx * dx + dy * dy) > 5
@@ -30,6 +34,7 @@ export function useClickOutside(
     document.addEventListener('pointerdown', onDown)
     document.addEventListener('pointerup', onUp)
     return () => {
+      cancelAnimationFrame(timer)
       document.removeEventListener('pointerdown', onDown)
       document.removeEventListener('pointerup', onUp)
     }

@@ -28,11 +28,11 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background to-muted">
+    <div className="min-h-dvh flex items-center justify-center bg-gradient-to-b from-background to-muted">
       <Card className="w-[400px]">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Network Globe</CardTitle>
-          <CardDescription>Enter your email to continue</CardDescription>
+          <CardTitle className="text-2xl">Konterra</CardTitle>
+          <CardDescription>Your personal network command center</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">

@@ -120,7 +120,7 @@ export default function GlobeFilters({
       style={{ zIndex: Z.controls }}
     >
       {open ? (
-        <div className={`${GLASS.panel} rounded-2xl p-4 w-[240px] animate-in fade-in slide-in-from-top-2 duration-200`}>
+        <div className={`${GLASS.panel} rounded-2xl p-4 w-[calc(100vw-2rem)] sm:w-[240px] max-w-[280px] max-h-[calc(100dvh-6rem)] sm:max-h-[calc(100dvh-2rem)] overflow-y-auto transition-[opacity,transform] duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] animate-in fade-in slide-in-from-top-2`}>
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
               Filters

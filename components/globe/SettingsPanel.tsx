@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { signOut } from 'next-auth/react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -11,7 +11,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { ThemeToggle } from '@/components/theme-toggle'
 import { Checkbox } from '@/components/ui/checkbox'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { LogOut, Loader2, Pencil, Check, X, Search } from 'lucide-react'
+import { LogOut, Loader2, Pencil, Check, X, Search, Upload } from 'lucide-react'
 import { toast } from 'sonner'
 import GlobePanel from '@/components/globe/GlobePanel'
 import { PANEL_WIDTH } from '@/lib/constants/ui'
@@ -25,6 +25,7 @@ interface SettingsPanelProps {
   onDisplayChange: (opts: DisplayOptions) => void
   visitedCountries?: Set<string>
   onToggleVisitedCountry?: (country: string) => void
+  onOpenImport?: () => void
 }
 
 const allCountryNames = Array.from(new Set(Object.values(countryNames))).sort()
@@ -35,22 +36,24 @@ interface SessionUser {
   image?: string | null
 }
 
-export default function SettingsPanel({ open, onClose, displayOptions, onDisplayChange, visitedCountries, onToggleVisitedCountry }: SettingsPanelProps) {
+export default function SettingsPanel({ open, onClose, displayOptions, onDisplayChange, visitedCountries, onToggleVisitedCountry, onOpenImport }: SettingsPanelProps) {
   const [user, setUser] = useState<SessionUser | null>(null)
   const [signingOut, setSigningOut] = useState(false)
   const [editingName, setEditingName] = useState(false)
   const [nameValue, setNameValue] = useState('')
   const [countrySearch, setCountrySearch] = useState('')
+  const fetched = useRef(false)
 
   const filteredCountries = countrySearch
     ? allCountryNames.filter((c) => c.toLowerCase().includes(countrySearch.toLowerCase()))
     : allCountryNames
 
   useEffect(() => {
-    if (open) {
-      fetch('/api/auth/session')
+    if (open && !fetched.current) {
+      fetched.current = true
+      fetch('/api/profile')
         .then((r) => r.json())
-        .then((s) => setUser(s?.user || null))
+        .then((data) => setUser(data))
         .catch(() => {})
     }
   }, [open])
@@ -187,6 +190,20 @@ export default function SettingsPanel({ open, onClose, displayOptions, onDisplay
               </ToggleGroupItem>
             </ToggleGroup>
           </div>
+        </div>
+
+        <Separator className="bg-border" />
+
+        <div className="space-y-3">
+          <span className="text-xs font-medium text-muted-foreground/60 uppercase tracking-wider">Data</span>
+          <Button
+            variant="outline"
+            className="w-full justify-start"
+            onClick={onOpenImport}
+          >
+            <Upload className="mr-2 h-4 w-4" />
+            Import Contacts
+          </Button>
         </div>
 
         <Separator className="bg-border" />

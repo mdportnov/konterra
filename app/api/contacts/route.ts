@@ -1,16 +1,21 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
-import { getContacts, createContact } from '@/lib/store'
+import { getContactsByUserId, createContact } from '@/lib/db/queries'
 import { geocode } from '@/lib/geocoding'
+import { validateContact, safeParseBody } from '@/lib/validation'
 
-export async function GET() {
+export async function GET(req: Request) {
   const session = await auth()
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const contacts = getContacts(session.user.id)
-  return NextResponse.json(contacts)
+  const { searchParams } = new URL(req.url)
+  const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10) || 1)
+  const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '50', 10) || 50))
+
+  const result = await getContactsByUserId(session.user.id, page, limit)
+  return NextResponse.json(result)
 }
 
 function toDateOrNull(v: unknown): Date | null {
@@ -31,8 +36,17 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const body = await req.json()
-  let { lat, lng } = body
+  const body = await safeParseBody(req)
+  if (!body) {
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
+  }
+
+  const validationError = validateContact(body)
+  if (validationError) {
+    return NextResponse.json({ error: validationError }, { status: 400 })
+  }
+
+  let { lat, lng } = body as { lat?: number; lng?: number }
 
   if (!lat || !lng) {
     const locationQuery = [body.city, body.country].filter(Boolean).join(', ')
@@ -49,11 +63,11 @@ export async function POST(req: Request) {
     }
   }
 
-  const tags = Array.isArray(body.tags) ? body.tags : null
+  const tags: string[] | null = Array.isArray(body.tags) ? body.tags as string[] : null
 
-  const contact = createContact({
+  const contact = await createContact({
     userId: session.user.id,
-    name: body.name,
+    name: body.name as string,
     photo: toStringOrNull(body.photo),
     company: toStringOrNull(body.company),
     role: toStringOrNull(body.role),
@@ -72,10 +86,10 @@ export async function POST(req: Request) {
     tags,
     notes: toStringOrNull(body.notes),
     meta: body.meta ?? null,
-    secondaryLocations: body.secondaryLocations ?? null,
+    secondaryLocations: Array.isArray(body.secondaryLocations) ? body.secondaryLocations as string[] : null,
     rating: typeof body.rating === 'number' ? body.rating : null,
-    gender: toStringOrNull(body.gender),
-    relationshipType: toStringOrNull(body.relationshipType),
+    gender: toStringOrNull(body.gender) as 'male' | 'female' | null,
+    relationshipType: toStringOrNull(body.relationshipType) as typeof import('@/lib/db/schema').contacts.$inferInsert.relationshipType,
     metAt: toStringOrNull(body.metAt),
     metDate: toDateOrNull(body.metDate),
     lastContactedAt: toDateOrNull(body.lastContactedAt),

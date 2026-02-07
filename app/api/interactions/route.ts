@@ -1,10 +1,17 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
-import { getRecentInteractions } from '@/lib/store'
+import { getRecentInteractions } from '@/lib/db/queries'
 
-export async function GET() {
+export async function GET(req: Request) {
   const session = await auth()
-  const userId = session?.user?.email || 'demo@example.com'
-  const items = getRecentInteractions(userId, 15)
-  return NextResponse.json(items)
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const { searchParams } = new URL(req.url)
+  const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '15', 10) || 15))
+  const offset = Math.max(0, parseInt(searchParams.get('offset') || '0', 10) || 0)
+
+  const result = await getRecentInteractions(session.user.id, limit, offset)
+  return NextResponse.json(result)
 }

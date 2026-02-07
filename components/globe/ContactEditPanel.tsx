@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -25,6 +25,9 @@ import {
   Info,
   Star,
   ArrowLeft,
+  Brain,
+  Target,
+  ChevronRight,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { StarRating } from '@/components/ui/star-rating'
@@ -37,6 +40,12 @@ import { PANEL_WIDTH } from '@/lib/constants/ui'
 import type { Contact } from '@/lib/db/schema'
 
 const RELATIONSHIP_TYPES = ['friend', 'business', 'investor', 'conference', 'mentor', 'colleague', 'family', 'dating'] as const
+
+const COMMUNICATION_STYLES = ['direct', 'diplomatic', 'analytical', 'expressive'] as const
+const PREFERRED_CHANNELS = ['email', 'call', 'text', 'in-person', 'linkedin'] as const
+const RESPONSE_SPEEDS = ['immediate', 'same-day', 'slow', 'unreliable'] as const
+const LOYALTY_INDICATORS = ['proven', 'likely', 'neutral', 'unreliable', 'unknown'] as const
+const FINANCIAL_CAPACITIES = ['bootstrapper', 'funded', 'wealthy', 'institutional'] as const
 
 interface ContactEditPanelProps {
   contact: Contact | null
@@ -79,6 +88,21 @@ type FormData = {
   metAt: string
   metDate: string
   nextFollowUp: string
+  timezone: string
+  language: string
+  birthday: string
+  personalInterests: string
+  professionalGoals: string
+  communicationStyle: string
+  preferredChannel: string
+  responseSpeed: string
+  motivations: string
+  painPoints: string
+  influenceLevel: number
+  networkReach: number
+  trustLevel: number
+  loyaltyIndicator: string
+  financialCapacity: string
 }
 
 function toDateStr(d: Date | string | null | undefined): string {
@@ -111,12 +135,41 @@ function buildFormData(contact: Contact | null): FormData {
     metAt: contact?.metAt || '',
     metDate: toDateStr(contact?.metDate),
     nextFollowUp: toDateStr(contact?.nextFollowUp),
+    timezone: contact?.timezone || '',
+    language: contact?.language || '',
+    birthday: toDateStr(contact?.birthday),
+    personalInterests: contact?.personalInterests?.join(', ') || '',
+    professionalGoals: contact?.professionalGoals?.join(', ') || '',
+    communicationStyle: contact?.communicationStyle || '',
+    preferredChannel: contact?.preferredChannel || '',
+    responseSpeed: contact?.responseSpeed || '',
+    motivations: contact?.motivations?.join(', ') || '',
+    painPoints: contact?.painPoints?.join(', ') || '',
+    influenceLevel: contact?.influenceLevel || 0,
+    networkReach: contact?.networkReach || 0,
+    trustLevel: contact?.trustLevel || 0,
+    loyaltyIndicator: contact?.loyaltyIndicator || '',
+    financialCapacity: contact?.financialCapacity || '',
   }
+}
+
+function splitCommaSeparated(value: string): string[] | undefined {
+  const arr = value.split(',').map((s) => s.trim()).filter(Boolean)
+  return arr.length > 0 ? arr : undefined
 }
 
 export default function ContactEditPanel({ contact, open, onSaved, onCancel }: ContactEditPanelProps) {
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState<FormData>(buildFormData(contact))
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+    profile: false,
+    psychology: false,
+    strategic: false,
+  })
+
+  const toggleSection = useCallback((key: string) => {
+    setExpandedSections((prev) => ({ ...prev, [key]: !prev[key] }))
+  }, [])
 
   useEffect(() => {
     if (open) setFormData(buildFormData(contact))
@@ -126,9 +179,29 @@ export default function ContactEditPanel({ contact, open, onSaved, onCancel }: C
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }))
   }
 
+  const handleSelectChange = (name: string, value: string) => {
+    setFormData((prev) => ({ ...prev, [name]: value }))
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
+
+    const errors: string[] = []
+    if (!formData.name.trim()) errors.push('Name is required')
+    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) errors.push('Invalid email format')
+    if (formData.phone && !/^\+?[\d\s\-().]{7,20}$/.test(formData.phone)) errors.push('Invalid phone format')
+    const urlFields = ['linkedin', 'twitter', 'instagram', 'github', 'website', 'photo'] as const
+    for (const field of urlFields) {
+      const val = formData[field]
+      if (val && !/^https?:\/\/.+/.test(val)) errors.push(`${field} must be a valid URL`)
+    }
+    if (formData.telegram && formData.telegram !== '' && !/^@?\w{3,32}$/.test(formData.telegram.replace('https://t.me/', ''))) errors.push('Invalid Telegram username')
+    if (errors.length > 0) {
+      errors.forEach(e => toast.error(e))
+      setLoading(false)
+      return
+    }
 
     try {
       const tags = formData.tags
@@ -145,6 +218,21 @@ export default function ContactEditPanel({ contact, open, onSaved, onCancel }: C
         metAt: formData.metAt || null,
         metDate: formData.metDate || null,
         nextFollowUp: formData.nextFollowUp || null,
+        timezone: formData.timezone || null,
+        language: formData.language || null,
+        birthday: formData.birthday || null,
+        personalInterests: splitCommaSeparated(formData.personalInterests),
+        professionalGoals: splitCommaSeparated(formData.professionalGoals),
+        communicationStyle: formData.communicationStyle || null,
+        preferredChannel: formData.preferredChannel || null,
+        responseSpeed: formData.responseSpeed || null,
+        motivations: splitCommaSeparated(formData.motivations),
+        painPoints: splitCommaSeparated(formData.painPoints),
+        influenceLevel: formData.influenceLevel || null,
+        networkReach: formData.networkReach || null,
+        trustLevel: formData.trustLevel || null,
+        loyaltyIndicator: formData.loyaltyIndicator || null,
+        financialCapacity: formData.financialCapacity || null,
       }
       const isEdit = !!contact
       const url = isEdit ? `/api/contacts/${contact.id}` : '/api/contacts'
@@ -206,11 +294,11 @@ export default function ContactEditPanel({ contact, open, onSaved, onCancel }: C
         <form id="contact-edit-panel-form" onSubmit={handleSubmit} className="px-4 py-3 space-y-5">
           <div className="space-y-3">
             <SectionLabel icon={User} text="Basic Info" />
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <FieldRow label="Name *" name="name" value={formData.name} onChange={handleChange} required />
               <FieldRow label="Photo URL" name="photo" value={formData.photo} onChange={handleChange} placeholder="https://..." />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <FieldRow label="Company" name="company" value={formData.company} onChange={handleChange} />
               <FieldRow label="Role" name="role" value={formData.role} onChange={handleChange} />
             </div>
@@ -220,7 +308,7 @@ export default function ContactEditPanel({ contact, open, onSaved, onCancel }: C
 
           <div className="space-y-3">
             <SectionLabel icon={MapPin} text="Location" />
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <FieldRow label="City" name="city" value={formData.city} onChange={handleChange} />
               <FieldRow label="Country" name="country" value={formData.country} onChange={handleChange} />
             </div>
@@ -230,7 +318,7 @@ export default function ContactEditPanel({ contact, open, onSaved, onCancel }: C
 
           <div className="space-y-3">
             <SectionLabel icon={Handshake} text="Relationship" />
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <div className="flex items-center gap-1">
                   <Label className="text-xs text-muted-foreground">Rating</Label>
@@ -281,15 +369,15 @@ export default function ContactEditPanel({ contact, open, onSaved, onCancel }: C
                 />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label htmlFor="relationshipType" className="text-xs text-muted-foreground">Type</Label>
                 <select
                   id="relationshipType"
                   name="relationshipType"
                   value={formData.relationshipType}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, relationshipType: e.target.value }))}
-                  className="flex h-8 w-full rounded-md border border-input bg-muted/50 px-3 py-1 text-sm text-foreground"
+                  onChange={(e) => handleSelectChange('relationshipType', e.target.value)}
+                  className="flex h-8 w-full rounded-md border border-input bg-muted/50 px-3 py-1 text-sm text-foreground cursor-pointer"
                 >
                   <option value="">Select...</option>
                   {RELATIONSHIP_TYPES.map((t) => (
@@ -299,7 +387,7 @@ export default function ContactEditPanel({ contact, open, onSaved, onCancel }: C
               </div>
               <FieldRow label="Met At" name="metAt" value={formData.metAt} onChange={handleChange} placeholder="ETHDenver 2024" />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <FieldRow label="Met Date" name="metDate" value={formData.metDate} onChange={handleChange} type="date" />
               <FieldRow label="Next Follow-up" name="nextFollowUp" value={formData.nextFollowUp} onChange={handleChange} type="date" />
             </div>
@@ -309,7 +397,7 @@ export default function ContactEditPanel({ contact, open, onSaved, onCancel }: C
 
           <div className="space-y-3">
             <SectionLabel icon={Globe} text="Social & Contact" />
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {socialFields.map((f) => (
                 <div key={f.key} className="space-y-1.5">
                   <Label htmlFor={f.key} className="text-xs text-muted-foreground flex items-center gap-1.5">
@@ -353,6 +441,152 @@ export default function ContactEditPanel({ contact, open, onSaved, onCancel }: C
               className="bg-muted/50 border-input text-foreground placeholder:text-muted-foreground/40 text-sm resize-none focus-visible:ring-orange-500/30 focus-visible:border-orange-500/50"
             />
           </div>
+
+          <Separator className="bg-border" />
+
+          <CollapsibleSection
+            title="Profile"
+            icon={User}
+            expanded={expandedSections.profile}
+            onToggle={() => toggleSection('profile')}
+          >
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <FieldRow label="Timezone" name="timezone" value={formData.timezone} onChange={handleChange} placeholder="UTC+2, EST, etc." />
+                <FieldRow label="Language" name="language" value={formData.language} onChange={handleChange} placeholder="English" />
+              </div>
+              <FieldRow label="Birthday" name="birthday" value={formData.birthday} onChange={handleChange} type="date" />
+              <div className="space-y-1.5">
+                <Label htmlFor="personalInterests" className="text-xs text-muted-foreground">Personal Interests</Label>
+                <Input
+                  id="personalInterests"
+                  name="personalInterests"
+                  value={formData.personalInterests}
+                  onChange={handleChange}
+                  placeholder="surfing, chess, cooking"
+                  className="bg-muted/50 border-input text-foreground placeholder:text-muted-foreground/40 h-8 text-sm focus-visible:ring-orange-500/30 focus-visible:border-orange-500/50"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="professionalGoals" className="text-xs text-muted-foreground">Professional Goals</Label>
+                <Input
+                  id="professionalGoals"
+                  name="professionalGoals"
+                  value={formData.professionalGoals}
+                  onChange={handleChange}
+                  placeholder="raise Series A, scale team"
+                  className="bg-muted/50 border-input text-foreground placeholder:text-muted-foreground/40 h-8 text-sm focus-visible:ring-orange-500/30 focus-visible:border-orange-500/50"
+                />
+              </div>
+            </div>
+          </CollapsibleSection>
+
+          <CollapsibleSection
+            title="Psychology"
+            icon={Brain}
+            expanded={expandedSections.psychology}
+            onToggle={() => toggleSection('psychology')}
+          >
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <SelectField
+                  label="Communication Style"
+                  name="communicationStyle"
+                  value={formData.communicationStyle}
+                  onChange={handleSelectChange}
+                  options={COMMUNICATION_STYLES}
+                />
+                <SelectField
+                  label="Preferred Channel"
+                  name="preferredChannel"
+                  value={formData.preferredChannel}
+                  onChange={handleSelectChange}
+                  options={PREFERRED_CHANNELS}
+                />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <SelectField
+                  label="Response Speed"
+                  name="responseSpeed"
+                  value={formData.responseSpeed}
+                  onChange={handleSelectChange}
+                  options={RESPONSE_SPEEDS}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="motivations" className="text-xs text-muted-foreground">Motivations</Label>
+                <Input
+                  id="motivations"
+                  name="motivations"
+                  value={formData.motivations}
+                  onChange={handleChange}
+                  placeholder="wealth, impact, recognition"
+                  className="bg-muted/50 border-input text-foreground placeholder:text-muted-foreground/40 h-8 text-sm focus-visible:ring-orange-500/30 focus-visible:border-orange-500/50"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="painPoints" className="text-xs text-muted-foreground">Pain Points</Label>
+                <Input
+                  id="painPoints"
+                  name="painPoints"
+                  value={formData.painPoints}
+                  onChange={handleChange}
+                  placeholder="hiring, fundraising, burnout"
+                  className="bg-muted/50 border-input text-foreground placeholder:text-muted-foreground/40 h-8 text-sm focus-visible:ring-orange-500/30 focus-visible:border-orange-500/50"
+                />
+              </div>
+            </div>
+          </CollapsibleSection>
+
+          <CollapsibleSection
+            title="Strategic Assessment"
+            icon={Target}
+            expanded={expandedSections.strategic}
+            onToggle={() => toggleSection('strategic')}
+          >
+            <div className="space-y-3">
+              <RangeField
+                label="Influence Level"
+                name="influenceLevel"
+                value={formData.influenceLevel}
+                min={0}
+                max={10}
+                onChange={(v) => setFormData((prev) => ({ ...prev, influenceLevel: v }))}
+              />
+              <RangeField
+                label="Network Reach"
+                name="networkReach"
+                value={formData.networkReach}
+                min={0}
+                max={10}
+                onChange={(v) => setFormData((prev) => ({ ...prev, networkReach: v }))}
+              />
+              <RangeField
+                label="Trust Level"
+                name="trustLevel"
+                value={formData.trustLevel}
+                min={0}
+                max={5}
+                onChange={(v) => setFormData((prev) => ({ ...prev, trustLevel: v }))}
+              />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <SelectField
+                  label="Loyalty Indicator"
+                  name="loyaltyIndicator"
+                  value={formData.loyaltyIndicator}
+                  onChange={handleSelectChange}
+                  options={LOYALTY_INDICATORS}
+                />
+                <SelectField
+                  label="Financial Capacity"
+                  name="financialCapacity"
+                  value={formData.financialCapacity}
+                  onChange={handleSelectChange}
+                  options={FINANCIAL_CAPACITIES}
+                />
+              </div>
+            </div>
+          </CollapsibleSection>
         </form>
       </ScrollArea>
 
@@ -418,6 +652,112 @@ function FieldRow({
         required={required}
         className="bg-muted/50 border-input text-foreground placeholder:text-muted-foreground/40 h-8 text-sm focus-visible:ring-orange-500/30 focus-visible:border-orange-500/50"
       />
+    </div>
+  )
+}
+
+function SelectField({
+  label,
+  name,
+  value,
+  onChange,
+  options,
+}: {
+  label: string
+  name: string
+  value: string
+  onChange: (name: string, value: string) => void
+  options: readonly string[]
+}) {
+  return (
+    <div className="space-y-1.5">
+      <Label htmlFor={name} className="text-xs text-muted-foreground">{label}</Label>
+      <select
+        id={name}
+        name={name}
+        value={value}
+        onChange={(e) => onChange(name, e.target.value)}
+        className="flex h-8 w-full rounded-md border border-input bg-muted/50 px-3 py-1 text-sm text-foreground cursor-pointer"
+      >
+        <option value="">Select...</option>
+        {options.map((opt) => (
+          <option key={opt} value={opt} className="bg-popover text-popover-foreground">{opt}</option>
+        ))}
+      </select>
+    </div>
+  )
+}
+
+function RangeField({
+  label,
+  name,
+  value,
+  min,
+  max,
+  onChange,
+}: {
+  label: string
+  name: string
+  value: number
+  min: number
+  max: number
+  onChange: (value: number) => void
+}) {
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between">
+        <Label htmlFor={name} className="text-xs text-muted-foreground">{label}</Label>
+        <span className="text-xs text-muted-foreground tabular-nums">{value}/{max}</span>
+      </div>
+      <input
+        id={name}
+        name={name}
+        type="range"
+        min={min}
+        max={max}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="w-full h-2 rounded-full appearance-none cursor-pointer bg-muted accent-orange-500"
+      />
+    </div>
+  )
+}
+
+function CollapsibleSection({
+  title,
+  icon: Icon,
+  expanded,
+  onToggle,
+  children,
+}: {
+  title: string
+  icon: React.ComponentType<{ className?: string }>
+  expanded: boolean
+  onToggle: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={onToggle}
+        className="w-full flex items-center gap-2 py-1 hover:opacity-80 transition-opacity cursor-pointer"
+      >
+        <ChevronRight className={`h-3 w-3 text-muted-foreground/60 transition-transform duration-200 ${expanded ? 'rotate-90' : ''}`} />
+        <Icon className="h-3.5 w-3.5 text-muted-foreground/60" />
+        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{title}</span>
+      </button>
+      <div
+        className="grid transition-[grid-template-rows,opacity] duration-200 ease-[cubic-bezier(0.32,0.72,0,1)]"
+        style={{
+          gridTemplateRows: expanded ? '1fr' : '0fr',
+          opacity: expanded ? 1 : 0,
+        }}
+      >
+        <div className="overflow-hidden">
+          <div className="mt-2">{children}</div>
+        </div>
+      </div>
     </div>
   )
 }

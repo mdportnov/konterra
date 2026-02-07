@@ -29,7 +29,7 @@ export default function CountryPopup({ country, contacts, x, y, open, onSelect, 
   useClickOutside(ref, onClose, open)
   useHotkey('Escape', onClose, { enabled: open })
 
-  const isEmpty = contacts.length === 0 && !visited
+  const hasContacts = contacts.length > 0
 
   const grouped = useMemo(() => {
     const map = new Map<string, Contact[]>()
@@ -44,8 +44,18 @@ export default function CountryPopup({ country, contacts, x, y, open, onSelect, 
 
   const pos = useMemo(() => {
     const pad = 16
-    const w = isEmpty ? 220 : 320
-    const estH = isEmpty ? 140 : 450
+    const isMobileView = typeof window !== 'undefined' && window.innerWidth < 640
+    const w = isMobileView
+      ? Math.min(window.innerWidth - pad * 2, 320)
+      : 280
+    const estH = hasContacts ? 450 : 180
+
+    if (isMobileView) {
+      const left = (window.innerWidth - w) / 2
+      const top = Math.max(pad, (window.innerHeight - Math.min(estH, window.innerHeight - pad * 2)) / 2)
+      return { left, top, w }
+    }
+
     let left = x - w / 2
     let top = y + 12
 
@@ -57,7 +67,7 @@ export default function CountryPopup({ country, contacts, x, y, open, onSelect, 
     }
 
     return { left, top, w }
-  }, [x, y, isEmpty])
+  }, [x, y, hasContacts])
 
   const handleSelect = useCallback((c: Contact) => {
     onSelect(c)
@@ -71,58 +81,35 @@ export default function CountryPopup({ country, contacts, x, y, open, onSelect, 
         left: pos.left,
         top: pos.top,
         width: pos.w,
-        maxHeight: isEmpty ? undefined : 450,
+        maxHeight: typeof window !== 'undefined' && window.innerWidth < 640 ? '80dvh' : 450,
         zIndex: Z.overlay,
         opacity: open ? 1 : 0,
         transform: open ? 'scale(1) translateY(0)' : 'scale(0.95) translateY(4px)',
-        transition: 'opacity 150ms ease-out, transform 150ms ease-out',
+        transition: 'opacity 200ms cubic-bezier(0.32,0.72,0,1), transform 200ms cubic-bezier(0.32,0.72,0,1)',
         pointerEvents: open ? 'auto' : 'none',
       }}
     >
       <div className="flex items-center justify-between px-4 py-3 border-b border-border">
         <div className="flex items-center gap-2 min-w-0">
           <span className="text-sm font-medium text-foreground truncate">{country}</span>
-          {contacts.length > 0 && (
+          {hasContacts && (
             <span className="text-xs text-muted-foreground/60 shrink-0">{contacts.length} contact{contacts.length === 1 ? '' : 's'}</span>
           )}
         </div>
-        <button onClick={onClose} className="text-muted-foreground/60 hover:text-muted-foreground shrink-0 ml-2">
+        <button onClick={onClose} className="text-muted-foreground/60 hover:text-muted-foreground shrink-0 ml-2 cursor-pointer">
           <X className="h-3.5 w-3.5" />
         </button>
       </div>
 
-      {isEmpty && (
-        <div className="p-3 space-y-1.5">
-          {onToggleVisited && (
-            <button
-              onClick={onToggleVisited}
-              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-left hover:bg-accent transition-colors"
-            >
-              <MapPinPlus className="h-4 w-4 text-teal-500 shrink-0" />
-              <span className="text-xs text-foreground">Mark as visited</span>
-            </button>
-          )}
-          {onAddContact && (
-            <button
-              onClick={onAddContact}
-              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-left hover:bg-accent transition-colors"
-            >
-              <UserPlus className="h-4 w-4 text-orange-400 shrink-0" />
-              <span className="text-xs text-foreground">Add contact here</span>
-            </button>
-          )}
-        </div>
-      )}
-
-      {!isEmpty && onToggleVisited && (
-        <div className="flex items-center justify-between px-4 py-2.5 border-b border-border">
-          <span className="text-xs text-muted-foreground">Visited</span>
+      {onToggleVisited && (
+        <div className="flex items-center justify-between px-4 py-2.5 border-b border-border transition-colors duration-200">
+          <span className="text-xs text-muted-foreground">{visited ? 'Visited' : 'Mark as visited'}</span>
           <Switch checked={!!visited} onCheckedChange={onToggleVisited} />
         </div>
       )}
 
-      {!isEmpty && contacts.length > 0 && (
-        <ScrollArea className="max-h-[340px]">
+      {hasContacts && (
+        <ScrollArea className="max-h-[280px]">
           <div className="py-1">
             {grouped.map(([city, cityContacts], groupIdx) => (
               <div key={city}>
@@ -142,7 +129,7 @@ export default function CountryPopup({ country, contacts, x, y, open, onSelect, 
                     <button
                       key={c.id}
                       onClick={() => handleSelect(c)}
-                      className="w-full flex items-center gap-3 px-4 py-2 hover:bg-accent transition-colors text-left"
+                      className="w-full flex items-center gap-3 px-4 py-2 hover:bg-accent transition-colors text-left cursor-pointer"
                     >
                       <Avatar className="h-8 w-8 border border-border shrink-0">
                         <AvatarImage src={c.photo || undefined} />
@@ -167,26 +154,14 @@ export default function CountryPopup({ country, contacts, x, y, open, onSelect, 
         </ScrollArea>
       )}
 
-      {!isEmpty && onAddContact && (
-        <div className="border-t border-border px-3 py-2">
+      {onAddContact && (
+        <div className={`${hasContacts ? 'border-t border-border' : ''} px-3 py-2`}>
           <button
             onClick={onAddContact}
-            className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+            className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-accent transition-colors cursor-pointer"
           >
             <UserPlus className="h-3.5 w-3.5" />
             Add contact
-          </button>
-        </div>
-      )}
-
-      {!isEmpty && contacts.length === 0 && visited && onAddContact && (
-        <div className="p-3">
-          <button
-            onClick={onAddContact}
-            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-left hover:bg-accent transition-colors"
-          >
-            <UserPlus className="h-4 w-4 text-orange-400 shrink-0" />
-            <span className="text-xs text-foreground">Add contact here</span>
           </button>
         </div>
       )}

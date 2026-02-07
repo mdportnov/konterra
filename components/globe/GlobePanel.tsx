@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils'
 import { GLASS, Z, TRANSITION } from '@/lib/constants/ui'
 import { useClickOutside } from '@/hooks/use-click-outside'
 import { useHotkey } from '@/hooks/use-hotkey'
+import { useIsMobile } from '@/hooks/use-mobile'
 
 interface GlobePanelProps {
   open: boolean
@@ -28,6 +29,7 @@ export default function GlobePanel({
   children,
 }: GlobePanelProps) {
   const panelRef = useRef<HTMLDivElement>(null)
+  const isMobile = useIsMobile()
 
   const handleClose = useCallback(() => {
     onClose?.()
@@ -41,17 +43,19 @@ export default function GlobePanel({
   const translateClosed = side === 'left' ? '-translate-x-full' : 'translate-x-full'
   const borderSide = side === 'left' ? 'border-r' : 'border-l'
 
+  const panelWidth = isMobile ? '100vw' : width
+
   return (
     <div
       ref={panelRef}
       className={cn(
         'fixed top-0 h-full',
         side === 'left' ? 'left-0' : 'right-0',
-        TRANSITION.panel,
-        open ? 'translate-x-0' : translateClosed,
+        'transition-[transform,opacity] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]',
+        open ? 'translate-x-0 opacity-100' : `${translateClosed} opacity-0`,
         className
       )}
-      style={{ width, zIndex: z }}
+      style={{ width: panelWidth, zIndex: z, pointerEvents: open ? 'auto' : 'none' }}
     >
       <div
         className={cn(

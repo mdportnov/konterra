@@ -2,12 +2,14 @@
 
 import { useMemo } from 'react'
 import { networkHealthScore, overdueFollowUps } from '@/lib/metrics'
+import { Skeleton } from '@/components/ui/skeleton'
 import { GLASS } from '@/lib/constants/ui'
 import type { Contact, Interaction } from '@/lib/db/schema'
 
 interface NetworkHealthProps {
   contacts: Contact[]
   interactions: Interaction[]
+  loading?: boolean
 }
 
 function arcPath(score: number, radius: number, cx: number, cy: number): string {
@@ -40,7 +42,7 @@ function scoreLabel(score: number): string {
 
 const NOW = typeof window !== 'undefined' ? Date.now() : Date.now()
 
-export default function NetworkHealth({ contacts, interactions }: NetworkHealthProps) {
+export default function NetworkHealth({ contacts, interactions, loading }: NetworkHealthProps) {
   const score = useMemo(() => networkHealthScore(contacts, interactions), [contacts, interactions])
   const activeIn90 = useMemo(() => {
     const cutoff = NOW - 90 * 86400000
@@ -55,6 +57,34 @@ export default function NetworkHealth({ contacts, interactions }: NetworkHealthP
     [contacts]
   )
   const color = scoreColor(score)
+
+  if (loading) {
+    return (
+      <div className="space-y-2">
+        <Skeleton className="h-3.5 w-28" />
+        <div className={`${GLASS.control} rounded-xl p-4`}>
+          <div className="flex items-center gap-5">
+            <Skeleton className="h-[88px] w-[96px] rounded-xl shrink-0" />
+            <div className="space-y-3 flex-1">
+              <div className="flex items-center justify-between">
+                <Skeleton className="h-3 w-16" />
+                <Skeleton className="h-3 w-12" />
+              </div>
+              <Skeleton className="h-1 w-full rounded-full" />
+              <div className="flex items-center justify-between">
+                <Skeleton className="h-3 w-24" />
+                <Skeleton className="h-3 w-6" />
+              </div>
+              <div className="flex items-center justify-between">
+                <Skeleton className="h-3 w-16" />
+                <Skeleton className="h-3 w-6" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-2">
