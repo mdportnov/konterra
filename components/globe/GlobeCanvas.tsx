@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useEffect, useState, useCallback, useMemo } from 'react'
+import { memo, useRef, useEffect, useState, useCallback, useMemo } from 'react'
 import dynamic from 'next/dynamic'
 import { feature } from 'topojson-client'
 import { MeshPhongMaterial, Color } from 'three'
@@ -98,7 +98,7 @@ const CONNECTION_COLORS: Record<string, string> = {
   referred_by: 'rgba(236, 72, 153, 0.5)',
 }
 
-export default function GlobeCanvas({
+export default memo(function GlobeCanvas({
   contacts,
   selectedContact,
   flyTarget,
@@ -363,13 +363,11 @@ export default function GlobeCanvas({
 
   const getPointLabel = useCallback((point: object) => {
     const p = point as GlobePoint
-    if (p.isUser) return `<div style="background:rgba(34,197,94,0.9);color:white;padding:4px 8px;border-radius:4px;font-size:11px;font-weight:600;backdrop-filter:blur(8px)">You</div>`
-    if (p.isCluster) return `<div style="background:rgba(0,0,0,0.85);color:white;padding:5px 9px;border-radius:5px;font-size:11px;backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.08)">
-      <b>${p.count} contacts</b>${p.city ? `<br/><span style="opacity:0.6">${p.city}</span>` : ''}
-    </div>`
-    return `<div style="background:rgba(0,0,0,0.85);color:white;padding:5px 9px;border-radius:5px;font-size:11px;backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.08)">
-      <b>${p.name}</b>${p.city ? `<br/><span style="opacity:0.6">${p.city}</span>` : ''}
-    </div>`
+    const base = 'padding:5px 10px;border-radius:6px;font-size:11px;backdrop-filter:blur(12px);font-family:system-ui,sans-serif;line-height:1.4'
+    const dark = `background:rgba(0,0,0,0.8);color:rgba(255,255,255,0.95);border:1px solid rgba(255,255,255,0.1);${base}`
+    if (p.isUser) return `<div style="background:rgba(34,197,94,0.9);color:white;font-weight:600;${base}">You</div>`
+    if (p.isCluster) return `<div style="${dark}"><b>${p.count} contacts</b>${p.city ? `<br/><span style="opacity:0.55;font-size:10px">${p.city}</span>` : ''}</div>`
+    return `<div style="${dark}"><b>${p.name}</b>${p.city ? `<br/><span style="opacity:0.55;font-size:10px">${p.city}</span>` : ''}</div>`
   }, [])
 
   const getPolygonLabel = useCallback((feat: object) => {
@@ -378,13 +376,14 @@ export default function GlobeCanvas({
     if (!name) return ''
     const count = countryContactCount.get(name) || 0
     const isVisited = visitedCountries?.has(name)
-    const parts: string[] = [name]
+    const parts: string[] = [`<b>${name}</b>`]
     if (count > 0) parts.push(`${count} contact${count === 1 ? '' : 's'}`)
     if (isVisited) parts.push('Visited')
-    const label = parts.join(' &middot; ')
-    const bg = isDark ? 'rgba(0,0,0,0.75)' : 'rgba(255,255,255,0.85)'
-    const textColor = isDark ? 'rgba(180,200,255,0.9)' : 'rgba(30,40,60,0.9)'
-    return `<div style="background:${bg};color:${textColor};padding:4px 10px;border-radius:4px;font-size:11px;backdrop-filter:blur(8px);border:1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}">${label}</div>`
+    const label = parts.join(' <span style="opacity:0.4">&middot;</span> ')
+    const bg = isDark ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.9)'
+    const textColor = isDark ? 'rgba(255,255,255,0.95)' : 'rgba(20,30,50,0.9)'
+    const border = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'
+    return `<div style="background:${bg};color:${textColor};padding:5px 10px;border-radius:6px;font-size:11px;backdrop-filter:blur(12px);border:1px solid ${border};font-family:system-ui,sans-serif;line-height:1.4;box-shadow:0 2px 8px rgba(0,0,0,${isDark ? '0.4' : '0.08'})">${label}</div>`
   }, [isDark, countryContactCount, visitedCountries])
 
   const getPolygonCapColor = useCallback((feat: object) => {
@@ -481,4 +480,4 @@ export default function GlobeCanvas({
       )}
     </div>
   )
-}
+})

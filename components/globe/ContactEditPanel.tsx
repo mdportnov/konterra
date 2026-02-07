@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -28,16 +28,88 @@ import {
   Brain,
   Target,
   ChevronRight,
+  Search,
+  Check,
+  ChevronsUpDown,
+  X,
 } from 'lucide-react'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
 import { StarRating } from '@/components/ui/star-rating'
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
+import { Calendar } from '@/components/ui/calendar'
+import { CalendarIcon } from 'lucide-react'
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
 import { RATING_LABELS } from '@/lib/constants/rating'
 import { GenderToggle } from '@/components/ui/gender-toggle'
 import GlobePanel from '@/components/globe/GlobePanel'
 import { PANEL_WIDTH } from '@/lib/constants/ui'
 import type { Contact } from '@/lib/db/schema'
+
+const TIMEZONES = [
+  'UTC-12:00', 'UTC-11:00', 'UTC-10:00', 'UTC-09:30', 'UTC-09:00',
+  'UTC-08:00', 'UTC-07:00', 'UTC-06:00', 'UTC-05:00', 'UTC-04:00',
+  'UTC-03:30', 'UTC-03:00', 'UTC-02:00', 'UTC-01:00', 'UTC+00:00',
+  'UTC+01:00', 'UTC+02:00', 'UTC+03:00', 'UTC+03:30', 'UTC+04:00',
+  'UTC+04:30', 'UTC+05:00', 'UTC+05:30', 'UTC+05:45', 'UTC+06:00',
+  'UTC+06:30', 'UTC+07:00', 'UTC+08:00', 'UTC+08:45', 'UTC+09:00',
+  'UTC+09:30', 'UTC+10:00', 'UTC+10:30', 'UTC+11:00', 'UTC+12:00',
+  'UTC+12:45', 'UTC+13:00', 'UTC+14:00',
+] as const
+
+const TIMEZONE_LABELS: Record<string, string> = {
+  'UTC-12:00': 'UTC-12 (Baker Island)',
+  'UTC-11:00': 'UTC-11 (Samoa)',
+  'UTC-10:00': 'UTC-10 (Hawaii)',
+  'UTC-09:00': 'UTC-9 (Alaska)',
+  'UTC-08:00': 'UTC-8 (Los Angeles)',
+  'UTC-07:00': 'UTC-7 (Denver)',
+  'UTC-06:00': 'UTC-6 (Chicago)',
+  'UTC-05:00': 'UTC-5 (New York)',
+  'UTC-04:00': 'UTC-4 (Santiago)',
+  'UTC-03:00': 'UTC-3 (Buenos Aires)',
+  'UTC-02:00': 'UTC-2 (South Georgia)',
+  'UTC-01:00': 'UTC-1 (Azores)',
+  'UTC+00:00': 'UTC+0 (London)',
+  'UTC+01:00': 'UTC+1 (Berlin, Paris)',
+  'UTC+02:00': 'UTC+2 (Kyiv, Cairo)',
+  'UTC+03:00': 'UTC+3 (Moscow, Istanbul)',
+  'UTC+03:30': 'UTC+3:30 (Tehran)',
+  'UTC+04:00': 'UTC+4 (Dubai)',
+  'UTC+04:30': 'UTC+4:30 (Kabul)',
+  'UTC+05:00': 'UTC+5 (Karachi)',
+  'UTC+05:30': 'UTC+5:30 (Mumbai)',
+  'UTC+05:45': 'UTC+5:45 (Kathmandu)',
+  'UTC+06:00': 'UTC+6 (Dhaka)',
+  'UTC+06:30': 'UTC+6:30 (Yangon)',
+  'UTC+07:00': 'UTC+7 (Bangkok)',
+  'UTC+08:00': 'UTC+8 (Singapore)',
+  'UTC+09:00': 'UTC+9 (Tokyo)',
+  'UTC+09:30': 'UTC+9:30 (Adelaide)',
+  'UTC+10:00': 'UTC+10 (Sydney)',
+  'UTC+11:00': 'UTC+11 (Solomon Is.)',
+  'UTC+12:00': 'UTC+12 (Auckland)',
+  'UTC+13:00': 'UTC+13 (Samoa)',
+  'UTC+14:00': 'UTC+14 (Kiribati)',
+}
+
+const LANGUAGES = [
+  'Afrikaans', 'Albanian', 'Amharic', 'Arabic', 'Armenian', 'Azerbaijani',
+  'Basque', 'Belarusian', 'Bengali', 'Bosnian', 'Bulgarian', 'Burmese',
+  'Cantonese', 'Catalan', 'Chinese (Mandarin)', 'Croatian', 'Czech',
+  'Danish', 'Dutch', 'English', 'Estonian', 'Filipino', 'Finnish', 'French',
+  'Galician', 'Georgian', 'German', 'Greek', 'Gujarati', 'Hausa', 'Hebrew',
+  'Hindi', 'Hungarian', 'Icelandic', 'Igbo', 'Indonesian', 'Irish', 'Italian',
+  'Japanese', 'Javanese', 'Kannada', 'Kazakh', 'Khmer', 'Korean', 'Kurdish',
+  'Kyrgyz', 'Lao', 'Latvian', 'Lithuanian', 'Luxembourgish', 'Macedonian',
+  'Malagasy', 'Malay', 'Malayalam', 'Maltese', 'Mandarin', 'Marathi',
+  'Mongolian', 'Nepali', 'Norwegian', 'Pashto', 'Persian', 'Polish',
+  'Portuguese', 'Punjabi', 'Romanian', 'Russian', 'Serbian', 'Sinhala',
+  'Slovak', 'Slovenian', 'Somali', 'Spanish', 'Swahili', 'Swedish',
+  'Tagalog', 'Tamil', 'Telugu', 'Thai', 'Tibetan', 'Turkish', 'Ukrainian',
+  'Urdu', 'Uzbek', 'Vietnamese', 'Welsh', 'Wolof', 'Xhosa', 'Yoruba', 'Zulu',
+] as const
 
 const RELATIONSHIP_TYPES = ['friend', 'business', 'investor', 'conference', 'mentor', 'colleague', 'family', 'dating'] as const
 
@@ -57,12 +129,12 @@ interface ContactEditPanelProps {
 const socialFields = [
   { key: 'email', label: 'Email', icon: Mail, type: 'email', placeholder: 'name@example.com' },
   { key: 'phone', label: 'Phone', icon: Phone, type: 'tel', placeholder: '+1 234 567 8900' },
-  { key: 'linkedin', label: 'LinkedIn', icon: Linkedin, type: 'url', placeholder: 'https://linkedin.com/in/...' },
-  { key: 'twitter', label: 'X / Twitter', icon: Twitter, type: 'url', placeholder: 'https://x.com/...' },
-  { key: 'telegram', label: 'Telegram', icon: Send, type: 'text', placeholder: '@username' },
-  { key: 'instagram', label: 'Instagram', icon: Instagram, type: 'url', placeholder: 'https://instagram.com/...' },
-  { key: 'github', label: 'GitHub', icon: Github, type: 'url', placeholder: 'https://github.com/...' },
-  { key: 'website', label: 'Website', icon: Globe, type: 'url', placeholder: 'https://...' },
+  { key: 'linkedin', label: 'LinkedIn', icon: Linkedin, type: 'text', placeholder: 'username', prefix: 'linkedin.com/in/' },
+  { key: 'twitter', label: 'X / Twitter', icon: Twitter, type: 'text', placeholder: 'handle', prefix: 'x.com/' },
+  { key: 'telegram', label: 'Telegram', icon: Send, type: 'text', placeholder: 'username', prefix: '@' },
+  { key: 'instagram', label: 'Instagram', icon: Instagram, type: 'text', placeholder: 'username', prefix: 'instagram.com/' },
+  { key: 'github', label: 'GitHub', icon: Github, type: 'text', placeholder: 'username', prefix: 'github.com/' },
+  { key: 'website', label: 'Website', icon: Globe, type: 'url', placeholder: 'example.com', prefix: 'https://' },
 ] as const
 
 type FormData = {
@@ -111,6 +183,38 @@ function toDateStr(d: Date | string | null | undefined): string {
   return isNaN(date.getTime()) ? '' : date.toISOString().slice(0, 10)
 }
 
+const prefixMap: Record<string, { prefix: string; urlBase?: string }> = {
+  linkedin: { prefix: 'linkedin.com/in/', urlBase: 'https://linkedin.com/in/' },
+  twitter: { prefix: 'x.com/', urlBase: 'https://x.com/' },
+  telegram: { prefix: '@' },
+  instagram: { prefix: 'instagram.com/', urlBase: 'https://instagram.com/' },
+  github: { prefix: 'github.com/', urlBase: 'https://github.com/' },
+  website: { prefix: 'https://', urlBase: 'https://' },
+}
+
+function stripPrefix(key: string, value: string | null | undefined): string {
+  if (!value) return ''
+  const cfg = prefixMap[key]
+  if (!cfg) return value
+  if (cfg.urlBase && value.startsWith(cfg.urlBase)) return value.slice(cfg.urlBase.length)
+  const httpsVariant = 'https://' + cfg.prefix
+  if (cfg.urlBase !== 'https://' && value.startsWith(httpsVariant)) return value.slice(httpsVariant.length)
+  if (value.startsWith(cfg.prefix)) return value.slice(cfg.prefix.length)
+  if (value.startsWith('http://') || value.startsWith('https://')) {
+    const withoutProto = value.replace(/^https?:\/\//, '')
+    if (withoutProto.startsWith(cfg.prefix)) return withoutProto.slice(cfg.prefix.length)
+  }
+  return value
+}
+
+function addPrefix(key: string, value: string): string {
+  if (!value) return ''
+  const cfg = prefixMap[key]
+  if (!cfg) return value
+  if (cfg.urlBase) return cfg.urlBase + value
+  return cfg.prefix + value
+}
+
 function buildFormData(contact: Contact | null): FormData {
   return {
     name: contact?.name || '',
@@ -121,12 +225,12 @@ function buildFormData(contact: Contact | null): FormData {
     country: contact?.country || '',
     email: contact?.email || '',
     phone: contact?.phone || '',
-    linkedin: contact?.linkedin || '',
-    twitter: contact?.twitter || '',
-    telegram: contact?.telegram || '',
-    instagram: contact?.instagram || '',
-    github: contact?.github || '',
-    website: contact?.website || '',
+    linkedin: stripPrefix('linkedin', contact?.linkedin),
+    twitter: stripPrefix('twitter', contact?.twitter),
+    telegram: stripPrefix('telegram', contact?.telegram),
+    instagram: stripPrefix('instagram', contact?.instagram),
+    github: stripPrefix('github', contact?.github),
+    website: stripPrefix('website', contact?.website),
     tags: contact?.tags?.join(', ') || '',
     notes: contact?.notes || '',
     rating: contact?.rating || 0,
@@ -179,6 +283,10 @@ export default function ContactEditPanel({ contact, open, onSaved, onCancel }: C
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }))
   }
 
+  const handleSocialChange = (key: string, raw: string) => {
+    setFormData((prev) => ({ ...prev, [key]: stripPrefix(key, raw) }))
+  }
+
   const handleSelectChange = (name: string, value: string) => {
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
@@ -191,12 +299,7 @@ export default function ContactEditPanel({ contact, open, onSaved, onCancel }: C
     if (!formData.name.trim()) errors.push('Name is required')
     if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) errors.push('Invalid email format')
     if (formData.phone && !/^\+?[\d\s\-().]{7,20}$/.test(formData.phone)) errors.push('Invalid phone format')
-    const urlFields = ['linkedin', 'twitter', 'instagram', 'github', 'website', 'photo'] as const
-    for (const field of urlFields) {
-      const val = formData[field]
-      if (val && !/^https?:\/\/.+/.test(val)) errors.push(`${field} must be a valid URL`)
-    }
-    if (formData.telegram && formData.telegram !== '' && !/^@?\w{3,32}$/.test(formData.telegram.replace('https://t.me/', ''))) errors.push('Invalid Telegram username')
+    if (formData.photo && !/^https?:\/\/.+/.test(formData.photo)) errors.push('Photo must be a valid URL')
     if (errors.length > 0) {
       errors.forEach(e => toast.error(e))
       setLoading(false)
@@ -211,6 +314,12 @@ export default function ContactEditPanel({ contact, open, onSaved, onCancel }: C
 
       const body = {
         ...formData,
+        linkedin: addPrefix('linkedin', formData.linkedin),
+        twitter: addPrefix('twitter', formData.twitter),
+        telegram: addPrefix('telegram', formData.telegram),
+        instagram: addPrefix('instagram', formData.instagram),
+        github: addPrefix('github', formData.github),
+        website: addPrefix('website', formData.website),
         tags: tags.length > 0 ? tags : undefined,
         rating: formData.rating || null,
         gender: formData.gender || null,
@@ -388,8 +497,16 @@ export default function ContactEditPanel({ contact, open, onSaved, onCancel }: C
               <FieldRow label="Met At" name="metAt" value={formData.metAt} onChange={handleChange} placeholder="ETHDenver 2024" />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <FieldRow label="Met Date" name="metDate" value={formData.metDate} onChange={handleChange} type="date" />
-              <FieldRow label="Next Follow-up" name="nextFollowUp" value={formData.nextFollowUp} onChange={handleChange} type="date" />
+              <DatePickerField
+                label="Met Date"
+                value={formData.metDate}
+                onChange={(v) => setFormData((prev) => ({ ...prev, metDate: v }))}
+              />
+              <DatePickerField
+                label="Next Follow-up"
+                value={formData.nextFollowUp}
+                onChange={(v) => setFormData((prev) => ({ ...prev, nextFollowUp: v }))}
+              />
             </div>
           </div>
 
@@ -397,22 +514,32 @@ export default function ContactEditPanel({ contact, open, onSaved, onCancel }: C
 
           <div className="space-y-3">
             <SectionLabel icon={Globe} text="Social & Contact" />
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3">
               {socialFields.map((f) => (
                 <div key={f.key} className="space-y-1.5">
                   <Label htmlFor={f.key} className="text-xs text-muted-foreground flex items-center gap-1.5">
                     <f.icon className="h-3 w-3" />
                     {f.label}
                   </Label>
-                  <Input
-                    id={f.key}
-                    name={f.key}
-                    type={f.type}
-                    value={formData[f.key as keyof FormData]}
-                    onChange={handleChange}
-                    placeholder={f.placeholder}
-                    className="bg-muted/50 border-input text-foreground placeholder:text-muted-foreground/40 h-8 text-sm focus-visible:ring-orange-500/30 focus-visible:border-orange-500/50"
-                  />
+                  {'prefix' in f && f.prefix ? (
+                    <PrefixInput
+                      id={f.key}
+                      prefix={f.prefix}
+                      value={String(formData[f.key as keyof FormData] || '')}
+                      onChange={(val) => handleSocialChange(f.key, val)}
+                      placeholder={f.placeholder}
+                    />
+                  ) : (
+                    <Input
+                      id={f.key}
+                      name={f.key}
+                      type={f.type}
+                      value={formData[f.key as keyof FormData]}
+                      onChange={handleChange}
+                      placeholder={f.placeholder}
+                      className="bg-muted/50 border-input text-foreground placeholder:text-muted-foreground/40 h-8 text-sm focus-visible:ring-orange-500/30 focus-visible:border-orange-500/50"
+                    />
+                  )}
                 </div>
               ))}
             </div>
@@ -452,10 +579,20 @@ export default function ContactEditPanel({ contact, open, onSaved, onCancel }: C
           >
             <div className="space-y-3">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <FieldRow label="Timezone" name="timezone" value={formData.timezone} onChange={handleChange} placeholder="UTC+2, EST, etc." />
-                <FieldRow label="Language" name="language" value={formData.language} onChange={handleChange} placeholder="English" />
+                <TimezoneSelect
+                  value={formData.timezone}
+                  onChange={(v) => setFormData((prev) => ({ ...prev, timezone: v }))}
+                />
+                <LanguageMultiSelect
+                  value={formData.language}
+                  onChange={(v) => setFormData((prev) => ({ ...prev, language: v }))}
+                />
               </div>
-              <FieldRow label="Birthday" name="birthday" value={formData.birthday} onChange={handleChange} type="date" />
+              <DatePickerField
+                label="Birthday"
+                value={formData.birthday}
+                onChange={(v) => setFormData((prev) => ({ ...prev, birthday: v }))}
+              />
               <div className="space-y-1.5">
                 <Label htmlFor="personalInterests" className="text-xs text-muted-foreground">Personal Interests</Label>
                 <Input
@@ -723,6 +860,106 @@ function RangeField({
   )
 }
 
+function PrefixInput({
+  id,
+  prefix,
+  value,
+  onChange,
+  placeholder,
+}: {
+  id: string
+  prefix: string
+  value: string
+  onChange: (value: string) => void
+  placeholder?: string
+}) {
+  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    const pasted = e.clipboardData.getData('text')
+    if (pasted && pasted !== value) {
+      e.preventDefault()
+      onChange(pasted)
+    }
+  }
+
+  return (
+    <div className="flex h-8 w-full rounded-md border border-input bg-muted/50 text-sm focus-within:ring-1 focus-within:ring-orange-500/30 focus-within:border-orange-500/50 overflow-hidden">
+      <span className="flex items-center pl-2.5 text-muted-foreground/50 text-sm select-none shrink-0 pointer-events-none">
+        {prefix}
+      </span>
+      <input
+        id={id}
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onPaste={handlePaste}
+        placeholder={placeholder}
+        className="flex-1 bg-transparent text-foreground placeholder:text-muted-foreground/40 h-full pr-2.5 text-sm outline-none min-w-0"
+      />
+    </div>
+  )
+}
+
+function DatePickerField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+  const [open, setOpen] = useState(false)
+
+  const date = value ? new Date(value + 'T00:00:00') : undefined
+  const valid = date && !isNaN(date.getTime()) ? date : undefined
+
+  const formatDate = (d: Date) =>
+    d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-xs text-muted-foreground">{label}</Label>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            className="flex h-8 w-full items-center justify-between rounded-md border border-input bg-muted/50 px-3 text-sm cursor-pointer hover:bg-accent/50 transition-colors"
+          >
+            <span className={valid ? 'text-foreground' : 'text-muted-foreground/40'}>
+              {valid ? formatDate(valid) : 'Pick a date...'}
+            </span>
+            <CalendarIcon className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0 ml-1" />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" side="bottom" align="start">
+          <Calendar
+            mode="single"
+            selected={valid}
+            defaultMonth={valid || new Date()}
+            onSelect={(d) => {
+              if (d) {
+                const y = d.getFullYear()
+                const m = String(d.getMonth() + 1).padStart(2, '0')
+                const day = String(d.getDate()).padStart(2, '0')
+                onChange(`${y}-${m}-${day}`)
+              } else {
+                onChange('')
+              }
+              setOpen(false)
+            }}
+            captionLayout="dropdown"
+            fromYear={1930}
+            toYear={2035}
+          />
+          {value && (
+            <div className="border-t border-border px-3 py-2">
+              <button
+                type="button"
+                onClick={() => { onChange(''); setOpen(false) }}
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Clear date
+              </button>
+            </div>
+          )}
+        </PopoverContent>
+      </Popover>
+    </div>
+  )
+}
+
 function CollapsibleSection({
   title,
   icon: Icon,
@@ -758,6 +995,190 @@ function CollapsibleSection({
           <div className="mt-2">{children}</div>
         </div>
       </div>
+    </div>
+  )
+}
+
+function TimezoneSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [open, setOpen] = useState(false)
+  const [search, setSearch] = useState('')
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  const filtered = search
+    ? TIMEZONES.filter((tz) => {
+        const label = TIMEZONE_LABELS[tz] || tz
+        return label.toLowerCase().includes(search.toLowerCase()) || tz.toLowerCase().includes(search.toLowerCase())
+      })
+    : [...TIMEZONES]
+
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-xs text-muted-foreground">Timezone</Label>
+      <Popover open={open} onOpenChange={(v) => { setOpen(v); if (v) setTimeout(() => inputRef.current?.focus(), 0) }}>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            className="flex h-8 w-full items-center justify-between rounded-md border border-input bg-muted/50 px-3 text-sm text-foreground cursor-pointer hover:bg-accent/50 transition-colors"
+          >
+            <span className={value ? 'truncate' : 'text-muted-foreground/40 truncate'}>
+              {value ? (TIMEZONE_LABELS[value] || value) : 'Select...'}
+            </span>
+            <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0 ml-1" />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className="w-[260px] p-0" side="bottom" align="start">
+          <div className="flex items-center border-b border-border px-2">
+            <Search className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />
+            <input
+              ref={inputRef}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search timezone..."
+              className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground/40 h-9 px-2 outline-none"
+            />
+            {search && (
+              <button type="button" onClick={() => setSearch('')} className="text-muted-foreground/50 hover:text-muted-foreground">
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+          <ScrollArea className="h-[200px]">
+            <div className="p-1">
+              {value && (
+                <button
+                  type="button"
+                  onClick={() => { onChange(''); setOpen(false); setSearch('') }}
+                  className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-xs text-muted-foreground hover:bg-accent cursor-pointer"
+                >
+                  Clear
+                </button>
+              )}
+              {filtered.map((tz) => {
+                const label = TIMEZONE_LABELS[tz] || tz
+                const selected = value === tz
+                return (
+                  <button
+                    key={tz}
+                    type="button"
+                    onClick={() => { onChange(tz); setOpen(false); setSearch('') }}
+                    className={`flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-xs cursor-pointer transition-colors ${
+                      selected ? 'bg-accent text-foreground' : 'text-foreground hover:bg-accent/50'
+                    }`}
+                  >
+                    <Check className={`h-3 w-3 shrink-0 ${selected ? 'opacity-100' : 'opacity-0'}`} />
+                    <span className="truncate">{label}</span>
+                  </button>
+                )
+              })}
+              {filtered.length === 0 && (
+                <p className="text-xs text-muted-foreground/60 text-center py-4">No timezones found</p>
+              )}
+            </div>
+          </ScrollArea>
+        </PopoverContent>
+      </Popover>
+    </div>
+  )
+}
+
+function LanguageMultiSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [open, setOpen] = useState(false)
+  const [search, setSearch] = useState('')
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  const selected = value ? value.split(',').map((s) => s.trim()).filter(Boolean) : []
+  const selectedSet = new Set(selected)
+
+  const filtered = search
+    ? LANGUAGES.filter((l) => l.toLowerCase().includes(search.toLowerCase()))
+    : [...LANGUAGES]
+
+  const toggle = (lang: string) => {
+    const next = new Set(selectedSet)
+    if (next.has(lang)) next.delete(lang)
+    else next.add(lang)
+    onChange(Array.from(next).join(', '))
+  }
+
+  const remove = (lang: string) => {
+    const next = selected.filter((s) => s !== lang)
+    onChange(next.join(', '))
+  }
+
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-xs text-muted-foreground">Languages</Label>
+      <Popover open={open} onOpenChange={(v) => { setOpen(v); if (v) setTimeout(() => inputRef.current?.focus(), 0) }}>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            className="flex h-auto min-h-8 w-full items-center gap-1 flex-wrap rounded-md border border-input bg-muted/50 px-2 py-1 text-sm text-foreground cursor-pointer hover:bg-accent/50 transition-colors"
+          >
+            {selected.length > 0 ? (
+              <>
+                {selected.map((lang) => (
+                  <Badge
+                    key={lang}
+                    variant="secondary"
+                    className="text-[10px] h-5 gap-0.5 px-1.5 bg-accent"
+                  >
+                    {lang}
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      onClick={(e) => { e.stopPropagation(); remove(lang) }}
+                      onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); remove(lang) } }}
+                      className="ml-0.5 hover:text-foreground text-muted-foreground cursor-pointer"
+                    >
+                      <X className="h-2.5 w-2.5" />
+                    </span>
+                  </Badge>
+                ))}
+              </>
+            ) : (
+              <span className="text-muted-foreground/40 px-1">Select...</span>
+            )}
+            <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0 ml-auto" />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className="w-[220px] p-0" side="bottom" align="start">
+          <div className="flex items-center border-b border-border px-2">
+            <Search className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />
+            <input
+              ref={inputRef}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search language..."
+              className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground/40 h-9 px-2 outline-none"
+            />
+            {search && (
+              <button type="button" onClick={() => setSearch('')} className="text-muted-foreground/50 hover:text-muted-foreground">
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+          <ScrollArea className="h-[200px]">
+            <div className="p-1 space-y-0.5">
+              {filtered.map((lang) => (
+                <label
+                  key={lang}
+                  className="flex items-center gap-2 rounded-sm px-2 py-1.5 text-xs cursor-pointer hover:bg-accent/50 transition-colors"
+                >
+                  <Checkbox
+                    checked={selectedSet.has(lang)}
+                    onCheckedChange={() => toggle(lang)}
+                    className="h-3.5 w-3.5"
+                  />
+                  <span className="text-foreground">{lang}</span>
+                </label>
+              ))}
+              {filtered.length === 0 && (
+                <p className="text-xs text-muted-foreground/60 text-center py-4">No languages found</p>
+              )}
+            </div>
+          </ScrollArea>
+        </PopoverContent>
+      </Popover>
     </div>
   )
 }

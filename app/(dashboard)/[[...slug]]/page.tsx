@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic'
 import { toast } from 'sonner'
 import DashboardPanel from '@/components/dashboard/DashboardPanel'
 import ContactDetail from '@/components/globe/ContactDetail'
+import GlobePanel from '@/components/globe/GlobePanel'
 import GlobeControls from '@/components/globe/GlobeControls'
 import GlobeFilters from '@/components/globe/GlobeFilters'
 import ContactEditPanel from '@/components/globe/ContactEditPanel'
@@ -14,6 +15,7 @@ import ImportDialog from '@/components/import/ImportDialog'
 import type { Contact, ContactConnection } from '@/lib/db/schema'
 import type { ConnectedContact } from '@/components/globe/ContactDetail'
 import CountryPopup from '@/components/globe/CountryPopup'
+import { PANEL_WIDTH } from '@/lib/constants/ui'
 import { displayDefaults } from '@/types/display'
 import type { DisplayOptions } from '@/types/display'
 import { useIsMobile } from '@/hooks/use-mobile'
@@ -79,6 +81,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
   const isMobile = useIsMobile()
   const [mobileView, setMobileView] = useState<'globe' | 'dashboard'>('dashboard')
   const [importDialogOpen, setImportDialogOpen] = useState(false)
+  const [dashboardExpanded, setDashboardExpanded] = useState(false)
 
   useEffect(() => {
     return () => {
@@ -370,6 +373,19 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
     pushUrl('/contact/new')
   }, [closeCountryPopup])
 
+  const openDashboard = useCallback(() => setDashboardExpanded(true), [])
+  const closeDashboard = useCallback(() => setDashboardExpanded(false), [])
+
+  const handleDashContactClick = useCallback((c: Contact) => {
+    handleContactClick(c)
+    setDashboardExpanded(false)
+  }, [handleContactClick])
+
+  const handleDashAddContact = useCallback(() => {
+    handleAddContact()
+    setDashboardExpanded(false)
+  }, [handleAddContact])
+
   const showDashboard = !isMobile || mobileView === 'dashboard'
   const showGlobe = !isMobile || mobileView === 'globe'
 
@@ -509,18 +525,42 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
 
   return (
     <div className="fixed inset-0 flex overflow-hidden bg-background">
-      <DashboardPanel
-        contacts={contacts}
-        selectedContact={selectedContact}
-        onContactClick={handleContactClick}
-        onAddContact={handleAddContact}
-        onOpenContactsBrowser={handleOpenContactsBrowser}
-        isMobile={isMobile}
-        onSwitchToGlobe={() => setMobileView('globe')}
-      />
+      <div
+        className="shrink-0 h-full"
+        style={{ width: PANEL_WIDTH.dashboard.collapsed }}
+      >
+        <DashboardPanel
+          contacts={contacts}
+          selectedContact={selectedContact}
+          onContactClick={handleContactClick}
+          onAddContact={handleAddContact}
+          onOpenContactsBrowser={handleOpenContactsBrowser}
+          isMobile={isMobile}
+          collapsed
+          onToggleCollapse={openDashboard}
+        />
+      </div>
       <div className="relative flex-1 overflow-hidden globe-bg">
         {globeSection}
       </div>
+      <GlobePanel
+        open={dashboardExpanded}
+        side="left"
+        width={PANEL_WIDTH.dashboard.min}
+        glass="panel"
+        onClose={closeDashboard}
+      >
+        <DashboardPanel
+          contacts={contacts}
+          selectedContact={selectedContact}
+          onContactClick={handleDashContactClick}
+          onAddContact={handleDashAddContact}
+          onOpenContactsBrowser={handleOpenContactsBrowser}
+          isMobile={isMobile}
+          collapsed={false}
+          onToggleCollapse={closeDashboard}
+        />
+      </GlobePanel>
     </div>
   )
 }

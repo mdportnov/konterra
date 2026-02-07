@@ -185,6 +185,11 @@ export default function GlobeFilters({
                   )
                 })}
               </div>
+              {noneActive && (
+                <p className="text-[10px] text-destructive mt-1">
+                  No ratings selected — all contacts hidden
+                </p>
+              )}
             </div>
 
             {tags.length > 0 && (
@@ -281,12 +286,6 @@ export default function GlobeFilters({
               </div>
             )}
           </div>
-
-          {noneActive && (
-            <p className="text-[10px] text-destructive mt-2">
-              No ratings selected — all contacts hidden
-            </p>
-          )}
         </div>
       ) : (
         <TooltipProvider delayDuration={300}>
