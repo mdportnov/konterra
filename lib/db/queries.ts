@@ -1,7 +1,21 @@
 import { db } from './index'
-import { users, contacts, interactions, contactConnections, introductions, favors, visitedCountries } from './schema'
+import { users, contacts, interactions, contactConnections, introductions, favors, visitedCountries, waitlist } from './schema'
 import { eq, and, or, desc, sql } from 'drizzle-orm'
 import type { NewContact, NewContactConnection, NewIntroduction, NewFavor } from './schema'
+
+export async function getUserByEmail(email: string) {
+  return db.query.users.findFirst({
+    where: eq(users.email, email),
+    columns: { id: true, email: true, name: true, password: true },
+  })
+}
+
+export async function createWaitlistEntry(data: { email: string; name: string; message?: string }) {
+  await db
+    .insert(waitlist)
+    .values(data)
+    .onConflictDoNothing({ target: waitlist.email })
+}
 
 export async function getUserById(id: string) {
   return db.query.users.findFirst({
@@ -10,10 +24,10 @@ export async function getUserById(id: string) {
   })
 }
 
-export async function upsertUser(id: string, email: string, name: string) {
+export async function upsertUser(id: string, email: string, name: string, password: string) {
   const [row] = await db
     .insert(users)
-    .values({ id, email, name })
+    .values({ id, email, name, password })
     .onConflictDoNothing({ target: users.id })
     .returning()
   return row ?? db.query.users.findFirst({ where: eq(users.id, id) })

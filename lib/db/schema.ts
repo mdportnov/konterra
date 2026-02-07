@@ -54,6 +54,7 @@ export const financialCapacityEnum = pgEnum('financial_capacity', [
 export const users = pgTable('users', {
   id: text('id').primaryKey(),
   email: text('email').notNull().unique(),
+  password: text('password').notNull(),
   name: text('name'),
   image: text('image'),
   emailVerified: timestamp('email_verified', { mode: 'date' }),
@@ -229,3 +230,17 @@ export type Introduction = typeof introductions.$inferSelect
 export type NewIntroduction = typeof introductions.$inferInsert
 export type Favor = typeof favors.$inferSelect
 export type NewFavor = typeof favors.$inferInsert
+
+export const waitlistStatusEnum = pgEnum('waitlist_status', ['pending', 'approved', 'rejected'])
+
+export const waitlist = pgTable('waitlist', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  email: text('email').notNull().unique(),
+  name: text('name').notNull(),
+  message: text('message'),
+  status: waitlistStatusEnum('status').notNull().default('pending'),
+  createdAt: timestamp('created_at').defaultNow(),
+})
+
+export type WaitlistEntry = typeof waitlist.$inferSelect
+export type NewWaitlistEntry = typeof waitlist.$inferInsert

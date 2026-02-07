@@ -137,6 +137,55 @@
   }
 }
 
+.login-card {
+  background: oklch(0.08 0.01 260 / 70%);
+  backdrop-filter: blur(24px);
+  border: 1px solid oklch(0.55 0.08 180 / 15%);
+  box-shadow: 0 0 40px oklch(0.55 0.08 180 / 5%);
+}
+
+.login-input {
+  width: 100%;
+  padding: 0.625rem 0.75rem;
+  font-family: var(--font-geist-mono);
+  font-size: 0.8125rem;
+  color: oklch(0.9 0 0);
+  background: oklch(0.1 0.005 260 / 60%);
+  border: 1px solid oklch(1 0 0 / 8%);
+  border-radius: 0.5rem;
+  outline: none;
+  transition: border-color 150ms;
+}
+.login-input::placeholder {
+  color: oklch(0.5 0 0);
+}
+.login-input:focus {
+  border-color: oklch(0.55 0.08 180 / 50%);
+}
+
+.login-button {
+  width: 100%;
+  padding: 0.625rem;
+  font-family: var(--font-geist-mono);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: oklch(0.95 0 0);
+  background: oklch(0.55 0.08 180 / 15%);
+  border: 1px solid oklch(0.55 0.08 180 / 30%);
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: background 150ms, border-color 150ms;
+}
+.login-button:hover:not(:disabled) {
+  background: oklch(0.55 0.08 180 / 25%);
+  border-color: oklch(0.55 0.08 180 / 50%);
+}
+.login-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .float-tooltip-kap {
   background: none !important;
   border: none !important;

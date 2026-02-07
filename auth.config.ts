@@ -6,7 +6,8 @@ export default {
     Credentials({
       name: 'Email',
       credentials: {
-        email: { label: 'Email', type: 'email', placeholder: 'you@example.com' }
+        email: { label: 'Email', type: 'email', placeholder: 'you@example.com' },
+        password: { label: 'Password', type: 'password' },
       },
       authorize() {
         return null

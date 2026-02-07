@@ -479,12 +479,12 @@ export default function ContactDetail({
 
           {(contact.linkedin || contact.twitter || contact.telegram || contact.instagram || contact.github || contact.website) && (
             <div className="flex flex-wrap gap-2">
-              {contact.linkedin && <SocialButton href={contact.linkedin} icon={Linkedin} />}
-              {contact.twitter && <SocialButton href={contact.twitter} icon={Twitter} />}
-              {contact.telegram && <SocialButton href={`https://t.me/${contact.telegram.replace('@', '')}`} icon={Send} />}
-              {contact.instagram && <SocialButton href={contact.instagram} icon={Instagram} />}
-              {contact.github && <SocialButton href={contact.github} icon={Github} />}
-              {contact.website && <SocialButton href={contact.website} icon={Globe} />}
+              {contact.linkedin && <SocialButton href={ensureUrl(contact.linkedin, 'https://linkedin.com/in/')} icon={Linkedin} />}
+              {contact.twitter && <SocialButton href={ensureUrl(contact.twitter, 'https://x.com/')} icon={Twitter} />}
+              {contact.telegram && <SocialButton href={ensureUrl(contact.telegram, 'https://t.me/')} icon={Send} />}
+              {contact.instagram && <SocialButton href={ensureUrl(contact.instagram, 'https://instagram.com/')} icon={Instagram} />}
+              {contact.github && <SocialButton href={ensureUrl(contact.github, 'https://github.com/')} icon={Github} />}
+              {contact.website && <SocialButton href={ensureUrl(contact.website, 'https://')} icon={Globe} />}
             </div>
           )}
 
@@ -568,13 +568,21 @@ export default function ContactDetail({
                 size="icon"
                 variant="ghost"
                 className="h-6 w-6 !text-muted-foreground hover:!text-foreground"
-                onClick={(e) => { e.stopPropagation(); setShowAddInteraction(!showAddInteraction) }}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  if (!showAddInteraction) setExpandedSections((prev) => ({ ...prev, timeline: true }))
+                  setShowAddInteraction(!showAddInteraction)
+                }}
               >
-                <Plus className="h-3 w-3" />
+                {showAddInteraction ? <X className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
               </Button>
             }
           >
-            {showAddInteraction && (
+            <div
+              className="grid transition-[grid-template-rows,opacity] duration-200 ease-[cubic-bezier(0.32,0.72,0,1)]"
+              style={{ gridTemplateRows: showAddInteraction ? '1fr' : '0fr', opacity: showAddInteraction ? 1 : 0 }}
+            >
+              <div className="overflow-hidden">
               <div className="p-2 rounded-lg bg-accent/50 border border-border space-y-2 mb-2">
                 <select
                   value={newInteraction.type}
@@ -594,7 +602,8 @@ export default function ContactDetail({
                   <Button size="sm" variant="ghost" className="h-6 text-[10px]" onClick={() => setShowAddInteraction(false)}>Cancel</Button>
                 </div>
               </div>
-            )}
+              </div>
+            </div>
             {loadingInteractions ? (
               <div className="space-y-2 py-1">
                 <Skeleton className="h-4 w-full" />
@@ -637,13 +646,21 @@ export default function ContactDetail({
                 size="icon"
                 variant="ghost"
                 className="h-6 w-6 !text-muted-foreground hover:!text-foreground"
-                onClick={(e) => { e.stopPropagation(); setShowAddConnection(!showAddConnection) }}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  if (!showAddConnection) setExpandedSections((prev) => ({ ...prev, connections: true }))
+                  setShowAddConnection(!showAddConnection)
+                }}
               >
-                <Plus className="h-3 w-3" />
+                {showAddConnection ? <X className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
               </Button>
             }
           >
-            {showAddConnection && (
+            <div
+              className="grid transition-[grid-template-rows,opacity] duration-200 ease-[cubic-bezier(0.32,0.72,0,1)]"
+              style={{ gridTemplateRows: showAddConnection ? '1fr' : '0fr', opacity: showAddConnection ? 1 : 0 }}
+            >
+              <div className="overflow-hidden">
               <div className="p-2 rounded-lg bg-accent/50 border border-border space-y-2 mb-2">
                 <select
                   value={newConnection.targetContactId}
@@ -679,7 +696,8 @@ export default function ContactDetail({
                   <Button size="sm" variant="ghost" className="h-6 text-[10px]" onClick={() => setShowAddConnection(false)}>Cancel</Button>
                 </div>
               </div>
-            )}
+              </div>
+            </div>
             {loadingConnections ? (
               <div className="space-y-2 py-1">
                 <Skeleton className="h-4 w-full" />
@@ -724,13 +742,21 @@ export default function ContactDetail({
                 size="icon"
                 variant="ghost"
                 className="h-6 w-6 !text-muted-foreground hover:!text-foreground"
-                onClick={(e) => { e.stopPropagation(); setShowAddFavor(!showAddFavor) }}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  if (!showAddFavor) setExpandedSections((prev) => ({ ...prev, favors: true }))
+                  setShowAddFavor(!showAddFavor)
+                }}
               >
-                <Plus className="h-3 w-3" />
+                {showAddFavor ? <X className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
               </Button>
             }
           >
-            {showAddFavor && (
+            <div
+              className="grid transition-[grid-template-rows,opacity] duration-200 ease-[cubic-bezier(0.32,0.72,0,1)]"
+              style={{ gridTemplateRows: showAddFavor ? '1fr' : '0fr', opacity: showAddFavor ? 1 : 0 }}
+            >
+              <div className="overflow-hidden">
               <div className="p-2 rounded-lg bg-accent/50 border border-border space-y-2 mb-2">
                 <div className="flex gap-2">
                   <select
@@ -760,7 +786,8 @@ export default function ContactDetail({
                   <Button size="sm" variant="ghost" className="h-6 text-[10px]" onClick={() => setShowAddFavor(false)}>Cancel</Button>
                 </div>
               </div>
-            )}
+              </div>
+            </div>
             {loadingFavors ? (
               <div className="space-y-2 py-1">
                 <Skeleton className="h-4 w-full" />
@@ -893,6 +920,11 @@ export default function ContactDetail({
       </div>
     </GlobePanel>
   )
+}
+
+function ensureUrl(value: string, prefix: string) {
+  if (/^https?:\/\//.test(value)) return value
+  return prefix + value.replace(/^@/, '')
 }
 
 function SocialButton({ href, icon: Icon }: { href: string; icon: React.ComponentType<{ className?: string }> }) {

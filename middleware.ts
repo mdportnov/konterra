@@ -8,8 +8,9 @@ export default auth((req) => {
   const isLoggedIn = !!req.auth
   const isAuthPage = req.nextUrl.pathname.startsWith('/login')
   const isApiAuth = req.nextUrl.pathname.startsWith('/api/auth')
+  const isApiWaitlist = req.nextUrl.pathname.startsWith('/api/waitlist')
 
-  if (isApiAuth) {
+  if (isApiAuth || isApiWaitlist) {
     return NextResponse.next()
   }
 

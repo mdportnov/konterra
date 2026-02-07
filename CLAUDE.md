@@ -5,10 +5,45 @@
 - NextAuth v5, Drizzle ORM, Neon PostgreSQL
 - react-globe.gl + three.js for 3D visualization
 
-## Build & Dev
+## Local Development
+
+### Prerequisites
+- Docker (for local Postgres)
+- Node.js
+
+### Local Postgres
+```
+docker compose up -d          # starts Postgres 16 on localhost:5432
+```
+Credentials: `konterra / konterra / konterra` (user/password/db).
+Connection string is in `.env.local`: `postgresql://konterra:konterra@localhost:5432/konterra`
+
+### Database Commands
+- `npm run db:generate` — generate Drizzle migration SQL from schema changes
+- `npm run db:push` — push schema directly to local DB (skips migration files, fast for dev)
+- `npm run db:migrate` — run generated migration files against DB
+- `npm run db:studio` — open Drizzle Studio GUI
+
+After schema changes: run `npm run db:push` to apply to local DB immediately.
+`db:generate` + `db:migrate` is for tracked migrations (production).
+
+### Build & Dev
 - `npm run dev` — start dev server
 - `npm run build` — production build
 - `npm run lint` — eslint
+
+### Env Loading
+`drizzle.config.ts` uses `dotenv` to load `.env.local` so all `npm run db:*` commands work without manual env setup. Next.js loads `.env.local` automatically for `dev`/`build`/`start`.
+
+### Local vs Production
+| | Local | Production |
+|---|---|---|
+| Database | Docker Postgres 16 via `pg` (node-postgres) | Neon PostgreSQL (serverless) |
+| DB connection | `lib/db/index.ts` uses `pg.Pool` with `DATABASE_URL` | Same code, Neon accepts standard PG connections |
+| Schema changes | `npm run db:push` (direct, no migration files) | `npm run db:generate` then `npm run db:migrate` |
+| Auth | Credentials provider (email + password, bcryptjs) | Will add Google OAuth via `GOOGLE_CLIENT_ID/SECRET` |
+| SSL | No (`localhost`) | `?sslmode=require` in connection string |
+| Auth gating | Only pre-existing `users` rows can sign in | Same — unknown emails are rejected |
 
 ## UI Conventions
 

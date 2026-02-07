@@ -39,6 +39,7 @@ async function seed() {
     id: USER_ID,
     email: USER_ID,
     name: 'Demo User',
+    password: '$2b$10$j0UgM7/QYCeyscu6Et5lwOZ5y9/QZNH3xCqNLRcOcK///xljThkB6',
   }).onConflictDoNothing()
 
   await db.insert(schema.contacts).values([
