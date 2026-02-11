@@ -67,7 +67,7 @@ function parseCSV(text: string): Record<string, string>[] {
 
 function col(row: Record<string, string>, ...keys: string[]): string {
   for (const k of keys) {
-    if (row[k]) return row[k]
+    if (row[k]) return row[k].split(':::')[0].trim()
   }
   return ''
 }
@@ -106,7 +106,7 @@ export function parseGoogleCSV(csvText: string): ParsedContact[] {
     if (!name) continue
 
     const tags: string[] = []
-    const groupMembership = col(row, 'Group Membership')
+    const groupMembership = row['Group Membership'] || row['Labels'] || ''
     if (groupMembership) {
       groupMembership
         .split(':::')
@@ -119,8 +119,8 @@ export function parseGoogleCSV(csvText: string): ParsedContact[] {
       name,
       email: col(row, 'E-mail 1 - Value', 'E-mail Address', 'Email 1 - Value') || undefined,
       phone: col(row, 'Phone 1 - Value', 'Phone Number') || undefined,
-      company: col(row, 'Organization 1 - Name', 'Organization', 'Company') || undefined,
-      role: col(row, 'Organization 1 - Title', 'Job Title') || undefined,
+      company: col(row, 'Organization 1 - Name', 'Organization Name', 'Organization', 'Company') || undefined,
+      role: col(row, 'Organization 1 - Title', 'Organization Title', 'Job Title') || undefined,
       city: col(row, 'Address 1 - City', 'City') || undefined,
       country: col(row, 'Address 1 - Country', 'Country') || undefined,
       address: buildAddress(row) || undefined,
