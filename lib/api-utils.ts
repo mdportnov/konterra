@@ -9,7 +9,11 @@ export function toStringOrNull(v: unknown): string | null {
 export function toDateOrNull(v: unknown): Date | null {
   if (!v) return null
   if (v instanceof Date) return v
-  const d = new Date(v as string)
+  let raw = String(v)
+  if (raw.startsWith('--')) {
+    raw = '0000-' + raw.slice(2)
+  }
+  const d = new Date(raw)
   return isNaN(d.getTime()) ? null : d
 }
 

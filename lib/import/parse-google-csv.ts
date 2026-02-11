@@ -72,6 +72,25 @@ function col(row: Record<string, string>, ...keys: string[]): string {
   return ''
 }
 
+function normalizeBirthday(raw: string): string {
+  if (!raw) return ''
+  if (raw.startsWith('--')) return '0000-' + raw.slice(2)
+  return raw
+}
+
+function buildAddress(row: Record<string, string>): string {
+  const formatted = col(row, 'Address 1 - Formatted')
+  if (formatted) return formatted
+  return [
+    col(row, 'Address 1 - Street'),
+    col(row, 'Address 1 - PO Box'),
+    col(row, 'Address 1 - City', 'City'),
+    col(row, 'Address 1 - Region'),
+    col(row, 'Address 1 - Postal Code'),
+    col(row, 'Address 1 - Country', 'Country'),
+  ].filter(Boolean).join(', ')
+}
+
 export function parseGoogleCSV(csvText: string): ParsedContact[] {
   const rows = parseCSV(csvText)
   const results: ParsedContact[] = []
@@ -104,7 +123,8 @@ export function parseGoogleCSV(csvText: string): ParsedContact[] {
       role: col(row, 'Organization 1 - Title', 'Job Title') || undefined,
       city: col(row, 'Address 1 - City', 'City') || undefined,
       country: col(row, 'Address 1 - Country', 'Country') || undefined,
-      birthday: col(row, 'Birthday') || undefined,
+      address: buildAddress(row) || undefined,
+      birthday: normalizeBirthday(col(row, 'Birthday')) || undefined,
       website: col(row, 'Website 1 - Value', 'Website') || undefined,
       notes: col(row, 'Notes') || undefined,
       tags: tags.length > 0 ? tags : undefined,

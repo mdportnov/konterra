@@ -20,6 +20,7 @@ function buildNewContactData(userId: string, c: Record<string, unknown>): NewCon
     role: toStringOrNull(c.role),
     city: toStringOrNull(c.city),
     country: toStringOrNull(c.country),
+    address: toStringOrNull(c.address),
     lat: null,
     lng: null,
     email: toStringOrNull(c.email),
@@ -47,7 +48,7 @@ function buildNewContactData(userId: string, c: Record<string, unknown>): NewCon
 }
 
 const UPDATABLE_FIELDS = [
-  'name', 'email', 'phone', 'company', 'role', 'city', 'country',
+  'name', 'email', 'phone', 'company', 'role', 'city', 'country', 'address',
   'website', 'notes', 'telegram', 'linkedin', 'twitter', 'instagram',
   'github', 'timezone', 'gender', 'tags', 'birthday',
 ] as const

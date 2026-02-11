@@ -8,6 +8,7 @@ export interface ParsedContact {
   role?: string
   city?: string
   country?: string
+  address?: string
   birthday?: string
   website?: string
   notes?: string

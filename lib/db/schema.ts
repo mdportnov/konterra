@@ -97,6 +97,7 @@ export const contacts = pgTable('contacts', {
   role: text('role'),
   city: text('city'),
   country: text('country'),
+  address: text('address'),
   lat: doublePrecision('lat'),
   lng: doublePrecision('lng'),
   email: text('email'),

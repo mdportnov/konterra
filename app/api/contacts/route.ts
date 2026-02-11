@@ -52,6 +52,7 @@ export async function POST(req: Request) {
     role: toStringOrNull(body.role),
     city: toStringOrNull(body.city),
     country: toStringOrNull(body.country),
+    address: toStringOrNull(body.address),
     lat: lat ?? null,
     lng: lng ?? null,
     email: toStringOrNull(body.email),

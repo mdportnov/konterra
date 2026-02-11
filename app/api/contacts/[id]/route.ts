@@ -51,6 +51,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (body.role !== undefined) updates.role = toStringOrNull(body.role)
   if (body.city !== undefined) updates.city = toStringOrNull(body.city)
   if (body.country !== undefined) updates.country = toStringOrNull(body.country)
+  if (body.address !== undefined) updates.address = toStringOrNull(body.address)
   if (body.email !== undefined) updates.email = toStringOrNull(body.email)
   if (body.phone !== undefined) updates.phone = toStringOrNull(body.phone)
   if (body.linkedin !== undefined) updates.linkedin = toStringOrNull(body.linkedin)

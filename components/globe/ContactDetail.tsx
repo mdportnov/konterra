@@ -483,7 +483,7 @@ export default function ContactDetail({
             </div>
           </div>
 
-          {(contact.company || contact.city || contact.country) && (
+          {(contact.company || contact.city || contact.country || contact.address) && (
             <div className="space-y-2">
               {contact.company && (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -497,10 +497,20 @@ export default function ContactDetail({
                   <span>{[contact.city, contact.country].filter(Boolean).join(', ')}</span>
                 </div>
               )}
+              {contact.address && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <MapPin className="h-4 w-4 text-muted-foreground/60 shrink-0" />
+                  <span>{contact.address}</span>
+                </div>
+              )}
               {contact.birthday && (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Cake className="h-4 w-4 text-muted-foreground/60 shrink-0" />
-                  <span>{new Date(contact.birthday).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}</span>
+                  <span>{(() => {
+                    const bd = new Date(contact.birthday)
+                    if (bd.getFullYear() < 1900) return bd.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })
+                    return bd.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+                  })()}</span>
                 </div>
               )}
             </div>

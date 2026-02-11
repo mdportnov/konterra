@@ -47,6 +47,7 @@ type FormData = {
   role: string
   city: string
   country: string
+  address: string
   email: string
   phone: string
   linkedin: string
@@ -83,7 +84,13 @@ type FormData = {
 function toDateStr(d: Date | string | null | undefined): string {
   if (!d) return ''
   const date = d instanceof Date ? d : new Date(d)
-  return isNaN(date.getTime()) ? '' : date.toISOString().slice(0, 10)
+  if (isNaN(date.getTime())) return ''
+  if (date.getFullYear() < 1900) {
+    const m = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `0000-${m}-${day}`
+  }
+  return date.toISOString().slice(0, 10)
 }
 
 const prefixMap: Record<string, { prefix: string; urlBase?: string }> = {
@@ -126,6 +133,7 @@ function buildFormData(contact: Contact | null): FormData {
     role: contact?.role || '',
     city: contact?.city || '',
     country: contact?.country || '',
+    address: contact?.address || '',
     email: contact?.email || '',
     phone: contact?.phone || '',
     linkedin: stripPrefix('linkedin', contact?.linkedin),
@@ -241,6 +249,7 @@ export default function ContactEditPanel({ contact, open, onSaved, onCancel, ava
         nextFollowUp: formData.nextFollowUp || null,
         timezone: formData.timezone || null,
         language: formData.language || null,
+        address: formData.address || null,
         birthday: formData.birthday || null,
         personalInterests: splitCommaSeparated(formData.personalInterests),
         professionalGoals: splitCommaSeparated(formData.professionalGoals),
@@ -333,6 +342,7 @@ export default function ContactEditPanel({ contact, open, onSaved, onCancel, ava
               <FieldRow label="City" name="city" value={formData.city} onChange={handleChange} />
               <FieldRow label="Country" name="country" value={formData.country} onChange={handleChange} />
             </div>
+            <FieldRow label="Address" name="address" value={formData.address} onChange={handleChange} placeholder="Full address" />
           </div>
 
           <Separator className="bg-border" />
