@@ -192,6 +192,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
 
       <GlobeControls
         onAddContact={nav.handleAddContact}
+        onImport={() => setImportDialogOpen(true)}
         onSettings={nav.handleOpenSettings}
         onInsights={nav.handleOpenInsights}
         isMobile={isMobile}

@@ -121,10 +121,13 @@ export async function POST(req: Request) {
       created = results.length
     } catch (e) {
       console.error('Bulk create error:', e)
-      const raw = e instanceof Error ? e.message : 'Unknown error'
-      const idx = raw.indexOf('Failed query:')
-      const msg = idx > 0 ? raw.slice(0, idx).trim() : raw.slice(0, 300)
-      errors.push(`Bulk create failed: ${msg}`)
+      let msg = 'Unknown error'
+      if (e instanceof Error) {
+        const cause = (e as { cause?: { message?: string } }).cause
+        msg = cause?.message || e.message
+      }
+      if (msg.includes('Failed query:')) msg = msg.slice(0, msg.indexOf('Failed query:')).trim() || msg.slice(0, 200)
+      errors.push(`Bulk create failed: ${msg.slice(0, 300)}`)
     }
   }
 
