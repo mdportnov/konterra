@@ -87,7 +87,7 @@ export default function ContactDetail({
   const [interactions, setInteractions] = useState<Interaction[]>([])
   const [loadingInteractions, setLoadingInteractions] = useState(false)
   const [showAddInteraction, setShowAddInteraction] = useState(false)
-  const [newInteraction, setNewInteraction] = useState({ type: 'meeting', notes: '' })
+  const [newInteraction, setNewInteraction] = useState({ type: 'meeting', notes: '', date: new Date().toISOString().slice(0, 10) })
   const [connections, setConnections] = useState<ContactConnection[]>([])
   const [loadingConnections, setLoadingConnections] = useState(false)
   const [showAddConnection, setShowAddConnection] = useState(false)
@@ -175,13 +175,13 @@ export default function ContactDetail({
       const res = await fetch(`/api/contacts/${contact.id}/interactions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...newInteraction, date: new Date().toISOString() }),
+        body: JSON.stringify({ ...newInteraction, date: new Date(newInteraction.date + 'T12:00:00').toISOString() }),
       })
       if (res.ok) {
         const item = await res.json()
         setInteractions((prev) => [item, ...prev])
         setShowAddInteraction(false)
-        setNewInteraction({ type: 'meeting', notes: '' })
+        setNewInteraction({ type: 'meeting', notes: '', date: new Date().toISOString().slice(0, 10) })
         toast.success('Interaction added')
       }
     } catch {
@@ -653,6 +653,13 @@ export default function ContactDetail({
                 >
                   {INTERACTION_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
                 </select>
+                <input
+                  type="date"
+                  value={newInteraction.date}
+                  max={new Date().toISOString().slice(0, 10)}
+                  onChange={(e) => setNewInteraction((p) => ({ ...p, date: e.target.value }))}
+                  className="w-full h-7 text-xs rounded-md border border-input bg-muted/50 px-2 text-foreground"
+                />
                 <Input
                   value={newInteraction.notes}
                   onChange={(e) => setNewInteraction((p) => ({ ...p, notes: e.target.value }))}

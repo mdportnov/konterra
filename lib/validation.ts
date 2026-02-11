@@ -107,6 +107,10 @@ export function validateInteraction(body: Record<string, unknown>): string | nul
   if (!body.date) return null
   const d = new Date(body.date as string)
   if (isNaN(d.getTime())) return 'Invalid date'
+  const now = new Date()
+  now.setDate(now.getDate() + 1)
+  if (d > now) return 'Date cannot be in the future'
+  if (d.getFullYear() < 1970) return 'Date is too far in the past'
   return null
 }
 

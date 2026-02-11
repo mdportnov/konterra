@@ -35,72 +35,74 @@ export function useGlobeData() {
       })
   }, [])
 
-  useEffect(() => { load() }, [load])
-
   useEffect(() => {
-    fetchVisitedCountries()
-      .then((data) => {
-        if (Array.isArray(data)) setVisitedCountries(new Set(data))
-      })
-      .catch(() => toast.error('Failed to load visited countries'))
-  }, [])
+    const controller = new AbortController()
+    const { signal } = controller
 
-  useEffect(() => {
-    fetchConnections()
-      .then((data) => {
-        if (Array.isArray(data)) setConnections(data)
-      })
-      .catch(() => toast.error('Failed to load connections'))
-  }, [])
+    load()
 
-  useEffect(() => {
-    fetchAllCountryConnections()
-      .then((data) => {
-        if (Array.isArray(data)) setCountryConnections(data)
-      })
-      .catch(() => toast.error('Failed to load country connections'))
-  }, [])
+    fetchVisitedCountries(signal)
+      .then((data) => { if (Array.isArray(data)) setVisitedCountries(new Set(data)) })
+      .catch((e) => { if (!signal.aborted) toast.error('Failed to load visited countries') })
 
-  useEffect(() => {
-    fetchTags().then((data) => {
-      if (Array.isArray(data)) setUserTags(data)
-    }).catch(() => {})
-  }, [])
+    fetchConnections(signal)
+      .then((data) => { if (Array.isArray(data)) setConnections(data) })
+      .catch((e) => { if (!signal.aborted) toast.error('Failed to load connections') })
 
-  useEffect(() => {
-    fetchRecentInteractions().then(setAllInteractions).catch(() => {})
-  }, [])
+    fetchAllCountryConnections(signal)
+      .then((data) => { if (Array.isArray(data)) setCountryConnections(data) })
+      .catch((e) => { if (!signal.aborted) toast.error('Failed to load country connections') })
 
-  useEffect(() => {
-    fetchAllFavors().then(setAllFavors).catch(() => {})
-  }, [])
+    fetchTags(signal)
+      .then((data) => { if (Array.isArray(data)) setUserTags(data) })
+      .catch(() => {})
+
+    fetchRecentInteractions(signal).then(setAllInteractions).catch(() => {})
+    fetchAllFavors(signal).then(setAllFavors).catch(() => {})
+
+    return () => controller.abort()
+  }, [load])
 
   const reloadContacts = useCallback(() => {
-    fetchContacts().then(setContacts)
+    fetchContacts().then(setContacts).catch(() => toast.error('Failed to reload contacts'))
   }, [])
 
+  const visitedToggleInFlight = useRef(new Set<string>())
+
   const handleCountryVisitToggle = useCallback((country: string) => {
-    const wasVisited = visitedCountries.has(country)
+    if (visitedToggleInFlight.current.has(country)) return
+    visitedToggleInFlight.current.add(country)
+
+    let wasVisited = false
     setVisitedCountries((prev) => {
+      wasVisited = prev.has(country)
       const next = new Set(prev)
       if (wasVisited) next.delete(country)
       else next.add(country)
       return next
     })
+
     fetch('/api/visited-countries', {
       method: wasVisited ? 'DELETE' : 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ country }),
-    }).catch(() => {
-      setVisitedCountries((prev) => {
-        const rollback = new Set(prev)
-        if (wasVisited) rollback.add(country)
-        else rollback.delete(country)
-        return rollback
-      })
-      toast.error('Failed to update visited country')
     })
-  }, [visitedCountries])
+      .then((res) => {
+        if (!res.ok) throw new Error()
+      })
+      .catch(() => {
+        setVisitedCountries((prev) => {
+          const rollback = new Set(prev)
+          if (wasVisited) rollback.add(country)
+          else rollback.delete(country)
+          return rollback
+        })
+        toast.error('Failed to update visited country')
+      })
+      .finally(() => {
+        visitedToggleInFlight.current.delete(country)
+      })
+  }, [])
 
   const handleTagCreated = useCallback((tag: Tag) => {
     setUserTags((prev) => {

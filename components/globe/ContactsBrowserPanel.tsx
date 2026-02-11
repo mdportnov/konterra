@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState, useCallback } from 'react'
+import { useMemo, useState, useCallback, useEffect } from 'react'
 import GlobePanel from '@/components/globe/GlobePanel'
 import { PANEL_WIDTH, Z } from '@/lib/constants/ui'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -20,6 +20,7 @@ interface ContactsBrowserPanelProps {
 
 type Tab = 'contacts' | 'places'
 
+const PAGE_SIZE = 50
 const RELATIONSHIP_TYPES = ['friend', 'business', 'investor', 'conference', 'mentor', 'colleague', 'family', 'dating'] as const
 
 export default function ContactsBrowserPanel({
@@ -35,6 +36,7 @@ export default function ContactsBrowserPanel({
   const [selectedRelTypes, setSelectedRelTypes] = useState<string[]>([])
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
 
   const activeFilterCount = selectedTags.length + selectedRatings.size + selectedRelTypes.length
 
@@ -67,6 +69,14 @@ export default function ContactsBrowserPanel({
       return matchesSearch && matchesTags && matchesRating && matchesRelType
     })
   }, [contacts, search, selectedTags, selectedRatings, selectedRelTypes])
+
+  useEffect(() => { setCurrentPage(1) }, [search, selectedTags, selectedRatings, selectedRelTypes])
+
+  const totalPages = Math.ceil(filteredContacts.length / PAGE_SIZE)
+  const pagedContacts = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE
+    return filteredContacts.slice(start, start + PAGE_SIZE)
+  }, [filteredContacts, currentPage])
 
   const countryData = useMemo(() => {
     const map = new Map<string, Contact[]>()
@@ -145,6 +155,7 @@ export default function ContactsBrowserPanel({
     setSelectedRatings(new Set())
     setSelectedRelTypes([])
     setSearch('')
+    setCurrentPage(1)
   }, [])
 
   const handleTabChange = useCallback((t: Tab) => {
@@ -155,6 +166,7 @@ export default function ContactsBrowserPanel({
     setSelectedRelTypes([])
     setSelectedCountry(null)
     setFiltersOpen(false)
+    setCurrentPage(1)
   }, [])
 
   const handleSelectCountry = useCallback((country: string) => {
@@ -317,8 +329,11 @@ export default function ContactsBrowserPanel({
         )}
 
         {tab === 'contacts' && (
-          <div className="px-4 pb-1 shrink-0">
+          <div className="px-4 pb-1 shrink-0 flex items-center justify-between">
             <span className="text-[10px] text-muted-foreground/50">{filteredContacts.length} result{filteredContacts.length !== 1 ? 's' : ''}</span>
+            {totalPages > 1 && (
+              <PaginationRow current={currentPage} total={totalPages} onChange={setCurrentPage} />
+            )}
           </div>
         )}
 
@@ -339,7 +354,7 @@ export default function ContactsBrowserPanel({
         <ScrollArea className="flex-1 min-h-0">
           {tab === 'contacts' && (
             <div className="px-2 pb-2 space-y-0.5">
-              {filteredContacts.map((contact) => (
+              {pagedContacts.map((contact) => (
                 <ContactRow key={contact.id} contact={contact} onSelect={onSelectContact} />
               ))}
               {filteredContacts.length === 0 && (
@@ -394,6 +409,43 @@ export default function ContactsBrowserPanel({
         </ScrollArea>
       </div>
     </GlobePanel>
+  )
+}
+
+function PaginationRow({ current, total, onChange }: { current: number; total: number; onChange: (p: number) => void }) {
+  const pages: (number | '...')[] = []
+  if (total <= 5) {
+    for (let i = 1; i <= total; i++) pages.push(i)
+  } else {
+    pages.push(1)
+    if (current > 3) pages.push('...')
+    const start = Math.max(2, current - 1)
+    const end = Math.min(total - 1, current + 1)
+    for (let i = start; i <= end; i++) pages.push(i)
+    if (current < total - 2) pages.push('...')
+    pages.push(total)
+  }
+
+  return (
+    <div className="flex items-center gap-0.5">
+      {pages.map((p, i) =>
+        p === '...' ? (
+          <span key={`e${i}`} className="text-[10px] text-muted-foreground/40 px-0.5">...</span>
+        ) : (
+          <button
+            key={p}
+            onClick={() => onChange(p)}
+            className={`h-5 min-w-5 px-1 rounded text-[10px] font-medium transition-colors ${
+              p === current
+                ? 'bg-accent text-foreground'
+                : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+            }`}
+          >
+            {p}
+          </button>
+        )
+      )}
+    </div>
   )
 }
 

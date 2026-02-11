@@ -13,7 +13,7 @@ import SettingsPanel from '@/components/globe/SettingsPanel'
 import ImportDialog from '@/components/import/ImportDialog'
 import ConnectionInsightsPanel from '@/components/insights/ConnectionInsightsPanel'
 import CountryPopup from '@/components/globe/CountryPopup'
-import { PANEL_WIDTH } from '@/lib/constants/ui'
+import { PANEL_WIDTH, GLASS, Z } from '@/lib/constants/ui'
 import { displayDefaults } from '@/types/display'
 import type { DisplayOptions } from '@/types/display'
 import type { Contact, ContactCountryConnection } from '@/lib/db/schema'
@@ -125,6 +125,19 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
         countryConnections={data.countryConnections}
       />
 
+      {!data.loading && data.contacts.length === 0 && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ zIndex: Z.controls }}>
+          <div className={`${GLASS.panel} rounded-2xl p-6 text-center pointer-events-auto max-w-xs`}>
+            <p className="text-sm font-medium text-foreground mb-1">No contacts yet</p>
+            <p className="text-xs text-muted-foreground mb-4">Add your first contact or import from a file.</p>
+            <div className="flex gap-2 justify-center">
+              <button onClick={nav.handleAddContact} className="px-3 py-1.5 rounded-md bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors">Create contact</button>
+              <button onClick={() => setImportDialogOpen(true)} className="px-3 py-1.5 rounded-md bg-accent text-foreground text-xs font-medium hover:bg-accent/80 transition-colors">Import</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <ContactDetail
         contact={nav.selectedContact}
         open={nav.activePanel === 'detail'}
@@ -154,6 +167,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
         visitedCountries={data.visitedCountries}
         onToggleVisitedCountry={data.handleCountryVisitToggle}
         onOpenImport={() => setImportDialogOpen(true)}
+        onDeleteAllContacts={data.reloadContacts}
       />
 
       <ImportDialog

@@ -1,7 +1,11 @@
 import { db } from './index'
 import { users, contacts, interactions, contactConnections, contactCountryConnections, introductions, favors, visitedCountries, waitlist, tags } from './schema'
-import { eq, and, or, desc, sql, arrayContains } from 'drizzle-orm'
+import { eq, and, or, desc, sql, arrayContains, inArray } from 'drizzle-orm'
 import type { NewContact, NewContactConnection, NewContactCountryConnection, NewIntroduction, NewFavor } from './schema'
+
+export async function deleteAllContactsByUserId(userId: string) {
+  return db.delete(contacts).where(eq(contacts.userId, userId))
+}
 
 export async function getUserByEmail(email: string) {
   return db.query.users.findFirst({
@@ -231,8 +235,8 @@ export async function getIntroductionsByUserId(userId: string, page = 1, limit =
 }
 
 export async function createIntroduction(data: NewIntroduction) {
-  const [intro] = await db.insert(introductions).values(data).returning()
-  return intro
+  const rows = await db.insert(introductions).values(data).onConflictDoNothing().returning()
+  return rows[0] ?? null
 }
 
 export async function updateIntroduction(id: string, userId: string, data: Partial<NewIntroduction>) {
@@ -296,13 +300,15 @@ export async function deleteFavor(id: string, userId: string) {
 export async function createContactsBulk(data: NewContact[]) {
   if (data.length === 0) return []
   const BATCH_SIZE = 50
-  const results: (typeof contacts.$inferSelect)[] = []
-  for (let i = 0; i < data.length; i += BATCH_SIZE) {
-    const batch = data.slice(i, i + BATCH_SIZE)
-    const rows = await db.insert(contacts).values(batch).returning()
-    results.push(...rows)
-  }
-  return results
+  return db.transaction(async (tx) => {
+    const results: (typeof contacts.$inferSelect)[] = []
+    for (let i = 0; i < data.length; i += BATCH_SIZE) {
+      const batch = data.slice(i, i + BATCH_SIZE)
+      const rows = await tx.insert(contacts).values(batch).returning()
+      results.push(...rows)
+    }
+    return results
+  })
 }
 
 export async function getCountryConnectionsByContactId(contactId: string, userId: string) {
@@ -325,9 +331,13 @@ export async function createCountryConnection(data: NewContactCountryConnection)
   return conn
 }
 
-export async function deleteCountryConnection(id: string, userId: string) {
+export async function deleteCountryConnection(id: string, contactId: string, userId: string) {
   await db.delete(contactCountryConnections).where(
-    and(eq(contactCountryConnections.id, id), eq(contactCountryConnections.userId, userId))
+    and(
+      eq(contactCountryConnections.id, id),
+      eq(contactCountryConnections.contactId, contactId),
+      eq(contactCountryConnections.userId, userId)
+    )
   )
 }
 
@@ -366,19 +376,17 @@ export async function deleteTag(id: string, userId: string) {
   })
   if (!tag) return
 
-  const userContacts = await db.query.contacts.findMany({
-    where: and(eq(contacts.userId, userId), arrayContains(contacts.tags, [tag.name])),
-    columns: { id: true, tags: true },
-  })
-
   await db.transaction(async (tx) => {
-    for (const c of userContacts) {
-      const updated = (c.tags || []).filter((t) => t !== tag.name)
-      await tx
-        .update(contacts)
-        .set({ tags: updated.length > 0 ? updated : null })
-        .where(eq(contacts.id, c.id))
-    }
+    await tx
+      .update(contacts)
+      .set({ tags: sql`array_remove(${contacts.tags}, ${tag.name})` })
+      .where(and(eq(contacts.userId, userId), arrayContains(contacts.tags, [tag.name])))
+
+    await tx
+      .update(contacts)
+      .set({ tags: null })
+      .where(and(eq(contacts.userId, userId), sql`${contacts.tags} = '{}'`))
+
     await tx.delete(tags).where(and(eq(tags.id, id), eq(tags.userId, userId)))
   })
 
@@ -393,16 +401,12 @@ export async function renameTag(id: string, userId: string, newName: string) {
 
   const oldName = tag.name
 
-  const userContacts = await db.query.contacts.findMany({
-    where: and(eq(contacts.userId, userId), arrayContains(contacts.tags, [oldName])),
-    columns: { id: true, tags: true },
-  })
-
   return db.transaction(async (tx) => {
-    for (const c of userContacts) {
-      const updated = (c.tags || []).map((t) => (t === oldName ? newName : t))
-      await tx.update(contacts).set({ tags: updated }).where(eq(contacts.id, c.id))
-    }
+    await tx
+      .update(contacts)
+      .set({ tags: sql`array_replace(${contacts.tags}, ${oldName}, ${newName})` })
+      .where(and(eq(contacts.userId, userId), arrayContains(contacts.tags, [oldName])))
+
     const [updated] = await tx
       .update(tags)
       .set({ name: newName })

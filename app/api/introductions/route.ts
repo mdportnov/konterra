@@ -50,6 +50,10 @@ export async function POST(req: Request) {
     notes: (notes as string) || null,
   })
 
+  if (!intro) {
+    return NextResponse.json({ error: 'Introduction between these contacts already exists' }, { status: 409 })
+  }
+
   return NextResponse.json(intro, { status: 201 })
 }
 

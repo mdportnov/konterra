@@ -11,7 +11,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { ThemeToggle } from '@/components/theme-toggle'
 import { Checkbox } from '@/components/ui/checkbox'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { LogOut, Loader2, Pencil, Check, X, Search, Upload } from 'lucide-react'
+import { LogOut, Loader2, Pencil, Check, X, Search, Upload, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import GlobePanel from '@/components/globe/GlobePanel'
 import { PANEL_WIDTH } from '@/lib/constants/ui'
@@ -26,6 +26,7 @@ interface SettingsPanelProps {
   visitedCountries?: Set<string>
   onToggleVisitedCountry?: (country: string) => void
   onOpenImport?: () => void
+  onDeleteAllContacts?: () => void
 }
 
 const allCountryNames = Array.from(new Set(Object.values(countryNames))).sort()
@@ -36,12 +37,14 @@ interface SessionUser {
   image?: string | null
 }
 
-export default function SettingsPanel({ open, onClose, displayOptions, onDisplayChange, visitedCountries, onToggleVisitedCountry, onOpenImport }: SettingsPanelProps) {
+export default function SettingsPanel({ open, onClose, displayOptions, onDisplayChange, visitedCountries, onToggleVisitedCountry, onOpenImport, onDeleteAllContacts }: SettingsPanelProps) {
   const [user, setUser] = useState<SessionUser | null>(null)
   const [signingOut, setSigningOut] = useState(false)
   const [editingName, setEditingName] = useState(false)
   const [nameValue, setNameValue] = useState('')
   const [countrySearch, setCountrySearch] = useState('')
+  const [deleteConfirm, setDeleteConfirm] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const fetched = useRef(false)
 
   const filteredCountries = countrySearch
@@ -78,6 +81,21 @@ export default function SettingsPanel({ open, onClose, displayOptions, onDisplay
   const handleCancelEdit = () => {
     setNameValue('')
     setEditingName(false)
+  }
+
+  const handleDeleteAll = async () => {
+    setDeleting(true)
+    try {
+      const res = await fetch('/api/contacts', { method: 'DELETE' })
+      if (!res.ok) throw new Error('Failed to delete contacts')
+      toast.success('All contacts removed')
+      setDeleteConfirm(false)
+      onDeleteAllContacts?.()
+    } catch {
+      toast.error('Failed to remove contacts')
+    } finally {
+      setDeleting(false)
+    }
   }
 
   const handleSaveName = async () => {
@@ -204,6 +222,42 @@ export default function SettingsPanel({ open, onClose, displayOptions, onDisplay
             <Upload className="mr-2 h-4 w-4" />
             Import Contacts
           </Button>
+          {!deleteConfirm ? (
+            <Button
+              variant="outline"
+              className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/30"
+              onClick={() => setDeleteConfirm(true)}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Remove All Contacts
+            </Button>
+          ) : (
+            <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 space-y-2">
+              <p className="text-sm text-destructive font-medium">
+                This will permanently delete all your contacts, connections, interactions, and related data.
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="flex-1"
+                  onClick={handleDeleteAll}
+                  disabled={deleting}
+                >
+                  {deleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+                  Confirm Delete
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setDeleteConfirm(false)}
+                  disabled={deleting}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
 
         <Separator className="bg-border" />

@@ -1,5 +1,5 @@
 import { auth } from '@/auth'
-import { getContactsByUserId, createContact } from '@/lib/db/queries'
+import { getContactsByUserId, createContact, deleteAllContactsByUserId } from '@/lib/db/queries'
 import { geocode } from '@/lib/geocoding'
 import { validateContact, safeParseBody } from '@/lib/validation'
 import { toStringOrNull, toDateOrNull, parsePagination, unauthorized, badRequest, success } from '@/lib/api-utils'
@@ -13,6 +13,14 @@ export async function GET(req: Request) {
 
   const result = await getContactsByUserId(session.user.id, page, limit)
   return success(result)
+}
+
+export async function DELETE() {
+  const session = await auth()
+  if (!session?.user?.id) return unauthorized()
+
+  await deleteAllContactsByUserId(session.user.id)
+  return success({ deleted: true })
 }
 
 export async function POST(req: Request) {

@@ -84,8 +84,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (body.loyaltyIndicator !== undefined) updates.loyaltyIndicator = toStringOrNull(body.loyaltyIndicator)
   if (body.financialCapacity !== undefined) updates.financialCapacity = toStringOrNull(body.financialCapacity)
   if (body.motivations !== undefined) updates.motivations = Array.isArray(body.motivations) ? body.motivations : null
-  updates.lat = lat ?? null
-  updates.lng = lng ?? null
+  if (lat !== undefined) updates.lat = lat ?? null
+  if (lng !== undefined) updates.lng = lng ?? null
 
   const contact = await updateContact(id, session.user.id, updates)
 

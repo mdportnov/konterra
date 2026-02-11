@@ -65,7 +65,11 @@ export async function DELETE(
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
-  await params
+  const { id } = await params
+  const contact = await getContactById(id, session.user.id)
+  if (!contact) {
+    return NextResponse.json({ error: 'Contact not found' }, { status: 404 })
+  }
   const body = await safeParseBody(req)
   if (!body) {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
@@ -73,6 +77,6 @@ export async function DELETE(
   if (!body.connectionId) {
     return NextResponse.json({ error: 'connectionId required' }, { status: 400 })
   }
-  await deleteCountryConnection(body.connectionId as string, session.user.id)
+  await deleteCountryConnection(body.connectionId as string, id, session.user.id)
   return NextResponse.json({ success: true })
 }

@@ -191,6 +191,7 @@ export const introductions = pgTable('introductions', {
   index('introductions_user_id_idx').on(t.userId),
   index('introductions_contact_a_idx').on(t.contactAId),
   index('introductions_contact_b_idx').on(t.contactBId),
+  uniqueIndex('introductions_pair_idx').on(t.userId, t.contactAId, t.contactBId),
 ])
 
 export const favors = pgTable('favors', {

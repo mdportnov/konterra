@@ -11,6 +11,7 @@ import type { ImportEntry, ImportAction } from '@/lib/import/types'
 
 interface StepDedupReviewProps {
   entries: ImportEntry[]
+  intraDupCount?: number
   onConfirm: (entries: ImportEntry[]) => void
   onBack: () => void
 }
@@ -29,7 +30,7 @@ function CollapseSection({ open, children }: { open: boolean; children: React.Re
   )
 }
 
-export default function StepDedupReview({ entries: initial, onConfirm, onBack }: StepDedupReviewProps) {
+export default function StepDedupReview({ entries: initial, intraDupCount = 0, onConfirm, onBack }: StepDedupReviewProps) {
   const [entries, setEntries] = useState<ImportEntry[]>(initial)
 
   const duplicates = entries.filter((e) => e.match)
@@ -65,6 +66,11 @@ export default function StepDedupReview({ entries: initial, onConfirm, onBack }:
 
   return (
     <div className="space-y-4">
+      {intraDupCount > 0 && (
+        <p className="text-xs text-muted-foreground">
+          {intraDupCount} duplicate{intraDupCount !== 1 ? 's' : ''} within the file removed
+        </p>
+      )}
       {duplicates.length > 0 && (
         <>
           <div className="flex items-center justify-between">

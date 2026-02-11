@@ -9,7 +9,7 @@ import StepImportProgress from './StepImportProgress'
 import type { ImportSource } from './StepSourceSelect'
 import type { ParsedContact, ImportEntry } from '@/lib/import/types'
 import type { Contact } from '@/lib/db/schema'
-import { findDuplicates } from '@/lib/import/dedup'
+import { findDuplicates, deduplicateParsed } from '@/lib/import/dedup'
 
 type Step = 'source' | 'parse' | 'dedup' | 'importing'
 
@@ -70,12 +70,14 @@ export default function ImportDialog({ open, onOpenChange, existingContacts, onI
   const [step, setStep] = useState<Step>('source')
   const [source, setSource] = useState<ImportSource | null>(null)
   const [entries, setEntries] = useState<ImportEntry[]>([])
+  const [intraDupCount, setIntraDupCount] = useState(0)
   const contentRef = useRef<HTMLDivElement>(null)
 
   const reset = useCallback(() => {
     setStep('source')
     setSource(null)
     setEntries([])
+    setIntraDupCount(0)
   }, [])
 
   const handleOpenChange = useCallback((v: boolean) => {
@@ -89,7 +91,9 @@ export default function ImportDialog({ open, onOpenChange, existingContacts, onI
   }, [])
 
   const handleParsed = useCallback((contacts: ParsedContact[]) => {
-    const result = findDuplicates(contacts, existingContacts)
+    const { unique, removedCount } = deduplicateParsed(contacts)
+    setIntraDupCount(removedCount)
+    const result = findDuplicates(unique, existingContacts)
     setEntries(result)
     setStep('dedup')
   }, [existingContacts])
@@ -130,6 +134,7 @@ export default function ImportDialog({ open, onOpenChange, existingContacts, onI
           <AnimatedStep active={step === 'dedup'}>
             <StepDedupReview
               entries={entries}
+              intraDupCount={intraDupCount}
               onConfirm={handleConfirm}
               onBack={() => setStep('parse')}
             />

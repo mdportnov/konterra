@@ -18,14 +18,25 @@ async function apiFetch<T>(url: string, signal?: AbortSignal): Promise<T> {
   return res.json()
 }
 
+async function fetchAllPages<T>(baseUrl: string, signal?: AbortSignal): Promise<T[]> {
+  const first = await apiFetch<PaginatedResponse<T>>(`${baseUrl}?page=1&limit=100`, signal)
+  if (first.total <= first.data.length) return first.data
+
+  const totalPages = Math.min(Math.ceil(first.total / 100), 50)
+  const remaining = await Promise.all(
+    Array.from({ length: totalPages - 1 }, (_, i) =>
+      apiFetch<PaginatedResponse<T>>(`${baseUrl}?page=${i + 2}&limit=100`, signal)
+    )
+  )
+  return [first, ...remaining].flatMap((r) => r.data)
+}
+
 export async function fetchContacts(signal?: AbortSignal): Promise<Contact[]> {
-  const res = await apiFetch<PaginatedResponse<Contact>>('/api/contacts?limit=100', signal)
-  return res.data
+  return fetchAllPages<Contact>('/api/contacts', signal)
 }
 
 export async function fetchConnections(signal?: AbortSignal): Promise<ContactConnection[]> {
-  const res = await apiFetch<PaginatedResponse<ContactConnection>>('/api/connections?limit=100', signal)
-  return res.data
+  return fetchAllPages<ContactConnection>('/api/connections', signal)
 }
 
 export async function fetchVisitedCountries(signal?: AbortSignal): Promise<string[]> {
@@ -38,8 +49,7 @@ export async function fetchRecentInteractions(signal?: AbortSignal): Promise<Int
 }
 
 export async function fetchAllFavors(signal?: AbortSignal): Promise<Favor[]> {
-  const res = await apiFetch<PaginatedResponse<Favor>>('/api/favors?limit=100', signal)
-  return res.data
+  return fetchAllPages<Favor>('/api/favors', signal)
 }
 
 export async function fetchContactInteractions(contactId: string, signal?: AbortSignal): Promise<Interaction[]> {
