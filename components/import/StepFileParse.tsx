@@ -56,6 +56,13 @@ const instructions: Record<ImportSource, { steps: string[] }> = {
   },
 }
 
+function formatBirthdayPreview(raw: string): string {
+  const d = new Date(raw)
+  if (isNaN(d.getTime())) return raw
+  if (d.getFullYear() <= 1904) return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
 function CollapseSection({ open, children }: { open: boolean; children: React.ReactNode }) {
   return (
     <div
@@ -213,24 +220,32 @@ export default function StepFileParse({ source, onParsed, onBack }: StepFilePars
           </div>
 
           <ScrollArea className="h-[280px] rounded-lg border border-border">
+            <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="sticky top-0 bg-background border-b border-border">
                 <tr>
-                  <th className="text-left p-2 font-medium text-muted-foreground">Name</th>
-                  <th className="text-left p-2 font-medium text-muted-foreground">Email</th>
-                  <th className="text-left p-2 font-medium text-muted-foreground">Phone</th>
+                  <th className="text-left p-2 font-medium text-muted-foreground whitespace-nowrap">Name</th>
+                  <th className="text-left p-2 font-medium text-muted-foreground whitespace-nowrap">Email</th>
+                  <th className="text-left p-2 font-medium text-muted-foreground whitespace-nowrap">Phone</th>
+                  <th className="text-left p-2 font-medium text-muted-foreground whitespace-nowrap">Company</th>
+                  <th className="text-left p-2 font-medium text-muted-foreground whitespace-nowrap">Location</th>
+                  <th className="text-left p-2 font-medium text-muted-foreground whitespace-nowrap">Birthday</th>
                 </tr>
               </thead>
               <tbody>
                 {preview.map((c, i) => (
                   <tr key={i} className="border-b border-border/50">
-                    <td className="p-2 text-foreground truncate max-w-[160px]">{c.name}</td>
-                    <td className="p-2 text-muted-foreground truncate max-w-[160px]">{c.email || '\u2014'}</td>
-                    <td className="p-2 text-muted-foreground truncate max-w-[120px]">{c.phone || '\u2014'}</td>
+                    <td className="p-2 text-foreground truncate max-w-[140px]">{c.name}</td>
+                    <td className="p-2 text-muted-foreground truncate max-w-[140px]">{c.email || '\u2014'}</td>
+                    <td className="p-2 text-muted-foreground truncate max-w-[110px]">{c.phone || '\u2014'}</td>
+                    <td className="p-2 text-muted-foreground truncate max-w-[110px]">{c.company || '\u2014'}</td>
+                    <td className="p-2 text-muted-foreground truncate max-w-[120px]">{[c.city, c.country].filter(Boolean).join(', ') || '\u2014'}</td>
+                    <td className="p-2 text-muted-foreground truncate max-w-[90px] whitespace-nowrap">{c.birthday ? formatBirthdayPreview(c.birthday) : '\u2014'}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
+            </div>
             {(parsed?.length || 0) > 50 && (
               <p className="p-2 text-xs text-muted-foreground text-center">
                 Showing 50 of {parsed?.length}

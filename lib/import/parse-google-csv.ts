@@ -74,7 +74,7 @@ function col(row: Record<string, string>, ...keys: string[]): string {
 
 function normalizeBirthday(raw: string): string {
   if (!raw) return ''
-  if (raw.startsWith('--')) return '0000-' + raw.slice(2)
+  if (raw.startsWith('--')) return '1904-' + raw.slice(2)
   return raw
 }
 

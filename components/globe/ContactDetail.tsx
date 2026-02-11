@@ -508,7 +508,7 @@ export default function ContactDetail({
                   <Cake className="h-4 w-4 text-muted-foreground/60 shrink-0" />
                   <span>{(() => {
                     const bd = new Date(contact.birthday)
-                    if (bd.getFullYear() < 1900) return bd.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })
+                    if (bd.getFullYear() <= 1904) return bd.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })
                     return bd.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
                   })()}</span>
                 </div>

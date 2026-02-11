@@ -85,10 +85,10 @@ function toDateStr(d: Date | string | null | undefined): string {
   if (!d) return ''
   const date = d instanceof Date ? d : new Date(d)
   if (isNaN(date.getTime())) return ''
-  if (date.getFullYear() < 1900) {
+  if (date.getFullYear() <= 1904) {
     const m = String(date.getMonth() + 1).padStart(2, '0')
     const day = String(date.getDate()).padStart(2, '0')
-    return `0000-${m}-${day}`
+    return `1904-${m}-${day}`
   }
   return date.toISOString().slice(0, 10)
 }

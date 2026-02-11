@@ -11,7 +11,7 @@ export function toDateOrNull(v: unknown): Date | null {
   if (v instanceof Date) return v
   let raw = String(v)
   if (raw.startsWith('--')) {
-    raw = '0000-' + raw.slice(2)
+    raw = '1904-' + raw.slice(2)
   }
   const d = new Date(raw)
   return isNaN(d.getTime()) ? null : d
