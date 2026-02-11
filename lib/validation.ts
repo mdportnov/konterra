@@ -1,5 +1,4 @@
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-const PHONE_RE = /^\+?[\d\s\-().]{7,30}$/
 const URL_RE = /^https?:\/\/.+/
 const TELEGRAM_RE = /^@?\w{3,32}$/
 
@@ -49,8 +48,6 @@ export function validateContact(body: Record<string, unknown>, requireName = tru
 
   let err: string | null
   err = validateString(body.email, EMAIL_RE, 'email')
-  if (err) return err
-  err = validateString(body.phone, PHONE_RE, 'phone')
   if (err) return err
 
   const urlFields = ['linkedin', 'twitter', 'instagram', 'github', 'website', 'photo'] as const
