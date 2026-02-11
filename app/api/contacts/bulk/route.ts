@@ -120,7 +120,8 @@ export async function POST(req: Request) {
       allContacts.push(...results)
       created = results.length
     } catch (e) {
-      errors.push(`Bulk create failed: ${e instanceof Error ? e.message : 'Unknown error'}`)
+      const msg = e instanceof Error ? e.message : 'Unknown error'
+      errors.push(`Bulk create failed: ${msg.length > 300 ? msg.slice(0, 300) + '...' : msg}`)
     }
   }
 

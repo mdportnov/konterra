@@ -1,5 +1,5 @@
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-const PHONE_RE = /^\+?[\d\s\-().]{7,20}$/
+const PHONE_RE = /^\+?[\d\s\-().]{7,30}$/
 const URL_RE = /^https?:\/\/.+/
 const TELEGRAM_RE = /^@?\w{3,32}$/
 

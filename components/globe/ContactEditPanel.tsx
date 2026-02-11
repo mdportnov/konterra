@@ -218,7 +218,7 @@ export default function ContactEditPanel({ contact, open, onSaved, onCancel, ava
     const errors: string[] = []
     if (!formData.name.trim()) errors.push('Name is required')
     if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) errors.push('Invalid email format')
-    if (formData.phone && !/^\+?[\d\s\-().]{7,20}$/.test(formData.phone)) errors.push('Invalid phone format')
+    if (formData.phone && !/^\+?[\d\s\-().]{7,30}$/.test(formData.phone)) errors.push('Invalid phone format')
     if (formData.photo && !/^https?:\/\/.+/.test(formData.photo)) errors.push('Photo must be a valid URL')
     if (errors.length > 0) {
       errors.forEach(e => toast.error(e))

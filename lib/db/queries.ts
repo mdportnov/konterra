@@ -295,7 +295,14 @@ export async function deleteFavor(id: string, userId: string) {
 
 export async function createContactsBulk(data: NewContact[]) {
   if (data.length === 0) return []
-  return db.insert(contacts).values(data).returning()
+  const BATCH_SIZE = 50
+  const results: (typeof contacts.$inferSelect)[] = []
+  for (let i = 0; i < data.length; i += BATCH_SIZE) {
+    const batch = data.slice(i, i + BATCH_SIZE)
+    const rows = await db.insert(contacts).values(batch).returning()
+    results.push(...rows)
+  }
+  return results
 }
 
 export async function getCountryConnectionsByContactId(contactId: string, userId: string) {
