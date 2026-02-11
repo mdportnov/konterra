@@ -29,8 +29,8 @@ import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/comp
 import { PANEL_WIDTH } from '@/lib/constants/ui'
 import { RATING_LABELS } from '@/lib/constants/rating'
 import { trajectoryIcon, trajectoryColor, computeTrajectory, computeRelationshipStrength } from '@/lib/metrics'
-import { fetchContactInteractions, fetchContactConnections, fetchContactFavors } from '@/lib/api'
-import type { Contact, Interaction, ContactConnection, Favor } from '@/lib/db/schema'
+import { fetchContactInteractions, fetchContactConnections, fetchContactFavors, fetchContactCountryConnections } from '@/lib/api'
+import type { Contact, Interaction, ContactConnection, ContactCountryConnection, Favor } from '@/lib/db/schema'
 
 export interface ConnectedContact {
   id: string
@@ -48,6 +48,7 @@ interface ContactDetailProps {
   connectedContacts?: ConnectedContact[]
   onConnectedContactClick?: (c: ConnectedContact) => void
   allContacts?: Contact[]
+  onCountryConnectionsChange?: (contactId: string, connections: ContactCountryConnection[]) => void
 }
 
 const INTERACTION_TYPES = ['meeting', 'call', 'message', 'email', 'event', 'introduction', 'deal', 'note'] as const
@@ -79,6 +80,7 @@ export default function ContactDetail({
   connectedContacts = [],
   onConnectedContactClick,
   allContacts = [],
+  onCountryConnectionsChange,
 }: ContactDetailProps) {
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -94,7 +96,11 @@ export default function ContactDetail({
   const [loadingFavors, setLoadingFavors] = useState(false)
   const [showAddFavor, setShowAddFavor] = useState(false)
   const [newFavor, setNewFavor] = useState({ direction: 'given', type: 'introduction', description: '' })
-  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({ timeline: false, connections: false, favors: false, profile: false })
+  const [countryTies, setCountryTies] = useState<ContactCountryConnection[]>([])
+  const [loadingCountryTies, setLoadingCountryTies] = useState(false)
+  const [showAddCountryTie, setShowAddCountryTie] = useState(false)
+  const [newCountryTie, setNewCountryTie] = useState({ country: '', notes: '' })
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({ timeline: false, connections: false, favors: false, countryTies: false, profile: false })
   const abortRef = useRef<AbortController | null>(null)
 
   const toggleSection = useCallback((key: string) => {
@@ -111,6 +117,7 @@ export default function ContactDetail({
     setLoadingInteractions(true)
     setLoadingConnections(true)
     setLoadingFavors(true)
+    setLoadingCountryTies(true)
 
     fetchContactInteractions(contactId, controller.signal)
       .then((data) => { if (!controller.signal.aborted) setInteractions(data) })
@@ -126,6 +133,11 @@ export default function ContactDetail({
       .then((data) => { if (!controller.signal.aborted) setFavorsList(data) })
       .catch((e) => { if (!controller.signal.aborted && e.name !== 'AbortError') toast.error('Failed to load favors') })
       .finally(() => { if (!controller.signal.aborted) setLoadingFavors(false) })
+
+    fetchContactCountryConnections(contactId, controller.signal)
+      .then((data) => { if (!controller.signal.aborted) setCountryTies(data) })
+      .catch((e) => { if (!controller.signal.aborted && e.name !== 'AbortError') toast.error('Failed to load country ties') })
+      .finally(() => { if (!controller.signal.aborted) setLoadingCountryTies(false) })
 
     return () => controller.abort()
   }, [contact, open])
@@ -213,6 +225,46 @@ export default function ContactDetail({
       }
     } catch {
       toast.error('Failed to record favor')
+    }
+  }
+
+  const handleAddCountryTie = async () => {
+    if (!newCountryTie.country.trim()) return
+    try {
+      const res = await fetch(`/api/contacts/${contact.id}/country-connections`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newCountryTie),
+      })
+      if (res.ok) {
+        const item = await res.json()
+        const updated = [...countryTies, item]
+        setCountryTies(updated)
+        setShowAddCountryTie(false)
+        setNewCountryTie({ country: '', notes: '' })
+        toast.success('Country tie added')
+        onCountryConnectionsChange?.(contact.id, updated)
+      }
+    } catch {
+      toast.error('Failed to add country tie')
+    }
+  }
+
+  const handleDeleteCountryTie = async (connectionId: string) => {
+    try {
+      const res = await fetch(`/api/contacts/${contact.id}/country-connections`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ connectionId }),
+      })
+      if (res.ok) {
+        const updated = countryTies.filter((t) => t.id !== connectionId)
+        setCountryTies(updated)
+        toast.success('Country tie removed')
+        onCountryConnectionsChange?.(contact.id, updated)
+      }
+    } catch {
+      toast.error('Failed to remove country tie')
     }
   }
 
@@ -721,6 +773,82 @@ export default function ContactDetail({
               ))}
               {connections.length === 0 && (
                 <p className="text-[11px] text-muted-foreground/60 py-1">No connections yet</p>
+              )}
+            </div>
+            )}
+          </CollapsibleSection>
+
+          <CollapsibleSection
+            title="Country Ties"
+            icon={Globe}
+            count={countryTies.length}
+            expanded={expandedSections.countryTies}
+            onToggle={() => toggleSection('countryTies')}
+            action={
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-6 w-6 !text-muted-foreground hover:!text-foreground"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  if (!showAddCountryTie) setExpandedSections((prev) => ({ ...prev, countryTies: true }))
+                  setShowAddCountryTie(!showAddCountryTie)
+                }}
+              >
+                {showAddCountryTie ? <X className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
+              </Button>
+            }
+          >
+            <div
+              className="grid transition-[grid-template-rows,opacity] duration-200 ease-[cubic-bezier(0.32,0.72,0,1)]"
+              style={{ gridTemplateRows: showAddCountryTie ? '1fr' : '0fr', opacity: showAddCountryTie ? 1 : 0 }}
+            >
+              <div className="overflow-hidden">
+              <div className="p-2 rounded-lg bg-accent/50 border border-border space-y-2 mb-2">
+                <Input
+                  value={newCountryTie.country}
+                  onChange={(e) => setNewCountryTie((p) => ({ ...p, country: e.target.value }))}
+                  placeholder="Country name..."
+                  className="h-7 text-xs bg-muted/50"
+                />
+                <Input
+                  value={newCountryTie.notes}
+                  onChange={(e) => setNewCountryTie((p) => ({ ...p, notes: e.target.value }))}
+                  placeholder="Notes (optional)..."
+                  className="h-7 text-xs bg-muted/50"
+                />
+                <div className="flex gap-1">
+                  <Button size="sm" className="h-6 text-[10px] bg-purple-500 hover:bg-purple-600 text-white" onClick={handleAddCountryTie}>Add</Button>
+                  <Button size="sm" variant="ghost" className="h-6 text-[10px]" onClick={() => setShowAddCountryTie(false)}>Cancel</Button>
+                </div>
+              </div>
+              </div>
+            </div>
+            {loadingCountryTies ? (
+              <div className="space-y-2 py-1">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-3/4" />
+              </div>
+            ) : (
+            <div className="space-y-1">
+              {countryTies.map((tie) => (
+                <div key={tie.id} className="flex items-center gap-2 py-1 group">
+                  <Globe className="h-3 w-3 text-purple-500/60 shrink-0" />
+                  <span className="text-[11px] text-foreground font-medium">{tie.country}</span>
+                  {tie.notes && <span className="text-[10px] text-muted-foreground truncate flex-1">{tie.notes}</span>}
+                  {tie.tags && tie.tags.length > 0 && tie.tags.map((tag) => (
+                    <Badge key={tag} className="text-[9px] bg-purple-500/10 text-purple-500 border-purple-500/20">{tag}</Badge>
+                  ))}
+                  <button
+                    onClick={() => handleDeleteCountryTie(tie.id)}
+                    className="opacity-0 group-hover:opacity-100 text-muted-foreground/40 hover:text-red-500 transition-opacity ml-auto shrink-0 cursor-pointer"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+              {countryTies.length === 0 && (
+                <p className="text-[11px] text-muted-foreground/60 py-1">No country ties yet</p>
               )}
             </div>
             )}

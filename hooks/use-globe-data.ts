@@ -2,12 +2,13 @@
 
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { toast } from 'sonner'
-import { fetchContacts, fetchConnections, fetchVisitedCountries, fetchTags, fetchRecentInteractions, fetchAllFavors } from '@/lib/api'
-import type { Contact, ContactConnection, Tag, Interaction, Favor } from '@/lib/db/schema'
+import { fetchContacts, fetchConnections, fetchVisitedCountries, fetchTags, fetchRecentInteractions, fetchAllFavors, fetchAllCountryConnections } from '@/lib/api'
+import type { Contact, ContactConnection, ContactCountryConnection, Tag, Interaction, Favor } from '@/lib/db/schema'
 
 export function useGlobeData() {
   const [contacts, setContacts] = useState<Contact[]>([])
   const [connections, setConnections] = useState<ContactConnection[]>([])
+  const [countryConnections, setCountryConnections] = useState<ContactCountryConnection[]>([])
   const [visitedCountries, setVisitedCountries] = useState<Set<string>>(new Set())
   const [userTags, setUserTags] = useState<Tag[]>([])
   const [allInteractions, setAllInteractions] = useState<(Interaction & { contactName: string })[]>([])
@@ -50,6 +51,14 @@ export function useGlobeData() {
         if (Array.isArray(data)) setConnections(data)
       })
       .catch(() => toast.error('Failed to load connections'))
+  }, [])
+
+  useEffect(() => {
+    fetchAllCountryConnections()
+      .then((data) => {
+        if (Array.isArray(data)) setCountryConnections(data)
+      })
+      .catch(() => toast.error('Failed to load country connections'))
   }, [])
 
   useEffect(() => {
@@ -100,6 +109,13 @@ export function useGlobeData() {
     })
   }, [])
 
+  const handleCountryConnectionsChange = useCallback((contactId: string, updated: ContactCountryConnection[]) => {
+    setCountryConnections((prev) => {
+      const filtered = prev.filter((c) => c.contactId !== contactId)
+      return [...filtered, ...updated]
+    })
+  }, [])
+
   const handleTagDeleted = useCallback((tagId: string, tagName: string) => {
     setUserTags((prev) => prev.filter((t) => t.id !== tagId))
     setContacts((prev) =>
@@ -114,6 +130,7 @@ export function useGlobeData() {
   return {
     contacts, setContacts,
     connections, setConnections,
+    countryConnections, setCountryConnections,
     visitedCountries, setVisitedCountries,
     userTags, setUserTags,
     allInteractions,
@@ -122,6 +139,7 @@ export function useGlobeData() {
     pendingContactIdRef,
     reloadContacts,
     handleCountryVisitToggle,
+    handleCountryConnectionsChange,
     handleTagCreated,
     handleTagDeleted,
   }

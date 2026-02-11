@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef, use } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef, use } from 'react'
 import dynamic from 'next/dynamic'
 import DashboardPanel from '@/components/dashboard/DashboardPanel'
 import ContactDetail from '@/components/globe/ContactDetail'
@@ -16,7 +16,7 @@ import CountryPopup from '@/components/globe/CountryPopup'
 import { PANEL_WIDTH } from '@/lib/constants/ui'
 import { displayDefaults } from '@/types/display'
 import type { DisplayOptions } from '@/types/display'
-import type { Contact } from '@/lib/db/schema'
+import type { Contact, ContactCountryConnection } from '@/lib/db/schema'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { useGlobeData } from '@/hooks/use-globe-data'
 import { useContactFilters } from '@/hooks/use-contact-filters'
@@ -54,8 +54,8 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
   }, [nav.handleContactSaved, data.setContacts])
 
   const handleDeleteContact = useCallback((contactId: string) => {
-    nav.handleDeleteContact(contactId, data.setContacts, data.setConnections)
-  }, [nav.handleDeleteContact, data.setContacts, data.setConnections])
+    nav.handleDeleteContact(contactId, data.setContacts, data.setConnections, data.setCountryConnections)
+  }, [nav.handleDeleteContact, data.setContacts, data.setConnections, data.setCountryConnections])
 
   const handleCountryClick = useCallback((country: string, event: { x: number; y: number }) => {
     if (countryClosingTimer.current) clearTimeout(countryClosingTimer.current)
@@ -63,6 +63,17 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
     setCountryPopup({ country, contacts: matched, x: event.x, y: event.y })
     requestAnimationFrame(() => setCountryPopupOpen(true))
   }, [filters.filteredContacts])
+
+  const indirectPopupContacts = useMemo(() => {
+    if (!countryPopup) return []
+    const directIds = new Set(countryPopup.contacts.map((c) => c.id))
+    const indirectContactIds = data.countryConnections
+      .filter((cc) => cc.country === countryPopup.country)
+      .map((cc) => cc.contactId)
+      .filter((id) => !directIds.has(id))
+    const contactMap = new Map(data.contacts.map((c) => [c.id, c]))
+    return [...new Set(indirectContactIds)].map((id) => contactMap.get(id)).filter(Boolean) as Contact[]
+  }, [countryPopup, data.countryConnections, data.contacts])
 
   const closeCountryPopup = useCallback(() => {
     setCountryPopupOpen(false)
@@ -111,6 +122,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
         display={displayOptions}
         visitedCountries={data.visitedCountries}
         connections={data.connections}
+        countryConnections={data.countryConnections}
       />
 
       <ContactDetail
@@ -122,6 +134,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
         connectedContacts={nav.connectedContacts}
         onConnectedContactClick={nav.handleConnectedContactClick}
         allContacts={data.contacts}
+        onCountryConnectionsChange={data.handleCountryConnectionsChange}
       />
 
       <ContactEditPanel
@@ -214,6 +227,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
           visited={data.visitedCountries.has(countryPopup.country)}
           onToggleVisited={() => data.handleCountryVisitToggle(countryPopup.country)}
           onAddContact={handleAddContactToCountry}
+          indirectContacts={indirectPopupContacts}
         />
       )}
     </>

@@ -1,7 +1,7 @@
 import { db } from './index'
-import { users, contacts, interactions, contactConnections, introductions, favors, visitedCountries, waitlist, tags } from './schema'
+import { users, contacts, interactions, contactConnections, contactCountryConnections, introductions, favors, visitedCountries, waitlist, tags } from './schema'
 import { eq, and, or, desc, sql, arrayContains } from 'drizzle-orm'
-import type { NewContact, NewContactConnection, NewIntroduction, NewFavor } from './schema'
+import type { NewContact, NewContactConnection, NewContactCountryConnection, NewIntroduction, NewFavor } from './schema'
 
 export async function getUserByEmail(email: string) {
   return db.query.users.findFirst({
@@ -296,6 +296,32 @@ export async function deleteFavor(id: string, userId: string) {
 export async function createContactsBulk(data: NewContact[]) {
   if (data.length === 0) return []
   return db.insert(contacts).values(data).returning()
+}
+
+export async function getCountryConnectionsByContactId(contactId: string, userId: string) {
+  return db.query.contactCountryConnections.findMany({
+    where: and(
+      eq(contactCountryConnections.contactId, contactId),
+      eq(contactCountryConnections.userId, userId)
+    ),
+  })
+}
+
+export async function getAllCountryConnections(userId: string) {
+  return db.query.contactCountryConnections.findMany({
+    where: eq(contactCountryConnections.userId, userId),
+  })
+}
+
+export async function createCountryConnection(data: NewContactCountryConnection) {
+  const [conn] = await db.insert(contactCountryConnections).values(data).returning()
+  return conn
+}
+
+export async function deleteCountryConnection(id: string, userId: string) {
+  await db.delete(contactCountryConnections).where(
+    and(eq(contactCountryConnections.id, id), eq(contactCountryConnections.userId, userId))
+  )
 }
 
 export async function verifyContactOwnership(contactId: string, userId: string): Promise<boolean> {

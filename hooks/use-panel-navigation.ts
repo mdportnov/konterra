@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
-import type { Contact, ContactConnection } from '@/lib/db/schema'
+import type { Contact, ContactConnection, ContactCountryConnection } from '@/lib/db/schema'
 import type { ConnectedContact } from '@/components/globe/ContactDetail'
 
 export type ActivePanel = 'detail' | 'edit' | 'settings' | 'browser' | 'insights' | null
@@ -135,9 +135,10 @@ export function usePanelNavigation(
     pushUrl(stateToUrl('detail', saved.id))
   }, [])
 
-  const handleDeleteContact = useCallback((contactId: string, setContacts: React.Dispatch<React.SetStateAction<Contact[]>>, setConnections: React.Dispatch<React.SetStateAction<ContactConnection[]>>) => {
+  const handleDeleteContact = useCallback((contactId: string, setContacts: React.Dispatch<React.SetStateAction<Contact[]>>, setConnections: React.Dispatch<React.SetStateAction<ContactConnection[]>>, setCountryConnections?: React.Dispatch<React.SetStateAction<ContactCountryConnection[]>>) => {
     setContacts((prev) => prev.filter((c) => c.id !== contactId))
     setConnections((prev) => prev.filter((c) => c.sourceContactId !== contactId && c.targetContactId !== contactId))
+    setCountryConnections?.((prev) => prev.filter((c) => c.contactId !== contactId))
     setSelectedContact(null)
     setActivePanel(null)
     pushUrl('/')

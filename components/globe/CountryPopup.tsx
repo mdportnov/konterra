@@ -22,9 +22,10 @@ interface CountryPopupProps {
   visited?: boolean
   onToggleVisited?: () => void
   onAddContact?: () => void
+  indirectContacts?: Contact[]
 }
 
-export default function CountryPopup({ country, contacts, x, y, open, onSelect, onClose, visited, onToggleVisited, onAddContact }: CountryPopupProps) {
+export default function CountryPopup({ country, contacts, x, y, open, onSelect, onClose, visited, onToggleVisited, onAddContact, indirectContacts = [] }: CountryPopupProps) {
   const ref = useRef<HTMLDivElement>(null)
   useClickOutside(ref, onClose, open)
   useHotkey('Escape', onClose, { enabled: open })
@@ -154,8 +155,44 @@ export default function CountryPopup({ country, contacts, x, y, open, onSelect, 
         </ScrollArea>
       )}
 
+      {indirectContacts.length > 0 && (
+        <>
+          <Separator />
+          <div className="py-1">
+            <div className="px-4 pt-2 pb-1">
+              <span className="text-[10px] font-medium text-purple-500/60 uppercase tracking-wider">Has connections here</span>
+            </div>
+            {indirectContacts.map((c) => {
+              const ini = c.name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
+              return (
+                <button
+                  key={c.id}
+                  onClick={() => handleSelect(c)}
+                  className="w-full flex items-center gap-3 px-4 py-2 hover:bg-accent transition-colors text-left cursor-pointer opacity-60"
+                >
+                  <Avatar className="h-8 w-8 border border-purple-500/20 shrink-0">
+                    <AvatarImage src={c.photo || undefined} />
+                    <AvatarFallback className="text-[10px] bg-purple-500/15 text-purple-600 dark:text-purple-300">
+                      {ini}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0">
+                    <div className="text-sm text-foreground truncate">{c.name}</div>
+                    {(c.role || c.company) && (
+                      <div className="text-xs text-muted-foreground/60 truncate">
+                        {[c.role, c.company].filter(Boolean).join(' · ')}
+                      </div>
+                    )}
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+        </>
+      )}
+
       {onAddContact && (
-        <div className={`${hasContacts ? 'border-t border-border' : ''} px-3 py-2`}>
+        <div className={`${hasContacts || indirectContacts.length > 0 ? 'border-t border-border' : ''} px-3 py-2`}>
           <button
             onClick={onAddContact}
             className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-accent transition-colors cursor-pointer"

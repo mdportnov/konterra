@@ -221,6 +221,20 @@ export const tags = pgTable('tags', {
   uniqueIndex('tags_user_name_idx').on(t.userId, t.name),
 ])
 
+export const contactCountryConnections = pgTable('contact_country_connections', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: text('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  contactId: text('contact_id').references(() => contacts.id, { onDelete: 'cascade' }).notNull(),
+  country: text('country').notNull(),
+  notes: text('notes'),
+  tags: text('tags').array(),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (t) => [
+  index('contact_country_connections_user_id_idx').on(t.userId),
+  index('contact_country_connections_contact_id_idx').on(t.contactId),
+  uniqueIndex('contact_country_connections_contact_country_idx').on(t.contactId, t.country),
+])
+
 export const visitedCountries = pgTable('visited_countries', {
   id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
   userId: text('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
@@ -239,6 +253,8 @@ export type NewTag = typeof tags.$inferInsert
 export type Interaction = typeof interactions.$inferSelect
 export type ContactConnection = typeof contactConnections.$inferSelect
 export type NewContactConnection = typeof contactConnections.$inferInsert
+export type ContactCountryConnection = typeof contactCountryConnections.$inferSelect
+export type NewContactCountryConnection = typeof contactCountryConnections.$inferInsert
 export type Introduction = typeof introductions.$inferSelect
 export type NewIntroduction = typeof introductions.$inferInsert
 export type Favor = typeof favors.$inferSelect
