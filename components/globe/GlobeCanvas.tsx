@@ -58,7 +58,7 @@ interface GlobeCanvasProps {
 const EMPTY_ARCS: GlobeArc[] = []
 const EXIT_MS = 150
 
-function ContactDensityLegend({ isDark, visitedCountries, hasIndirect }: { isDark: boolean; visitedCountries?: Set<string>; hasIndirect?: boolean }) {
+function ContactDensityLegend({ isDark, visitedCountries, hasIndirect, showUserCountry }: { isDark: boolean; visitedCountries?: Set<string>; hasIndirect?: boolean; showUserCountry?: boolean }) {
   const hasVisited = visitedCountries && visitedCountries.size > 0
 
   return (
@@ -93,6 +93,12 @@ function ContactDensityLegend({ isDark, visitedCountries, hasIndirect }: { isDar
           <span className="text-[10px] text-muted-foreground">Indirect ties</span>
         </div>
       )}
+      {showUserCountry && (
+        <div className="flex items-center gap-1.5">
+          <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? 'rgba(34, 197, 94, 0.25)' : 'rgba(34, 197, 94, 0.15)', border: `1.5px solid ${isDark ? 'rgba(34, 197, 94, 0.6)' : 'rgba(34, 197, 94, 0.45)'}` }} />
+          <span className="text-[10px] text-muted-foreground">Your location</span>
+        </div>
+      )}
     </div>
   )
 }
@@ -121,6 +127,8 @@ export default memo(function GlobeCanvas({
   const globeRef = useRef<any>(null)
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 })
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null)
+  const [userCountry, setUserCountry] = useState<string | null>(null)
+  const globeReady = useRef(false)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [countries, setCountries] = useState<any[]>([])
 
@@ -195,14 +203,36 @@ export default memo(function GlobeCanvas({
   }, [])
 
   useEffect(() => {
-    if (!globeRef.current) return
-    const renderer = globeRef.current.renderer()
-    if (renderer) renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-    const controls = globeRef.current.controls()
-    controls.enableDamping = true
+    if (!userLocation || countries.length === 0) return
+    import('d3-geo').then((mod) => {
+      for (const feat of countries) {
+        if (mod.geoContains(feat, [userLocation.lng, userLocation.lat])) {
+          const name = countryNames[String(feat.id)]
+          if (name) setUserCountry(name)
+          break
+        }
+      }
+    })
+  }, [userLocation, countries])
 
-    const target = userLocation || { lat: 20, lng: 0 }
-    globeRef.current.pointOfView({ ...target, altitude: 2.2 }, 1000)
+  useEffect(() => {
+    const init = () => {
+      if (!globeRef.current) return false
+      const renderer = globeRef.current.renderer()
+      if (!renderer) return false
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+      const controls = globeRef.current.controls()
+      controls.enableDamping = true
+      globeReady.current = true
+      const target = userLocation || { lat: 20, lng: 0 }
+      globeRef.current.pointOfView({ ...target, altitude: 2.2 }, 1000)
+      return true
+    }
+    if (init()) return
+    const interval = setInterval(() => {
+      if (init()) clearInterval(interval)
+    }, 100)
+    return () => clearInterval(interval)
   }, [userLocation])
 
   useEffect(() => {
@@ -464,12 +494,13 @@ export default memo(function GlobeCanvas({
     if (count > 0) parts.push(`${count} contact${count === 1 ? '' : 's'}`)
     if (indirectCount > 0) parts.push(`${indirectCount} indirect tie${indirectCount === 1 ? '' : 's'}`)
     if (isVisited) parts.push('Visited')
+    if (userCountry && name === userCountry) parts.push('Your location')
     const label = parts.join(' <span style="opacity:0.4">&middot;</span> ')
     const bg = isDark ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.9)'
     const textColor = isDark ? 'rgba(255,255,255,0.95)' : 'rgba(20,30,50,0.9)'
     const border = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'
     return `<div style="background:${bg};color:${textColor};padding:5px 10px;border-radius:6px;font-size:11px;backdrop-filter:blur(12px);border:1px solid ${border};font-family:system-ui,sans-serif;line-height:1.4;box-shadow:0 2px 8px rgba(0,0,0,${isDark ? '0.4' : '0.08'})">${label}</div>`
-  }, [isDark, countryContactCount, countryConnectionCountMap, visitedCountries])
+  }, [isDark, countryContactCount, countryConnectionCountMap, visitedCountries, userCountry])
 
   const getPolygonCapColor = useCallback((feat: object) => {
     const f = feat as { id?: string }
@@ -488,9 +519,10 @@ export default memo(function GlobeCanvas({
       if (count >= 1) return isDark ? 'rgba(234, 88, 12, 0.35)' : 'rgba(234, 88, 12, 0.25)'
       if (isIndirectOnly) return isDark ? 'rgba(168, 85, 247, 0.2)' : 'rgba(168, 85, 247, 0.12)'
       if (isVisited) return isDark ? 'rgba(20, 184, 166, 0.25)' : 'rgba(20, 184, 166, 0.15)'
+      if (userCountry && name === userCountry) return isDark ? 'rgba(34, 197, 94, 0.25)' : 'rgba(34, 197, 94, 0.15)'
     }
     return isDark ? 'rgba(15, 25, 55, 0.85)' : 'rgba(180, 195, 220, 0.7)'
-  }, [isDark, countryContactCount, visitedCountries, indirectOnlyCountries])
+  }, [isDark, countryContactCount, visitedCountries, indirectOnlyCountries, userCountry])
 
   const getPolygonSideColor = useCallback(
     () => isDark ? 'rgba(10, 18, 40, 0.6)' : 'rgba(160, 180, 210, 0.5)',
@@ -509,10 +541,11 @@ export default memo(function GlobeCanvas({
         if (isVisited) return isDark ? 'rgba(20, 184, 166, 0.6)' : 'rgba(20, 184, 166, 0.45)'
         if (hasContacts) return isDark ? 'rgba(234, 88, 12, 0.5)' : 'rgba(234, 88, 12, 0.35)'
         if (isIndirectOnly) return isDark ? 'rgba(168, 85, 247, 0.5)' : 'rgba(168, 85, 247, 0.35)'
+        if (userCountry && name === userCountry) return isDark ? 'rgba(34, 197, 94, 0.6)' : 'rgba(34, 197, 94, 0.45)'
       }
       return isDark ? 'rgba(40, 70, 130, 0.35)' : 'rgba(100, 130, 180, 0.3)'
     },
-    [isDark, visitedCountries, countryContactCount, indirectOnlyCountries]
+    [isDark, visitedCountries, countryContactCount, indirectOnlyCountries, userCountry]
   )
 
   const getPointColor = useCallback((point: object) => (point as GlobePoint).color, [])
@@ -555,7 +588,7 @@ export default memo(function GlobeCanvas({
         arcDashAnimateTime={display.arcMode === 'animated' ? 1800 : 0}
         arcStroke={getArcStroke}
       />
-      {(hasCountryContacts || (visitedCountries && visitedCountries.size > 0) || countryConnections.length > 0) && <ContactDensityLegend isDark={isDark} visitedCountries={visitedCountries} hasIndirect={countryConnections.length > 0} />}
+      {(hasCountryContacts || (visitedCountries && visitedCountries.size > 0) || countryConnections.length > 0 || !!userCountry) && <ContactDensityLegend isDark={isDark} visitedCountries={visitedCountries} hasIndirect={countryConnections.length > 0} showUserCountry={!!userCountry} />}
       {clusterData && (
         <ClusterPopup
           open={clusterOpen}
