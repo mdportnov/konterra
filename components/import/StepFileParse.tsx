@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Upload, AlertCircle } from 'lucide-react'
@@ -74,9 +74,30 @@ export default function StepFileParse({ source, onParsed, onBack }: StepFilePars
   const [parsed, setParsed] = useState<ParsedContact[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [fileName, setFileName] = useState<string | null>(null)
+  const [dragging, setDragging] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  const dragCounter = useRef(0)
 
-  const handleFile = (file: File) => {
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    dragCounter.current++
+    if (e.dataTransfer.types.includes('Files')) setDragging(true)
+  }, [])
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    dragCounter.current--
+    if (dragCounter.current === 0) setDragging(false)
+  }, [])
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+  }, [])
+
+  const handleFile = useCallback((file: File) => {
     setError(null)
     setFileName(file.name)
 
@@ -114,7 +135,16 @@ export default function StepFileParse({ source, onParsed, onBack }: StepFilePars
       setError('Failed to read file')
     }
     reader.readAsText(file)
-  }
+  }, [source])
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDragging(false)
+    dragCounter.current = 0
+    const file = e.dataTransfer.files?.[0]
+    if (file) handleFile(file)
+  }, [handleFile])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -148,12 +178,18 @@ export default function StepFileParse({ source, onParsed, onBack }: StepFilePars
       <CollapseSection open={!parsed && !error}>
         <button
           onClick={() => inputRef.current?.click()}
-          className="w-full flex flex-col items-center gap-3 p-8 rounded-lg border-2 border-dashed border-border hover:border-foreground/30 hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 ease-out"
+          onDragEnter={handleDragEnter}
+          onDragLeave={handleDragLeave}
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
+          className={`w-full flex flex-col items-center gap-3 p-8 rounded-lg border-2 border-dashed transition-colors duration-200 ease-out ${dragging ? 'border-primary bg-primary/5' : 'border-border hover:border-foreground/30'}`}
         >
-          <Upload className="h-8 w-8 text-muted-foreground" />
+          <Upload className={`h-8 w-8 transition-colors duration-150 ${dragging ? 'text-primary' : 'text-muted-foreground'}`} />
           <div className="text-center">
             <p className="text-sm font-medium text-foreground">Upload {labelMap[source]}</p>
-            <p className="text-xs text-muted-foreground mt-1">Click to select file</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {dragging ? 'Drop file here' : 'Drag & drop or click to select'}
+            </p>
           </div>
         </button>
       </CollapseSection>

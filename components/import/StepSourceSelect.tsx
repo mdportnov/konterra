@@ -36,7 +36,7 @@ export default function StepSourceSelect({ onSelect }: StepSourceSelectProps) {
         <button
           key={s.id}
           onClick={() => onSelect(s.id)}
-          className="flex items-center gap-4 p-4 rounded-lg border border-border hover:bg-accent hover:scale-[1.02] active:scale-[0.98] text-left transition-all duration-200 ease-out"
+          className="flex items-center gap-4 p-4 rounded-lg border border-border hover:bg-accent hover:border-foreground/20 active:scale-[0.98] text-left transition-all duration-200 ease-out"
           style={{ animationDelay: `${i * 50}ms` }}
         >
           <s.icon className="h-8 w-8 text-muted-foreground shrink-0 transition-colors duration-150" />
