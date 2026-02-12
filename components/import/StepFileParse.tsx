@@ -9,6 +9,7 @@ import type { ParsedContact } from '@/lib/import/types'
 import { parseGoogleCSV } from '@/lib/import/parse-google-csv'
 import { parseTelegramJSON } from '@/lib/import/parse-telegram'
 import { parseVCards } from '@/lib/import/parse-vcard'
+import { enrichLocationFields } from '@/lib/import/parse-address'
 
 interface StepFileParseProps {
   source: ImportSource
@@ -132,6 +133,7 @@ export default function StepFileParse({ source, onParsed, onBack }: StepFilePars
           return
         }
 
+        result = enrichLocationFields(result)
         setParsed(result)
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Failed to parse file')
