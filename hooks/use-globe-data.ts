@@ -72,6 +72,10 @@ export function useGlobeData() {
     return fetchContacts().then((data) => { setContacts(data); return data }).catch(() => { toast.error('Failed to reload contacts'); return [] as Contact[] })
   }, [])
 
+  const reloadConnections = useCallback(() => {
+    return fetchConnections().then((data) => { if (Array.isArray(data)) setConnections(data) }).catch(() => { toast.error('Failed to reload connections') })
+  }, [])
+
   const geocodingRef = useRef(false)
 
   const runBatchGeocode = useCallback(async () => {
@@ -174,6 +178,7 @@ export function useGlobeData() {
     loading,
     pendingContactIdRef,
     reloadContacts,
+    reloadConnections,
     runBatchGeocode,
     handleCountryVisitToggle,
     handleCountryConnectionsChange,

@@ -32,7 +32,13 @@ async function fetchAllPages<T>(baseUrl: string, signal?: AbortSignal): Promise<
 }
 
 export async function fetchContacts(signal?: AbortSignal): Promise<Contact[]> {
-  return fetchAllPages<Contact>('/api/contacts', signal)
+  const all = await fetchAllPages<Contact>('/api/contacts', signal)
+  const seen = new Set<string>()
+  return all.filter((c) => {
+    if (seen.has(c.id)) return false
+    seen.add(c.id)
+    return true
+  })
 }
 
 export async function fetchConnections(signal?: AbortSignal): Promise<ContactConnection[]> {

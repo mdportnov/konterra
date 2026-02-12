@@ -135,6 +135,7 @@ export const contacts = pgTable('contacts', {
   financialCapacity: financialCapacityEnum('financial_capacity'),
   motivations: text('motivations').array(),
   createdAt: timestamp('created_at').defaultNow(),
+  isSelf: boolean('is_self').default(false),
   updatedAt: timestamp('updated_at').defaultNow(),
 }, (t) => [
   index('contacts_user_id_idx').on(t.userId),

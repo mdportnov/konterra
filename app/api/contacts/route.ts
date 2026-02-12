@@ -1,5 +1,5 @@
 import { auth } from '@/auth'
-import { getContactsByUserId, createContact, deleteAllContactsByUserId } from '@/lib/db/queries'
+import { getContactsByUserId, createContact, deleteAllContactsByUserId, getOrCreateSelfContact, createConnection } from '@/lib/db/queries'
 import { geocode } from '@/lib/geocoding'
 import { validateContact, safeParseBody } from '@/lib/validation'
 import { toStringOrNull, toDateOrNull, parsePagination, unauthorized, badRequest, success } from '@/lib/api-utils'
@@ -83,6 +83,18 @@ export async function POST(req: Request) {
     lastContactedAt: toDateOrNull(body.lastContactedAt),
     nextFollowUp: toDateOrNull(body.nextFollowUp),
   })
+
+  try {
+    const selfContact = await getOrCreateSelfContact(session.user.id, session.user.name ?? 'Me')
+    await createConnection({
+      userId: session.user.id,
+      sourceContactId: selfContact.id,
+      targetContactId: contact.id,
+      connectionType: 'knows',
+    })
+  } catch (e) {
+    console.error('Auto-connect error:', e)
+  }
 
   return success(contact, 201)
 }

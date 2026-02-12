@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
-import { createContactsBulk, updateContact } from '@/lib/db/queries'
+import { createContactsBulk, updateContact, getOrCreateSelfContact, createConnectionsBulk } from '@/lib/db/queries'
 import { validateContact, safeParseBody } from '@/lib/validation'
 import { toStringOrNull, toDateOrNull, unauthorized, badRequest } from '@/lib/api-utils'
 import { getCountryCoords } from '@/lib/country-coords'
-import type { NewContact } from '@/lib/db/schema'
+import type { NewContact, NewContactConnection } from '@/lib/db/schema'
 
 interface BulkItem {
   action: 'create' | 'update' | 'skip'
@@ -146,11 +146,31 @@ export async function POST(req: Request) {
     }
   }
 
+  let connectionsCreated = 0
+  if (created > 0) {
+    try {
+      const selfContact = await getOrCreateSelfContact(userId, session.user.name ?? 'Me')
+      const connData: NewContactConnection[] = (allContacts as { id: string }[])
+        .filter((c) => c.id !== selfContact.id)
+        .map((c) => ({
+          userId,
+          sourceContactId: selfContact.id,
+          targetContactId: c.id,
+          connectionType: 'knows' as const,
+        }))
+      const conns = await createConnectionsBulk(connData)
+      connectionsCreated = conns.length
+    } catch (e) {
+      console.error('Auto-connect error:', e)
+    }
+  }
+
   return NextResponse.json({
     created,
     updated,
     skipped,
     errors,
     contacts: allContacts,
+    connectionsCreated,
   })
 }
