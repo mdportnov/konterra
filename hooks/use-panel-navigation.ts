@@ -106,8 +106,11 @@ export function usePanelNavigation(
     pushUrl(stateToUrl('edit', contact.id))
   }, [])
 
-  const handleAddContact = useCallback(() => {
+  const [editPrefill, setEditPrefill] = useState<Record<string, string>>({})
+
+  const handleAddContact = useCallback((prefill?: Record<string, string>) => {
     setEditingContact(null)
+    setEditPrefill(prefill || {})
     setActivePanel('edit')
     pushUrl('/contact/new')
     if (isMobile) setMobileView('globe')
@@ -241,6 +244,7 @@ export function usePanelNavigation(
     selectedContact, setSelectedContact,
     activePanel, setActivePanel,
     editingContact, setEditingContact,
+    editPrefill,
     flyTarget, setFlyTarget,
     connectedContacts,
     resolveInitialContact,

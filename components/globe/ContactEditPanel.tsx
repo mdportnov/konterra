@@ -180,9 +180,10 @@ interface ContactEditPanelProps {
   onCancel: () => void
   availableTags?: DbTag[]
   onTagCreated?: (tag: DbTag) => void
+  prefill?: Record<string, string>
 }
 
-export default function ContactEditPanel({ contact, open, onSaved, onCancel, availableTags = [], onTagCreated }: ContactEditPanelProps) {
+export default function ContactEditPanel({ contact, open, onSaved, onCancel, availableTags = [], onTagCreated, prefill }: ContactEditPanelProps) {
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState<FormData>(buildFormData(contact))
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
@@ -196,8 +197,16 @@ export default function ContactEditPanel({ contact, open, onSaved, onCancel, ava
   }, [])
 
   useEffect(() => {
-    if (open) setFormData(buildFormData(contact))
-  }, [open, contact])
+    if (open) {
+      const base = buildFormData(contact)
+      if (!contact && prefill) {
+        for (const [k, v] of Object.entries(prefill)) {
+          if (k in base) (base as Record<string, unknown>)[k] = v
+        }
+      }
+      setFormData(base)
+    }
+  }, [open, contact, prefill])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }))

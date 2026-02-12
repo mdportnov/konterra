@@ -88,18 +88,23 @@ export default function ContactDetail({
   const [loadingInteractions, setLoadingInteractions] = useState(false)
   const [showAddInteraction, setShowAddInteraction] = useState(false)
   const [newInteraction, setNewInteraction] = useState({ type: 'meeting', notes: '', date: new Date().toISOString().slice(0, 10) })
+  const [savingInteraction, setSavingInteraction] = useState(false)
   const [connections, setConnections] = useState<ContactConnection[]>([])
   const [loadingConnections, setLoadingConnections] = useState(false)
   const [showAddConnection, setShowAddConnection] = useState(false)
   const [newConnection, setNewConnection] = useState({ targetContactId: '', connectionType: 'knows', strength: 3 })
+  const [savingConnection, setSavingConnection] = useState(false)
   const [favorsList, setFavorsList] = useState<Favor[]>([])
   const [loadingFavors, setLoadingFavors] = useState(false)
   const [showAddFavor, setShowAddFavor] = useState(false)
   const [newFavor, setNewFavor] = useState({ direction: 'given', type: 'introduction', description: '' })
+  const [savingFavor, setSavingFavor] = useState(false)
   const [countryTies, setCountryTies] = useState<ContactCountryConnection[]>([])
   const [loadingCountryTies, setLoadingCountryTies] = useState(false)
   const [showAddCountryTie, setShowAddCountryTie] = useState(false)
   const [newCountryTie, setNewCountryTie] = useState({ country: '', notes: '' })
+  const [savingCountryTie, setSavingCountryTie] = useState(false)
+  const [showAllInteractions, setShowAllInteractions] = useState(false)
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({ timeline: false, connections: false, favors: false, countryTies: false, profile: false })
   const abortRef = useRef<AbortController | null>(null)
 
@@ -171,6 +176,7 @@ export default function ContactDetail({
   }
 
   const handleAddInteraction = async () => {
+    setSavingInteraction(true)
     try {
       const res = await fetch(`/api/contacts/${contact.id}/interactions`, {
         method: 'POST',
@@ -186,11 +192,14 @@ export default function ContactDetail({
       }
     } catch {
       toast.error('Failed to add interaction')
+    } finally {
+      setSavingInteraction(false)
     }
   }
 
   const handleAddConnection = async () => {
     if (!newConnection.targetContactId) return
+    setSavingConnection(true)
     try {
       const res = await fetch(`/api/contacts/${contact.id}/connections`, {
         method: 'POST',
@@ -206,10 +215,13 @@ export default function ContactDetail({
       }
     } catch {
       toast.error('Failed to add connection')
+    } finally {
+      setSavingConnection(false)
     }
   }
 
   const handleAddFavor = async () => {
+    setSavingFavor(true)
     try {
       const res = await fetch(`/api/contacts/${contact.id}/favors`, {
         method: 'POST',
@@ -225,11 +237,14 @@ export default function ContactDetail({
       }
     } catch {
       toast.error('Failed to record favor')
+    } finally {
+      setSavingFavor(false)
     }
   }
 
   const handleAddCountryTie = async () => {
     if (!newCountryTie.country.trim()) return
+    setSavingCountryTie(true)
     try {
       const res = await fetch(`/api/contacts/${contact.id}/country-connections`, {
         method: 'POST',
@@ -247,6 +262,8 @@ export default function ContactDetail({
       }
     } catch {
       toast.error('Failed to add country tie')
+    } finally {
+      setSavingCountryTie(false)
     }
   }
 
@@ -667,8 +684,8 @@ export default function ContactDetail({
                   className="h-7 text-xs bg-muted/50"
                 />
                 <div className="flex gap-1">
-                  <Button size="sm" className="h-6 text-[10px] bg-orange-500 hover:bg-orange-600 text-white" onClick={handleAddInteraction}>Add</Button>
-                  <Button size="sm" variant="ghost" className="h-6 text-[10px]" onClick={() => setShowAddInteraction(false)}>Cancel</Button>
+                  <Button size="sm" className="h-6 text-[10px] bg-orange-500 hover:bg-orange-600 text-white" onClick={handleAddInteraction} disabled={savingInteraction}>{savingInteraction ? 'Adding...' : 'Add'}</Button>
+                  <Button size="sm" variant="ghost" className="h-6 text-[10px]" onClick={() => setShowAddInteraction(false)} disabled={savingInteraction}>Cancel</Button>
                 </div>
               </div>
               </div>
@@ -680,7 +697,7 @@ export default function ContactDetail({
               </div>
             ) : (
             <div className="space-y-1">
-              {interactions.slice(0, 10).map((item) => {
+              {(showAllInteractions ? interactions : interactions.slice(0, 10)).map((item) => {
                 const Icon = INTERACTION_ICONS[item.type] || MessageSquare
                 return (
                   <div key={item.id} className="flex items-start gap-2 py-1">
@@ -699,6 +716,14 @@ export default function ContactDetail({
               })}
               {interactions.length === 0 && (
                 <p className="text-[11px] text-muted-foreground/60 py-1">No interactions yet</p>
+              )}
+              {!showAllInteractions && interactions.length > 10 && (
+                <button
+                  onClick={() => setShowAllInteractions(true)}
+                  className="text-[10px] text-muted-foreground/50 hover:text-muted-foreground transition-colors py-1"
+                >
+                  Show all {interactions.length} interactions
+                </button>
               )}
             </div>
             )}
@@ -761,8 +786,8 @@ export default function ContactDetail({
                   ))}
                 </div>
                 <div className="flex gap-1">
-                  <Button size="sm" className="h-6 text-[10px] bg-orange-500 hover:bg-orange-600 text-white" onClick={handleAddConnection}>Add</Button>
-                  <Button size="sm" variant="ghost" className="h-6 text-[10px]" onClick={() => setShowAddConnection(false)}>Cancel</Button>
+                  <Button size="sm" className="h-6 text-[10px] bg-orange-500 hover:bg-orange-600 text-white" onClick={handleAddConnection} disabled={savingConnection || !newConnection.targetContactId}>{savingConnection ? 'Adding...' : 'Add'}</Button>
+                  <Button size="sm" variant="ghost" className="h-6 text-[10px]" onClick={() => setShowAddConnection(false)} disabled={savingConnection}>Cancel</Button>
                 </div>
               </div>
               </div>
@@ -835,8 +860,8 @@ export default function ContactDetail({
                   className="h-7 text-xs bg-muted/50"
                 />
                 <div className="flex gap-1">
-                  <Button size="sm" className="h-6 text-[10px] bg-purple-500 hover:bg-purple-600 text-white" onClick={handleAddCountryTie}>Add</Button>
-                  <Button size="sm" variant="ghost" className="h-6 text-[10px]" onClick={() => setShowAddCountryTie(false)}>Cancel</Button>
+                  <Button size="sm" className="h-6 text-[10px] bg-purple-500 hover:bg-purple-600 text-white" onClick={handleAddCountryTie} disabled={savingCountryTie || !newCountryTie.country.trim()}>{savingCountryTie ? 'Adding...' : 'Add'}</Button>
+                  <Button size="sm" variant="ghost" className="h-6 text-[10px]" onClick={() => setShowAddCountryTie(false)} disabled={savingCountryTie}>Cancel</Button>
                 </div>
               </div>
               </div>
@@ -927,8 +952,8 @@ export default function ContactDetail({
                   className="h-7 text-xs bg-muted/50"
                 />
                 <div className="flex gap-1">
-                  <Button size="sm" className="h-6 text-[10px] bg-orange-500 hover:bg-orange-600 text-white" onClick={handleAddFavor}>Record</Button>
-                  <Button size="sm" variant="ghost" className="h-6 text-[10px]" onClick={() => setShowAddFavor(false)}>Cancel</Button>
+                  <Button size="sm" className="h-6 text-[10px] bg-orange-500 hover:bg-orange-600 text-white" onClick={handleAddFavor} disabled={savingFavor}>{savingFavor ? 'Saving...' : 'Record'}</Button>
+                  <Button size="sm" variant="ghost" className="h-6 text-[10px]" onClick={() => setShowAddFavor(false)} disabled={savingFavor}>Cancel</Button>
                 </div>
               </div>
               </div>

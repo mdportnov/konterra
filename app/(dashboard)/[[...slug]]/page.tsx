@@ -86,9 +86,10 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
   }, [closeCountryPopup, nav.handleContactClick])
 
   const handleAddContactToCountry = useCallback(() => {
+    const country = countryPopup?.country
     closeCountryPopup()
-    nav.handleAddContact()
-  }, [closeCountryPopup, nav.handleAddContact])
+    nav.handleAddContact(country ? { country } : undefined)
+  }, [closeCountryPopup, nav.handleAddContact, countryPopup?.country])
 
   const openDashboard = useCallback(() => setDashboardExpanded(true), [])
   const closeDashboard = useCallback(() => setDashboardExpanded(false), [])
@@ -131,7 +132,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
             <p className="text-sm font-medium text-foreground mb-1">No contacts yet</p>
             <p className="text-xs text-muted-foreground mb-4">Add your first contact or import from a file.</p>
             <div className="flex gap-2 justify-center">
-              <button onClick={nav.handleAddContact} className="px-3 py-1.5 rounded-md bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors">Create contact</button>
+              <button onClick={() => nav.handleAddContact()} className="px-3 py-1.5 rounded-md bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors">Create contact</button>
               <button onClick={() => setImportDialogOpen(true)} className="px-3 py-1.5 rounded-md bg-accent text-foreground text-xs font-medium hover:bg-accent/80 transition-colors">Import</button>
             </div>
           </div>
@@ -157,6 +158,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
         onCancel={nav.handleCancelEdit}
         availableTags={data.userTags}
         onTagCreated={data.handleTagCreated}
+        prefill={nav.editPrefill}
       />
 
       <SettingsPanel

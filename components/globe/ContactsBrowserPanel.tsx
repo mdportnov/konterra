@@ -8,8 +8,16 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Search, X, Star, ChevronRight, ArrowLeft, MapPin, SlidersHorizontal } from 'lucide-react'
+import { Search, X, Star, ChevronRight, ArrowLeft, MapPin, SlidersHorizontal, ArrowUpDown } from 'lucide-react'
 import type { Contact } from '@/lib/db/schema'
+
+type SortKey = 'name' | 'rating' | 'lastContacted' | 'updatedAt'
+const SORT_OPTIONS: { key: SortKey; label: string }[] = [
+  { key: 'name', label: 'Name' },
+  { key: 'rating', label: 'Rating' },
+  { key: 'lastContacted', label: 'Last contacted' },
+  { key: 'updatedAt', label: 'Recently updated' },
+]
 
 interface ContactsBrowserPanelProps {
   open: boolean
@@ -37,6 +45,7 @@ export default function ContactsBrowserPanel({
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
+  const [sortKey, setSortKey] = useState<SortKey>('name')
 
   const activeFilterCount = selectedTags.length + selectedRatings.size + selectedRelTypes.length
 
@@ -53,13 +62,15 @@ export default function ContactsBrowserPanel({
   }, [contacts])
 
   const filteredContacts = useMemo(() => {
-    return contacts.filter((c) => {
+    const filtered = contacts.filter((c) => {
       const q = search.toLowerCase()
       const matchesSearch =
         !search ||
         c.name.toLowerCase().includes(q) ||
         c.company?.toLowerCase().includes(q) ||
-        c.role?.toLowerCase().includes(q)
+        c.role?.toLowerCase().includes(q) ||
+        c.city?.toLowerCase().includes(q) ||
+        c.country?.toLowerCase().includes(q)
       const matchesTags =
         selectedTags.length === 0 || c.tags?.some((t) => selectedTags.includes(t))
       const matchesRating =
@@ -68,7 +79,31 @@ export default function ContactsBrowserPanel({
         selectedRelTypes.length === 0 || (c.relationshipType != null && selectedRelTypes.includes(c.relationshipType))
       return matchesSearch && matchesTags && matchesRating && matchesRelType
     })
-  }, [contacts, search, selectedTags, selectedRatings, selectedRelTypes])
+    const sorted = [...filtered]
+    switch (sortKey) {
+      case 'name':
+        sorted.sort((a, b) => a.name.localeCompare(b.name))
+        break
+      case 'rating':
+        sorted.sort((a, b) => (b.rating || 0) - (a.rating || 0))
+        break
+      case 'lastContacted':
+        sorted.sort((a, b) => {
+          const da = a.lastContactedAt ? new Date(a.lastContactedAt).getTime() : 0
+          const db = b.lastContactedAt ? new Date(b.lastContactedAt).getTime() : 0
+          return db - da
+        })
+        break
+      case 'updatedAt':
+        sorted.sort((a, b) => {
+          const da = a.updatedAt ? new Date(a.updatedAt).getTime() : 0
+          const db = b.updatedAt ? new Date(b.updatedAt).getTime() : 0
+          return db - da
+        })
+        break
+    }
+    return sorted
+  }, [contacts, search, selectedTags, selectedRatings, selectedRelTypes, sortKey])
 
   useEffect(() => { setCurrentPage(1) }, [search, selectedTags, selectedRatings, selectedRelTypes])
 
@@ -330,7 +365,19 @@ export default function ContactsBrowserPanel({
 
         {tab === 'contacts' && (
           <div className="px-4 pb-1 shrink-0 flex items-center justify-between">
-            <span className="text-[10px] text-muted-foreground/50">{filteredContacts.length} result{filteredContacts.length !== 1 ? 's' : ''}</span>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-muted-foreground/50">{filteredContacts.length} result{filteredContacts.length !== 1 ? 's' : ''}</span>
+              <div className="flex items-center gap-0.5">
+                <ArrowUpDown className="h-2.5 w-2.5 text-muted-foreground/40" />
+                <select
+                  value={sortKey}
+                  onChange={(e) => setSortKey(e.target.value as SortKey)}
+                  className="text-[10px] text-muted-foreground/60 bg-transparent border-none outline-none cursor-pointer hover:text-muted-foreground"
+                >
+                  {SORT_OPTIONS.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
+                </select>
+              </div>
+            </div>
             {totalPages > 1 && (
               <PaginationRow current={currentPage} total={totalPages} onChange={setCurrentPage} />
             )}
