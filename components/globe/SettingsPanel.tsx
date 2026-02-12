@@ -11,7 +11,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { ThemeToggle } from '@/components/theme-toggle'
 import { Checkbox } from '@/components/ui/checkbox'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { LogOut, Loader2, Pencil, Check, X, Search, Upload, Trash2 } from 'lucide-react'
+import { LogOut, Loader2, Pencil, Check, X, Search, Upload, Trash2, Copy } from 'lucide-react'
 import { toast } from 'sonner'
 import GlobePanel from '@/components/globe/GlobePanel'
 import { PANEL_WIDTH } from '@/lib/constants/ui'
@@ -26,6 +26,7 @@ interface SettingsPanelProps {
   visitedCountries?: Set<string>
   onToggleVisitedCountry?: (country: string) => void
   onOpenImport?: () => void
+  onOpenDuplicates?: () => void
   onDeleteAllContacts?: () => void
 }
 
@@ -37,7 +38,7 @@ interface SessionUser {
   image?: string | null
 }
 
-export default function SettingsPanel({ open, onClose, displayOptions, onDisplayChange, visitedCountries, onToggleVisitedCountry, onOpenImport, onDeleteAllContacts }: SettingsPanelProps) {
+export default function SettingsPanel({ open, onClose, displayOptions, onDisplayChange, visitedCountries, onToggleVisitedCountry, onOpenImport, onOpenDuplicates, onDeleteAllContacts }: SettingsPanelProps) {
   const [user, setUser] = useState<SessionUser | null>(null)
   const [signingOut, setSigningOut] = useState(false)
   const [editingName, setEditingName] = useState(false)
@@ -221,6 +222,14 @@ export default function SettingsPanel({ open, onClose, displayOptions, onDisplay
           >
             <Upload className="mr-2 h-4 w-4" />
             Import Contacts
+          </Button>
+          <Button
+            variant="outline"
+            className="w-full justify-start"
+            onClick={onOpenDuplicates}
+          >
+            <Copy className="mr-2 h-4 w-4" />
+            Resolve Duplicates
           </Button>
           {!deleteConfirm ? (
             <Button

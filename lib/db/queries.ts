@@ -47,7 +47,7 @@ export async function getContactsByUserId(userId: string, page = 1, limit = 50) 
   const [data, [{ count }]] = await Promise.all([
     db.query.contacts.findMany({
       where: eq(contacts.userId, userId),
-      orderBy: (contacts, { desc }) => [desc(contacts.updatedAt)],
+      orderBy: (contacts, { desc, asc }) => [desc(contacts.updatedAt), asc(contacts.id)],
       limit,
       offset,
     }),
@@ -297,6 +297,36 @@ export async function deleteFavor(id: string, userId: string) {
   )
 }
 
+export async function getOrCreateSelfContact(userId: string, userName: string) {
+  const existing = await db.query.contacts.findFirst({
+    where: and(eq(contacts.userId, userId), eq(contacts.isSelf, true)),
+  })
+  if (existing) return existing
+  const [self] = await db
+    .insert(contacts)
+    .values({ userId, name: userName || 'Me', isSelf: true })
+    .returning()
+  return self
+}
+
+export async function createConnectionsBulk(data: NewContactConnection[]) {
+  if (data.length === 0) return []
+  const BATCH_SIZE = 50
+  return db.transaction(async (tx) => {
+    const results: (typeof contactConnections.$inferSelect)[] = []
+    for (let i = 0; i < data.length; i += BATCH_SIZE) {
+      const batch = data.slice(i, i + BATCH_SIZE)
+      const rows = await tx
+        .insert(contactConnections)
+        .values(batch)
+        .onConflictDoNothing({ target: [contactConnections.sourceContactId, contactConnections.targetContactId] })
+        .returning()
+      results.push(...rows)
+    }
+    return results
+  })
+}
+
 export async function createContactsBulk(data: NewContact[]) {
   if (data.length === 0) return []
   const BATCH_SIZE = 50
@@ -391,6 +421,124 @@ export async function deleteTag(id: string, userId: string) {
   })
 
   return tag
+}
+
+export async function mergeContacts(
+  winnerId: string,
+  loserId: string,
+  userId: string,
+  fieldOverrides: Record<string, unknown>
+) {
+  return db.transaction(async (tx) => {
+    const [winner, loser] = await Promise.all([
+      tx.query.contacts.findFirst({ where: and(eq(contacts.id, winnerId), eq(contacts.userId, userId)) }),
+      tx.query.contacts.findFirst({ where: and(eq(contacts.id, loserId), eq(contacts.userId, userId)) }),
+    ])
+    if (!winner || !loser) return null
+
+    const updates: Record<string, unknown> = { ...fieldOverrides, updatedAt: new Date() }
+    const winnerTags = winner.tags || []
+    const loserTags = loser.tags || []
+    const mergedTags = [...new Set([...winnerTags, ...loserTags])]
+    if (mergedTags.length > 0) updates.tags = mergedTags
+
+    await tx.update(contacts).set(updates).where(eq(contacts.id, winnerId))
+
+    await tx.update(interactions).set({ contactId: winnerId }).where(eq(interactions.contactId, loserId))
+
+    await tx.update(favors).set({ contactId: winnerId }).where(eq(favors.contactId, loserId))
+
+    const existingCountryConns = await tx.query.contactCountryConnections.findMany({
+      where: eq(contactCountryConnections.contactId, winnerId),
+    })
+    const existingCountries = new Set(existingCountryConns.map((c) => c.country))
+    const loserCountryConns = await tx.query.contactCountryConnections.findMany({
+      where: eq(contactCountryConnections.contactId, loserId),
+    })
+    for (const cc of loserCountryConns) {
+      if (existingCountries.has(cc.country)) {
+        await tx.delete(contactCountryConnections).where(eq(contactCountryConnections.id, cc.id))
+      } else {
+        await tx.update(contactCountryConnections).set({ contactId: winnerId }).where(eq(contactCountryConnections.id, cc.id))
+      }
+    }
+
+    const existingConns = await tx.query.contactConnections.findMany({
+      where: and(
+        eq(contactConnections.userId, userId),
+        or(eq(contactConnections.sourceContactId, winnerId), eq(contactConnections.targetContactId, winnerId))
+      ),
+    })
+    const connPairs = new Set(existingConns.map((c) => {
+      const ids = [c.sourceContactId, c.targetContactId].sort()
+      return ids.join(':')
+    }))
+
+    const loserConns = await tx.query.contactConnections.findMany({
+      where: and(
+        eq(contactConnections.userId, userId),
+        or(eq(contactConnections.sourceContactId, loserId), eq(contactConnections.targetContactId, loserId))
+      ),
+    })
+    for (const conn of loserConns) {
+      const newSource = conn.sourceContactId === loserId ? winnerId : conn.sourceContactId
+      const newTarget = conn.targetContactId === loserId ? winnerId : conn.targetContactId
+      if (newSource === newTarget) {
+        await tx.delete(contactConnections).where(eq(contactConnections.id, conn.id))
+        continue
+      }
+      const pairKey = [newSource, newTarget].sort().join(':')
+      if (connPairs.has(pairKey)) {
+        await tx.delete(contactConnections).where(eq(contactConnections.id, conn.id))
+      } else {
+        await tx.update(contactConnections)
+          .set({ sourceContactId: newSource, targetContactId: newTarget })
+          .where(eq(contactConnections.id, conn.id))
+        connPairs.add(pairKey)
+      }
+    }
+
+    const loserIntros = await tx.query.introductions.findMany({
+      where: and(
+        eq(introductions.userId, userId),
+        or(eq(introductions.contactAId, loserId), eq(introductions.contactBId, loserId))
+      ),
+    })
+    const existingIntros = await tx.query.introductions.findMany({
+      where: and(
+        eq(introductions.userId, userId),
+        or(eq(introductions.contactAId, winnerId), eq(introductions.contactBId, winnerId))
+      ),
+    })
+    const introPairs = new Set(existingIntros.map((i) => [i.contactAId, i.contactBId].sort().join(':')))
+
+    for (const intro of loserIntros) {
+      const newA = intro.contactAId === loserId ? winnerId : intro.contactAId
+      const newB = intro.contactBId === loserId ? winnerId : intro.contactBId
+      if (newA === newB) {
+        await tx.delete(introductions).where(eq(introductions.id, intro.id))
+        continue
+      }
+      const pairKey = [newA, newB].sort().join(':')
+      if (introPairs.has(pairKey)) {
+        await tx.delete(introductions).where(eq(introductions.id, intro.id))
+      } else {
+        await tx.update(introductions)
+          .set({ contactAId: newA, contactBId: newB })
+          .where(eq(introductions.id, intro.id))
+        introPairs.add(pairKey)
+      }
+    }
+
+    await tx.delete(contacts).where(eq(contacts.id, loserId))
+
+    const [updated] = await tx
+      .select()
+      .from(contacts)
+      .where(eq(contacts.id, winnerId))
+
+    return updated
+  })
 }
 
 export async function renameTag(id: string, userId: string, newName: string) {

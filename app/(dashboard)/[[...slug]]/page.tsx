@@ -11,6 +11,7 @@ import ContactEditPanel from '@/components/globe/ContactEditPanel'
 import ContactsBrowserPanel from '@/components/globe/ContactsBrowserPanel'
 import SettingsPanel from '@/components/globe/SettingsPanel'
 import ImportDialog from '@/components/import/ImportDialog'
+import DuplicatesDialog from '@/components/dedup/DuplicatesDialog'
 import ConnectionInsightsPanel from '@/components/insights/ConnectionInsightsPanel'
 import CountryPopup from '@/components/globe/CountryPopup'
 import { PANEL_WIDTH, GLASS, Z } from '@/lib/constants/ui'
@@ -29,6 +30,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
   const isMobile = useIsMobile()
   const [mobileView, setMobileView] = useState<'globe' | 'dashboard'>('dashboard')
   const [importDialogOpen, setImportDialogOpen] = useState(false)
+  const [dupDialogOpen, setDupDialogOpen] = useState(false)
   const [dashboardExpanded, setDashboardExpanded] = useState(false)
   const [displayOptions, setDisplayOptions] = useState<DisplayOptions>(displayDefaults)
   const [countryPopup, setCountryPopup] = useState<{ country: string; contacts: Contact[]; x: number; y: number } | null>(null)
@@ -169,6 +171,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
         visitedCountries={data.visitedCountries}
         onToggleVisitedCountry={data.handleCountryVisitToggle}
         onOpenImport={() => setImportDialogOpen(true)}
+        onOpenDuplicates={() => setDupDialogOpen(true)}
         onDeleteAllContacts={data.reloadContacts}
       />
 
@@ -177,9 +180,16 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
         onOpenChange={setImportDialogOpen}
         existingContacts={data.contacts}
         onImportComplete={() => {
-          data.reloadContacts().then(() => data.runBatchGeocode())
+          Promise.all([data.reloadContacts(), data.reloadConnections()]).then(() => data.runBatchGeocode())
           setImportDialogOpen(false)
         }}
+      />
+
+      <DuplicatesDialog
+        open={dupDialogOpen}
+        onOpenChange={setDupDialogOpen}
+        contacts={data.contacts}
+        onResolved={data.reloadContacts}
       />
 
       <ContactsBrowserPanel
