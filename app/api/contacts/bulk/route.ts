@@ -3,6 +3,7 @@ import { auth } from '@/auth'
 import { createContactsBulk, updateContact } from '@/lib/db/queries'
 import { validateContact, safeParseBody } from '@/lib/validation'
 import { toStringOrNull, toDateOrNull, unauthorized, badRequest } from '@/lib/api-utils'
+import { getCountryCoords } from '@/lib/country-coords'
 import type { NewContact } from '@/lib/db/schema'
 
 interface BulkItem {
@@ -12,6 +13,8 @@ interface BulkItem {
 }
 
 function buildNewContactData(userId: string, c: Record<string, unknown>): NewContact {
+  const country = toStringOrNull(c.country)
+  const coords = country ? getCountryCoords(country) : null
   return {
     userId,
     name: c.name as string,
@@ -19,10 +22,10 @@ function buildNewContactData(userId: string, c: Record<string, unknown>): NewCon
     company: toStringOrNull(c.company),
     role: toStringOrNull(c.role),
     city: toStringOrNull(c.city),
-    country: toStringOrNull(c.country),
+    country,
     address: toStringOrNull(c.address),
-    lat: null,
-    lng: null,
+    lat: coords?.lat ?? null,
+    lng: coords?.lng ?? null,
     email: toStringOrNull(c.email),
     phone: toStringOrNull(c.phone),
     linkedin: toStringOrNull(c.linkedin),

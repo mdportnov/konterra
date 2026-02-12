@@ -177,7 +177,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
         onOpenChange={setImportDialogOpen}
         existingContacts={data.contacts}
         onImportComplete={() => {
-          data.reloadContacts()
+          data.reloadContacts().then(() => data.runBatchGeocode())
           setImportDialogOpen(false)
         }}
       />
@@ -187,6 +187,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
         onClose={nav.handleCloseBrowser}
         contacts={data.contacts}
         onSelectContact={nav.handleBrowserSelectContact}
+        loading={data.loading}
       />
 
       <GlobePanel
@@ -269,6 +270,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
             onAddContact={nav.handleAddContact}
             onOpenContactsBrowser={nav.handleOpenContactsBrowser}
             onOpenInsights={nav.handleOpenInsights}
+            onOpenSettings={nav.handleOpenSettings}
             isMobile={isMobile}
             onSwitchToGlobe={() => setMobileView('globe')}
             contactsLoading={data.loading}
@@ -304,6 +306,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
           onAddContact={nav.handleAddContact}
           onOpenContactsBrowser={nav.handleOpenContactsBrowser}
           onOpenInsights={nav.handleOpenInsights}
+          onOpenSettings={nav.handleOpenSettings}
           isMobile={isMobile}
           collapsed
           onToggleCollapse={openDashboard}
@@ -327,6 +330,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
           onAddContact={handleDashAddContact}
           onOpenContactsBrowser={nav.handleOpenContactsBrowser}
           onOpenInsights={handleDashOpenInsights}
+          onOpenSettings={nav.handleOpenSettings}
           isMobile={isMobile}
           collapsed={false}
           onToggleCollapse={closeDashboard}

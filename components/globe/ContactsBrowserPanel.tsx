@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Search, X, Star, ChevronRight, ArrowLeft, MapPin, SlidersHorizontal, ArrowUpDown } from 'lucide-react'
+import { Skeleton } from '@/components/ui/skeleton'
 import type { Contact } from '@/lib/db/schema'
 
 type SortKey = 'name' | 'rating' | 'lastContacted' | 'updatedAt'
@@ -24,6 +25,7 @@ interface ContactsBrowserPanelProps {
   onClose: () => void
   contacts: Contact[]
   onSelectContact: (contact: Contact) => void
+  loading?: boolean
 }
 
 type Tab = 'contacts' | 'places'
@@ -36,6 +38,7 @@ export default function ContactsBrowserPanel({
   onClose,
   contacts,
   onSelectContact,
+  loading = false,
 }: ContactsBrowserPanelProps) {
   const [tab, setTab] = useState<Tab>('contacts')
   const [search, setSearch] = useState('')
@@ -401,11 +404,23 @@ export default function ContactsBrowserPanel({
         <ScrollArea className="flex-1 min-h-0">
           {tab === 'contacts' && (
             <div className="px-2 pb-2 space-y-0.5">
-              {pagedContacts.map((contact) => (
-                <ContactRow key={contact.id} contact={contact} onSelect={onSelectContact} />
-              ))}
-              {filteredContacts.length === 0 && (
-                <p className="text-xs text-muted-foreground/60 text-center py-6">No contacts found</p>
+              {loading ? Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-2 px-2 py-1.5">
+                  <Skeleton className="h-7 w-7 rounded-full shrink-0" />
+                  <div className="flex-1 space-y-1">
+                    <Skeleton className="h-3.5 w-28" />
+                    <Skeleton className="h-3 w-20" />
+                  </div>
+                </div>
+              )) : (
+                <>
+                  {pagedContacts.map((contact) => (
+                    <ContactRow key={contact.id} contact={contact} onSelect={onSelectContact} />
+                  ))}
+                  {filteredContacts.length === 0 && (
+                    <p className="text-xs text-muted-foreground/60 text-center py-6">No contacts found</p>
+                  )}
+                </>
               )}
             </div>
           )}

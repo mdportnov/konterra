@@ -7,12 +7,14 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
-import { Search, X, MapPin, Building2, ChevronDown, ChevronRight, Plus, Globe as GlobeIcon } from 'lucide-react'
+import { Search, X, MapPin, Building2, ChevronDown, ChevronRight, Plus, Globe as GlobeIcon, Settings, Users, Sparkles, Upload, LogOut } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
 import { GLASS } from '@/lib/constants/ui'
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
 import { useHotkey } from '@/hooks/use-hotkey'
+import { useSession, signOut } from 'next-auth/react'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import StatsRow from './widgets/StatsRow'
 import TopCountriesChart from './widgets/TopCountriesChart'
 import ActivityTimeline from './widgets/ActivityTimeline'
@@ -31,6 +33,7 @@ interface DashboardPanelProps {
   onAddContact: () => void
   onOpenContactsBrowser?: () => void
   onOpenInsights?: () => void
+  onOpenSettings?: () => void
   isMobile?: boolean
   onSwitchToGlobe?: () => void
   contactsLoading?: boolean
@@ -46,12 +49,14 @@ export default function DashboardPanel({
   onAddContact,
   onOpenContactsBrowser,
   onOpenInsights,
+  onOpenSettings,
   isMobile,
   onSwitchToGlobe,
   contactsLoading = false,
   collapsed = false,
   onToggleCollapse,
 }: DashboardPanelProps) {
+  const { data: session } = useSession()
   const [search, setSearch] = useState('')
   const [selectedTags, setSelectedTags] = useState<string[]>([])
   const [selectedCountries, setSelectedCountries] = useState<string[]>([])
@@ -129,7 +134,53 @@ export default function DashboardPanel({
         <div className={isCollapsed ? 'p-3 space-y-3' : 'p-4 md:p-5 space-y-5 md:space-y-6'}>
           <div className="flex items-center justify-between gap-2">
             <div className="min-w-0">
-              <h1 className={`${isCollapsed ? 'text-sm' : 'text-lg'} font-semibold text-foreground truncate`}>Konterra</h1>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className={`${isCollapsed ? 'text-sm' : 'text-lg'} font-semibold text-foreground truncate hover:text-foreground/80 transition-colors cursor-pointer`}>
+                    Konterra
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-56">
+                  {session?.user && (
+                    <>
+                      <div className="flex items-center gap-2 px-2 py-1.5">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={session.user.image || undefined} />
+                          <AvatarFallback className="text-xs bg-muted text-muted-foreground">
+                            {session.user.name?.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2) || '?'}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium truncate">{session.user.name}</p>
+                          <p className="text-xs text-muted-foreground truncate">{session.user.email}</p>
+                        </div>
+                      </div>
+                      <DropdownMenuSeparator />
+                    </>
+                  )}
+                  <DropdownMenuItem onClick={onOpenContactsBrowser}>
+                    <Users className="h-4 w-4 mr-2" />
+                    Browse Contacts
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={onAddContact}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Contact
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={onOpenInsights}>
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Insights
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={onOpenSettings}>
+                    <Settings className="h-4 w-4 mr-2" />
+                    Settings
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => signOut({ callbackUrl: '/login' })}>
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Sign Out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
               {!isCollapsed && <p className="text-xs text-muted-foreground">Your network command center</p>}
             </div>
             <div className="flex items-center gap-1 shrink-0">

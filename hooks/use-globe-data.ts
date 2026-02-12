@@ -20,6 +20,8 @@ export function useGlobeData() {
     onLoaded?: (data: Contact[]) => void
   }>({})
 
+  const needsGeocodeRef = useRef(false)
+
   const load = useCallback((onLoaded?: (data: Contact[]) => void) => {
     initialResolveRef.current.onLoaded = onLoaded
     fetchContacts()
@@ -28,6 +30,9 @@ export function useGlobeData() {
         setLoading(false)
         initialResolveRef.current.onLoaded?.(data)
         initialResolveRef.current.onLoaded = undefined
+        if (data.some((c) => (c.city || c.country) && c.lat == null)) {
+          needsGeocodeRef.current = true
+        }
       })
       .catch(() => {
         toast.error('Failed to load contacts')
@@ -64,8 +69,37 @@ export function useGlobeData() {
   }, [load])
 
   const reloadContacts = useCallback(() => {
-    fetchContacts().then(setContacts).catch(() => toast.error('Failed to reload contacts'))
+    return fetchContacts().then((data) => { setContacts(data); return data }).catch(() => { toast.error('Failed to reload contacts'); return [] as Contact[] })
   }, [])
+
+  const geocodingRef = useRef(false)
+
+  const runBatchGeocode = useCallback(async () => {
+    if (geocodingRef.current) return
+    geocodingRef.current = true
+    try {
+      let remaining = Infinity
+      while (remaining > 0) {
+        const res = await fetch('/api/geocode/batch', { method: 'POST' })
+        if (!res.ok) break
+        const data = await res.json()
+        remaining = data.remaining ?? 0
+        if (data.geocoded > 0) {
+          await fetchContacts().then(setContacts)
+        }
+        if (remaining === 0 || data.geocoded === 0) break
+      }
+    } catch {} finally {
+      geocodingRef.current = false
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!loading && needsGeocodeRef.current) {
+      needsGeocodeRef.current = false
+      runBatchGeocode()
+    }
+  }, [loading, runBatchGeocode])
 
   const visitedToggleInFlight = useRef(new Set<string>())
 
@@ -140,6 +174,7 @@ export function useGlobeData() {
     loading,
     pendingContactIdRef,
     reloadContacts,
+    runBatchGeocode,
     handleCountryVisitToggle,
     handleCountryConnectionsChange,
     handleTagCreated,
