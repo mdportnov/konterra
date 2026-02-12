@@ -81,11 +81,16 @@ export function usePanelNavigation(
     return () => window.removeEventListener('popstate', onPopState)
   }, [contacts])
 
-  const flyToContact = useCallback((c: Contact) => {
+  const flyToContact = useCallback((c: Contact, fallback?: { lat: number; lng: number }) => {
     if (c.lat != null && c.lng != null) {
       setFlyTarget({ lat: c.lat, lng: c.lng, ts: Date.now() })
+    } else if (fallback) {
+      setFlyTarget({ lat: fallback.lat, lng: fallback.lng, ts: Date.now() })
+    } else if (c.country) {
+      const peer = contacts.find((o) => o.country === c.country && o.lat != null && o.lng != null && o.id !== c.id)
+      if (peer) setFlyTarget({ lat: peer.lat!, lng: peer.lng!, ts: Date.now() })
     }
-  }, [])
+  }, [contacts])
 
   const handleContactClick = useCallback((contact: Contact) => {
     setSelectedContact(contact)
