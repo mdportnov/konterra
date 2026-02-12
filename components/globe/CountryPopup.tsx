@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { Switch } from '@/components/ui/switch'
-import { X, MapPinPlus, UserPlus } from 'lucide-react'
+import { X, UserPlus } from 'lucide-react'
 import { useClickOutside } from '@/hooks/use-click-outside'
 import { useHotkey } from '@/hooks/use-hotkey'
 import { GLASS, Z } from '@/lib/constants/ui'
@@ -24,6 +24,10 @@ interface CountryPopupProps {
   onAddContact?: () => void
   indirectContacts?: Contact[]
 }
+
+const POPUP_W = 340
+const MAX_H = 520
+const SCROLL_MAX = 380
 
 export default function CountryPopup({ country, contacts, x, y, open, onSelect, onClose, visited, onToggleVisited, onAddContact, indirectContacts = [] }: CountryPopupProps) {
   const ref = useRef<HTMLDivElement>(null)
@@ -47,9 +51,9 @@ export default function CountryPopup({ country, contacts, x, y, open, onSelect, 
     const pad = 16
     const isMobileView = typeof window !== 'undefined' && window.innerWidth < 640
     const w = isMobileView
-      ? Math.min(window.innerWidth - pad * 2, 320)
-      : 280
-    const estH = hasContacts ? 450 : 180
+      ? Math.min(window.innerWidth - pad * 2, POPUP_W)
+      : POPUP_W
+    const estH = hasContacts ? MAX_H : 180
 
     if (isMobileView) {
       const left = (window.innerWidth - w) / 2
@@ -77,12 +81,12 @@ export default function CountryPopup({ country, contacts, x, y, open, onSelect, 
   return (
     <div
       ref={ref}
-      className={`${GLASS.heavy} fixed rounded-xl overflow-hidden shadow-2xl`}
+      className={`${GLASS.heavy} fixed rounded-xl shadow-2xl flex flex-col`}
       style={{
         left: pos.left,
         top: pos.top,
         width: pos.w,
-        maxHeight: typeof window !== 'undefined' && window.innerWidth < 640 ? '80dvh' : 450,
+        maxHeight: typeof window !== 'undefined' && window.innerWidth < 640 ? '80dvh' : MAX_H,
         zIndex: Z.overlay,
         opacity: open ? 1 : 0,
         transform: open ? 'scale(1) translateY(0)' : 'scale(0.95) translateY(4px)',
@@ -90,7 +94,7 @@ export default function CountryPopup({ country, contacts, x, y, open, onSelect, 
         pointerEvents: open ? 'auto' : 'none',
       }}
     >
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
         <div className="flex items-center gap-2 min-w-0">
           <span className="text-sm font-medium text-foreground truncate">{country}</span>
           {hasContacts && (
@@ -103,39 +107,77 @@ export default function CountryPopup({ country, contacts, x, y, open, onSelect, 
       </div>
 
       {onToggleVisited && (
-        <div className="flex items-center justify-between px-4 py-2.5 border-b border-border transition-colors duration-200">
+        <div className="flex items-center justify-between px-4 py-2.5 border-b border-border transition-colors duration-200 shrink-0">
           <span className="text-xs text-muted-foreground">{visited ? 'Visited' : 'Mark as visited'}</span>
           <Switch checked={!!visited} onCheckedChange={onToggleVisited} />
         </div>
       )}
 
-      {hasContacts && (
-        <ScrollArea className="max-h-[280px]">
-          <div className="py-1">
-            {grouped.map(([city, cityContacts], groupIdx) => (
-              <div key={city}>
-                {groupIdx > 0 && <Separator className="my-1" />}
-                <div className="px-4 pt-2.5 pb-1">
-                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{city}</span>
-                </div>
-                {cityContacts.map((c) => {
-                  const initials = c.name
-                    .split(' ')
-                    .map((n) => n[0])
-                    .join('')
-                    .toUpperCase()
-                    .slice(0, 2)
+      {(hasContacts || indirectContacts.length > 0) && (
+        <ScrollArea className="min-h-0 flex-1" style={{ maxHeight: SCROLL_MAX }}>
+          {hasContacts && (
+            <div className="py-1">
+              {grouped.map(([city, cityContacts], groupIdx) => (
+                <div key={city}>
+                  {groupIdx > 0 && <Separator className="my-1" />}
+                  <div className="px-4 pt-2.5 pb-1">
+                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{city}</span>
+                  </div>
+                  {cityContacts.map((c) => {
+                    const initials = c.name
+                      .split(' ')
+                      .map((n) => n[0])
+                      .join('')
+                      .toUpperCase()
+                      .slice(0, 2)
 
+                    return (
+                      <button
+                        key={c.id}
+                        onClick={() => handleSelect(c)}
+                        className="w-full flex items-center gap-3 px-4 py-2 hover:bg-accent transition-colors text-left cursor-pointer"
+                      >
+                        <Avatar className="h-8 w-8 border border-border shrink-0">
+                          <AvatarImage src={c.photo || undefined} />
+                          <AvatarFallback className="text-[10px] bg-orange-500/20 text-orange-600 dark:text-orange-300">
+                            {initials}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0">
+                          <div className="text-sm text-foreground truncate">{c.name}</div>
+                          {(c.role || c.company) && (
+                            <div className="text-xs text-muted-foreground/60 truncate">
+                              {[c.role, c.company].filter(Boolean).join(' · ')}
+                            </div>
+                          )}
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {indirectContacts.length > 0 && (
+            <>
+              {hasContacts && <Separator />}
+              <div className="py-1">
+                <div className="px-4 pt-2 pb-1">
+                  <span className="text-[10px] font-medium text-purple-500/60 uppercase tracking-wider">Has connections here</span>
+                </div>
+                {indirectContacts.map((c) => {
+                  const ini = c.name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
                   return (
                     <button
                       key={c.id}
                       onClick={() => handleSelect(c)}
-                      className="w-full flex items-center gap-3 px-4 py-2 hover:bg-accent transition-colors text-left cursor-pointer"
+                      className="w-full flex items-center gap-3 px-4 py-2 hover:bg-accent transition-colors text-left cursor-pointer opacity-60"
                     >
-                      <Avatar className="h-8 w-8 border border-border shrink-0">
+                      <Avatar className="h-8 w-8 border border-purple-500/20 shrink-0">
                         <AvatarImage src={c.photo || undefined} />
-                        <AvatarFallback className="text-[10px] bg-orange-500/20 text-orange-600 dark:text-orange-300">
-                          {initials}
+                        <AvatarFallback className="text-[10px] bg-purple-500/15 text-purple-600 dark:text-purple-300">
+                          {ini}
                         </AvatarFallback>
                       </Avatar>
                       <div className="min-w-0">
@@ -150,52 +192,16 @@ export default function CountryPopup({ country, contacts, x, y, open, onSelect, 
                   )
                 })}
               </div>
-            ))}
-          </div>
+            </>
+          )}
         </ScrollArea>
       )}
 
-      {indirectContacts.length > 0 && (
-        <>
-          <Separator />
-          <div className="py-1">
-            <div className="px-4 pt-2 pb-1">
-              <span className="text-[10px] font-medium text-purple-500/60 uppercase tracking-wider">Has connections here</span>
-            </div>
-            {indirectContacts.map((c) => {
-              const ini = c.name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
-              return (
-                <button
-                  key={c.id}
-                  onClick={() => handleSelect(c)}
-                  className="w-full flex items-center gap-3 px-4 py-2 hover:bg-accent transition-colors text-left cursor-pointer opacity-60"
-                >
-                  <Avatar className="h-8 w-8 border border-purple-500/20 shrink-0">
-                    <AvatarImage src={c.photo || undefined} />
-                    <AvatarFallback className="text-[10px] bg-purple-500/15 text-purple-600 dark:text-purple-300">
-                      {ini}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="min-w-0">
-                    <div className="text-sm text-foreground truncate">{c.name}</div>
-                    {(c.role || c.company) && (
-                      <div className="text-xs text-muted-foreground/60 truncate">
-                        {[c.role, c.company].filter(Boolean).join(' · ')}
-                      </div>
-                    )}
-                  </div>
-                </button>
-              )
-            })}
-          </div>
-        </>
-      )}
-
       {onAddContact && (
-        <div className={`${hasContacts || indirectContacts.length > 0 ? 'border-t border-border' : ''} px-3 py-2`}>
+        <div className="border-t border-border px-3 py-2 shrink-0">
           <button
             onClick={onAddContact}
-            className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-accent transition-colors cursor-pointer"
+            className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium bg-orange-500 hover:bg-orange-600 text-white transition-colors cursor-pointer"
           >
             <UserPlus className="h-3.5 w-3.5" />
             Add contact
