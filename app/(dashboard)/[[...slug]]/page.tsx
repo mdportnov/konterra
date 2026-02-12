@@ -3,12 +3,10 @@
 import { useState, useEffect, useCallback, useMemo, useRef, use } from 'react'
 import dynamic from 'next/dynamic'
 import DashboardPanel from '@/components/dashboard/DashboardPanel'
-import ContactDetail from '@/components/globe/ContactDetail'
 import GlobePanel from '@/components/globe/GlobePanel'
 import GlobeControls from '@/components/globe/GlobeControls'
 import GlobeFilters from '@/components/globe/GlobeFilters'
 import ContactEditPanel from '@/components/globe/ContactEditPanel'
-import ContactsBrowserPanel from '@/components/globe/ContactsBrowserPanel'
 import SettingsPanel from '@/components/globe/SettingsPanel'
 import ImportDialog from '@/components/import/ImportDialog'
 import DuplicatesDialog from '@/components/dedup/DuplicatesDialog'
@@ -96,23 +94,33 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
   const openDashboard = useCallback(() => setDashboardExpanded(true), [])
   const closeDashboard = useCallback(() => setDashboardExpanded(false), [])
 
-  const handleDashContactClick = useCallback((c: Contact) => {
+  const handleContactClick = useCallback((c: Contact) => {
     nav.handleContactClick(c)
-    setDashboardExpanded(false)
-  }, [nav.handleContactClick])
-
-  const handleDashAddContact = useCallback(() => {
-    nav.handleAddContact()
-    setDashboardExpanded(false)
-  }, [nav.handleAddContact])
-
-  const handleDashOpenInsights = useCallback(() => {
-    nav.handleOpenInsights()
-    setDashboardExpanded(false)
-  }, [nav.handleOpenInsights])
+    if (!dashboardExpanded) setDashboardExpanded(true)
+  }, [nav.handleContactClick, dashboardExpanded])
 
   const showDashboard = !isMobile || mobileView === 'dashboard'
   const showGlobe = !isMobile || mobileView === 'globe'
+
+  const dashboardProps = {
+    contacts: data.contacts,
+    connections: data.connections,
+    selectedContact: nav.selectedContact,
+    sidebarView: nav.sidebarView,
+    onContactClick: nav.handleContactClick,
+    onBackToList: nav.handleBackToList,
+    onAddContact: nav.handleAddContact,
+    onEditContact: nav.handleEditContact,
+    onDeleteContact: handleDeleteContact,
+    connectedContacts: nav.connectedContacts,
+    onConnectedContactClick: nav.handleConnectedContactClick,
+    allContacts: data.contacts,
+    onCountryConnectionsChange: data.handleCountryConnectionsChange,
+    onOpenInsights: nav.handleOpenInsights,
+    onOpenSettings: nav.handleOpenSettings,
+    isMobile,
+    contactsLoading: data.loading,
+  } as const
 
   const globeSection = (
     <>
@@ -140,18 +148,6 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
           </div>
         </div>
       )}
-
-      <ContactDetail
-        contact={nav.selectedContact}
-        open={nav.activePanel === 'detail'}
-        onClose={nav.handleCloseDetail}
-        onEdit={nav.handleEditContact}
-        onDelete={handleDeleteContact}
-        connectedContacts={nav.connectedContacts}
-        onConnectedContactClick={nav.handleConnectedContactClick}
-        allContacts={data.contacts}
-        onCountryConnectionsChange={data.handleCountryConnectionsChange}
-      />
 
       <ContactEditPanel
         contact={nav.editingContact}
@@ -190,14 +186,6 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
         onOpenChange={setDupDialogOpen}
         contacts={data.contacts}
         onResolved={data.reloadContacts}
-      />
-
-      <ContactsBrowserPanel
-        open={nav.activePanel === 'browser'}
-        onClose={nav.handleCloseBrowser}
-        contacts={data.contacts}
-        onSelectContact={nav.handleBrowserSelectContact}
-        loading={data.loading}
       />
 
       <GlobePanel
@@ -273,17 +261,8 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
           }}
         >
           <DashboardPanel
-            contacts={data.contacts}
-            connections={data.connections}
-            selectedContact={nav.selectedContact}
-            onContactClick={nav.handleContactClick}
-            onAddContact={nav.handleAddContact}
-            onOpenContactsBrowser={nav.handleOpenContactsBrowser}
-            onOpenInsights={nav.handleOpenInsights}
-            onOpenSettings={nav.handleOpenSettings}
-            isMobile={isMobile}
+            {...dashboardProps}
             onSwitchToGlobe={() => setMobileView('globe')}
-            contactsLoading={data.loading}
           />
         </div>
         <div
@@ -309,15 +288,8 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
         style={{ width: PANEL_WIDTH.dashboard.collapsed }}
       >
         <DashboardPanel
-          contacts={data.contacts}
-          connections={data.connections}
-          selectedContact={nav.selectedContact}
-          onContactClick={nav.handleContactClick}
-          onAddContact={nav.handleAddContact}
-          onOpenContactsBrowser={nav.handleOpenContactsBrowser}
-          onOpenInsights={nav.handleOpenInsights}
-          onOpenSettings={nav.handleOpenSettings}
-          isMobile={isMobile}
+          {...dashboardProps}
+          onContactClick={handleContactClick}
           collapsed
           onToggleCollapse={openDashboard}
         />
@@ -333,15 +305,8 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
         onClose={closeDashboard}
       >
         <DashboardPanel
-          contacts={data.contacts}
-          connections={data.connections}
-          selectedContact={nav.selectedContact}
-          onContactClick={handleDashContactClick}
-          onAddContact={handleDashAddContact}
-          onOpenContactsBrowser={nav.handleOpenContactsBrowser}
-          onOpenInsights={handleDashOpenInsights}
-          onOpenSettings={nav.handleOpenSettings}
-          isMobile={isMobile}
+          {...dashboardProps}
+          onContactClick={handleContactClick}
           collapsed={false}
           onToggleCollapse={closeDashboard}
         />

@@ -4,30 +4,28 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import type { Contact, ContactConnection, ContactCountryConnection } from '@/lib/db/schema'
 import type { ConnectedContact } from '@/components/globe/ContactDetail'
 
-export type ActivePanel = 'detail' | 'edit' | 'settings' | 'browser' | 'insights' | null
+export type ActivePanel = 'edit' | 'settings' | 'insights' | null
+export type SidebarView = 'list' | 'detail'
 
-function slugToState(slug?: string[]): { panel: ActivePanel; contactId: string | null; isNew: boolean } {
-  if (!slug || slug.length === 0) return { panel: null, contactId: null, isNew: false }
-  if (slug[0] === 'settings') return { panel: 'settings', contactId: null, isNew: false }
-  if (slug[0] === 'contacts') return { panel: 'browser', contactId: null, isNew: false }
-  if (slug[0] === 'insights') return { panel: 'insights', contactId: null, isNew: false }
+function slugToState(slug?: string[]): { panel: ActivePanel; sidebarView: SidebarView; contactId: string | null; isNew: boolean } {
+  if (!slug || slug.length === 0) return { panel: null, sidebarView: 'list', contactId: null, isNew: false }
+  if (slug[0] === 'settings') return { panel: 'settings', sidebarView: 'list', contactId: null, isNew: false }
+  if (slug[0] === 'contacts') return { panel: null, sidebarView: 'list', contactId: null, isNew: false }
+  if (slug[0] === 'insights') return { panel: 'insights', sidebarView: 'list', contactId: null, isNew: false }
   if (slug[0] === 'contact') {
-    if (slug[1] === 'new') return { panel: 'edit', contactId: null, isNew: true }
-    if (slug[2] === 'edit') return { panel: 'edit', contactId: slug[1], isNew: false }
-    if (slug[1]) return { panel: 'detail', contactId: slug[1], isNew: false }
+    if (slug[1] === 'new') return { panel: 'edit', sidebarView: 'list', contactId: null, isNew: true }
+    if (slug[2] === 'edit') return { panel: 'edit', sidebarView: 'list', contactId: slug[1], isNew: false }
+    if (slug[1]) return { panel: null, sidebarView: 'detail', contactId: slug[1], isNew: false }
   }
-  return { panel: null, contactId: null, isNew: false }
+  return { panel: null, sidebarView: 'list', contactId: null, isNew: false }
 }
 
-function stateToUrl(panel: ActivePanel, contactId?: string | null): string {
-  switch (panel) {
-    case 'detail': return contactId ? `/contact/${contactId}` : '/'
-    case 'edit': return contactId ? `/contact/${contactId}/edit` : '/contact/new'
-    case 'settings': return '/settings'
-    case 'browser': return '/contacts'
-    case 'insights': return '/insights'
-    default: return '/'
-  }
+function stateToUrl(panel: ActivePanel, sidebarView: SidebarView, contactId?: string | null): string {
+  if (panel === 'edit') return contactId ? `/contact/${contactId}/edit` : '/contact/new'
+  if (panel === 'settings') return '/settings'
+  if (panel === 'insights') return '/insights'
+  if (sidebarView === 'detail' && contactId) return `/contact/${contactId}`
+  return '/'
 }
 
 function pushUrl(url: string) {
@@ -47,11 +45,13 @@ export function usePanelNavigation(
   isMobile: boolean,
   setMobileView: (v: 'globe' | 'dashboard') => void,
 ) {
-  const initialState = useRef(slugToState(slug))
-  const pendingContactId = useRef<string | null>(initialState.current.contactId)
+  const [initParsed] = useState(() => slugToState(slug))
+  const initialState = useRef(initParsed)
+  const pendingContactId = useRef<string | null>(initParsed.contactId)
 
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null)
-  const [activePanel, setActivePanel] = useState<ActivePanel>(initialState.current.panel)
+  const [activePanel, setActivePanel] = useState<ActivePanel>(initParsed.panel)
+  const [sidebarView, setSidebarView] = useState<SidebarView>(initParsed.sidebarView)
   const [editingContact, setEditingContact] = useState<Contact | null>(null)
   const [flyTarget, setFlyTarget] = useState<{ lat: number; lng: number; ts: number } | null>(null)
 
@@ -59,10 +59,8 @@ export function usePanelNavigation(
     const onPopState = () => {
       const s = slugToState(pathnameToSlug(window.location.pathname))
       setActivePanel(s.panel)
-      if (s.panel === null) {
-        setSelectedContact(null)
-        setEditingContact(null)
-      } else if (s.panel === 'detail' && s.contactId) {
+      setSidebarView(s.sidebarView)
+      if (s.sidebarView === 'detail' && s.contactId) {
         const c = contacts.find((x) => x.id === s.contactId)
         if (c) {
           setSelectedContact(c)
@@ -70,7 +68,11 @@ export function usePanelNavigation(
             setFlyTarget({ lat: c.lat, lng: c.lng, ts: Date.now() })
           }
         }
-      } else if (s.panel === 'edit' && s.contactId) {
+      } else if (s.sidebarView === 'list' && s.panel === null) {
+        setSelectedContact(null)
+        setEditingContact(null)
+      }
+      if (s.panel === 'edit' && s.contactId) {
         const c = contacts.find((x) => x.id === s.contactId)
         if (c) setEditingContact(c)
       } else if (s.panel === 'edit' && s.isNew) {
@@ -94,21 +96,23 @@ export function usePanelNavigation(
 
   const handleContactClick = useCallback((contact: Contact) => {
     setSelectedContact(contact)
-    setActivePanel('detail')
-    pushUrl(stateToUrl('detail', contact.id))
-    if (isMobile) setMobileView('globe')
+    setSidebarView('detail')
+    setActivePanel(null)
+    pushUrl(stateToUrl(null, 'detail', contact.id))
+    if (isMobile) setMobileView('dashboard')
     flyToContact(contact)
   }, [isMobile, setMobileView, flyToContact])
 
-  const handleCloseDetail = useCallback(() => {
-    setActivePanel(null)
+  const handleBackToList = useCallback(() => {
+    setSidebarView('list')
+    setSelectedContact(null)
     pushUrl('/')
   }, [])
 
   const handleEditContact = useCallback((contact: Contact) => {
     setEditingContact(contact)
     setActivePanel('edit')
-    pushUrl(stateToUrl('edit', contact.id))
+    pushUrl(stateToUrl('edit', 'list', contact.id))
   }, [])
 
   const [editPrefill, setEditPrefill] = useState<Record<string, string>>({})
@@ -124,8 +128,13 @@ export function usePanelNavigation(
   const handleCancelEdit = useCallback(() => {
     setActivePanel(null)
     setEditingContact(null)
-    pushUrl('/')
-  }, [])
+    if (selectedContact) {
+      setSidebarView('detail')
+      pushUrl(stateToUrl(null, 'detail', selectedContact.id))
+    } else {
+      pushUrl('/')
+    }
+  }, [selectedContact])
 
   const handleContactSaved = useCallback((saved: Contact, setContacts: React.Dispatch<React.SetStateAction<Contact[]>>) => {
     setContacts((prev) => {
@@ -138,9 +147,10 @@ export function usePanelNavigation(
       return [saved, ...prev]
     })
     setSelectedContact(saved)
-    setActivePanel('detail')
+    setSidebarView('detail')
+    setActivePanel(null)
     setEditingContact(null)
-    pushUrl(stateToUrl('detail', saved.id))
+    pushUrl(stateToUrl(null, 'detail', saved.id))
   }, [])
 
   const handleDeleteContact = useCallback((contactId: string, setContacts: React.Dispatch<React.SetStateAction<Contact[]>>, setConnections: React.Dispatch<React.SetStateAction<ContactConnection[]>>, setCountryConnections?: React.Dispatch<React.SetStateAction<ContactCountryConnection[]>>) => {
@@ -148,6 +158,7 @@ export function usePanelNavigation(
     setConnections((prev) => prev.filter((c) => c.sourceContactId !== contactId && c.targetContactId !== contactId))
     setCountryConnections?.((prev) => prev.filter((c) => c.contactId !== contactId))
     setSelectedContact(null)
+    setSidebarView('list')
     setActivePanel(null)
     pushUrl('/')
   }, [])
@@ -161,24 +172,6 @@ export function usePanelNavigation(
     setActivePanel(null)
     pushUrl('/')
   }, [])
-
-  const handleOpenContactsBrowser = useCallback(() => {
-    setActivePanel('browser')
-    pushUrl('/contacts')
-    if (isMobile) setMobileView('globe')
-  }, [isMobile, setMobileView])
-
-  const handleCloseBrowser = useCallback(() => {
-    setActivePanel(null)
-    pushUrl('/')
-  }, [])
-
-  const handleBrowserSelectContact = useCallback((contact: Contact) => {
-    setSelectedContact(contact)
-    setActivePanel('detail')
-    pushUrl(stateToUrl('detail', contact.id))
-    flyToContact(contact)
-  }, [flyToContact])
 
   const handleOpenInsights = useCallback(() => {
     setActivePanel('insights')
@@ -223,8 +216,9 @@ export function usePanelNavigation(
     const c = contacts.find((x) => x.id === cc.id)
     if (c) {
       setSelectedContact(c)
-      setActivePanel('detail')
-      pushUrl(stateToUrl('detail', c.id))
+      setSidebarView('detail')
+      setActivePanel(null)
+      pushUrl(stateToUrl(null, 'detail', c.id))
       flyToContact(c)
     }
   }, [contacts, flyToContact])
@@ -233,7 +227,7 @@ export function usePanelNavigation(
     if (pendingContactId.current) {
       const c = data.find((x) => x.id === pendingContactId.current)
       if (c) {
-        if (initialState.current.panel === 'detail') {
+        if (initialState.current.sidebarView === 'detail') {
           setSelectedContact(c)
           flyToContact(c)
         } else if (initialState.current.panel === 'edit') {
@@ -248,13 +242,14 @@ export function usePanelNavigation(
   return {
     selectedContact, setSelectedContact,
     activePanel, setActivePanel,
+    sidebarView, setSidebarView,
     editingContact, setEditingContact,
     editPrefill,
     flyTarget, setFlyTarget,
     connectedContacts,
     resolveInitialContact,
     handleContactClick,
-    handleCloseDetail,
+    handleBackToList,
     handleEditContact,
     handleAddContact,
     handleCancelEdit,
@@ -262,9 +257,6 @@ export function usePanelNavigation(
     handleDeleteContact,
     handleOpenSettings,
     handleCloseSettings,
-    handleOpenContactsBrowser,
-    handleCloseBrowser,
-    handleBrowserSelectContact,
     handleOpenInsights,
     handleCloseInsights,
     handleConnectedContactClick,

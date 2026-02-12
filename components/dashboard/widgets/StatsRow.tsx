@@ -8,11 +8,10 @@ import type { Contact } from '@/lib/db/schema'
 
 interface StatsRowProps {
   contacts: Contact[]
-  onContactsClick?: () => void
   loading?: boolean
 }
 
-export default function StatsRow({ contacts, onContactsClick, loading }: StatsRowProps) {
+export default function StatsRow({ contacts, loading }: StatsRowProps) {
   const stats = useMemo(() => {
     const countries = new Set<string>()
     const cities = new Set<string>()
@@ -61,29 +60,20 @@ export default function StatsRow({ contacts, onContactsClick, loading }: StatsRo
 
   return (
     <div className="grid grid-cols-2 gap-2">
-      {cards.map((card) => {
-        const isClickable = card.label === 'Contacts' && !!onContactsClick
-        return (
-          <div
-            key={card.label}
-            role={isClickable ? 'button' : undefined}
-            tabIndex={isClickable ? 0 : undefined}
-            onClick={isClickable ? onContactsClick : undefined}
-            onKeyDown={isClickable ? (e) => { if (e.key === 'Enter' || e.key === ' ') onContactsClick!() } : undefined}
-            className={`${GLASS.control} rounded-xl p-3 flex items-center gap-3 text-left ${
-              isClickable ? 'cursor-pointer hover:bg-accent/50 transition-colors' : ''
-            }`}
-          >
-            <div className="rounded-lg bg-orange-500/10 p-2">
-              <card.icon className="h-4 w-4 text-orange-400" />
-            </div>
-            <div>
-              <p className="text-lg font-semibold text-foreground leading-tight">{card.value}</p>
-              <p className="text-[11px] text-muted-foreground">{card.label}</p>
-            </div>
+      {cards.map((card) => (
+        <div
+          key={card.label}
+          className={`${GLASS.control} rounded-xl p-3 flex items-center gap-3 text-left`}
+        >
+          <div className="rounded-lg bg-orange-500/10 p-2">
+            <card.icon className="h-4 w-4 text-orange-400" />
           </div>
-        )
-      })}
+          <div>
+            <p className="text-lg font-semibold text-foreground leading-tight">{card.value}</p>
+            <p className="text-[11px] text-muted-foreground">{card.label}</p>
+          </div>
+        </div>
+      ))}
     </div>
   )
 }
