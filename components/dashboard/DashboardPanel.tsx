@@ -130,120 +130,122 @@ export default function DashboardPanel({
     <div
       className={`h-full w-full flex flex-col overflow-hidden ${isCollapsed ? `${GLASS.panel} border-r border-border` : ''}`}
     >
+      <div className={isCollapsed ? 'p-3 pb-0' : 'px-4 pt-4 md:px-5 md:pt-5'}>
+        <div className="flex items-center justify-between gap-2">
+          <div className="min-w-0">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className={`${isCollapsed ? 'text-sm' : 'text-lg'} font-semibold text-foreground truncate hover:text-foreground/80 transition-colors cursor-pointer`}>
+                  Konterra
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-56">
+                {session?.user && (
+                  <>
+                    <div className="flex items-center gap-2 px-2 py-1.5">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={session.user.image || undefined} />
+                        <AvatarFallback className="text-xs bg-muted text-muted-foreground">
+                          {session.user.name?.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2) || '?'}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">{session.user.name}</p>
+                        <p className="text-xs text-muted-foreground truncate">{session.user.email}</p>
+                      </div>
+                    </div>
+                    <DropdownMenuSeparator />
+                  </>
+                )}
+                <DropdownMenuItem onClick={onOpenContactsBrowser}>
+                  <Users className="h-4 w-4 mr-2" />
+                  Browse Contacts
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={onAddContact}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Contact
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={onOpenInsights}>
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Insights
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={onOpenSettings}>
+                  <Settings className="h-4 w-4 mr-2" />
+                  Settings
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => signOut({ callbackUrl: '/login' })}>
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Sign Out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            {!isCollapsed && <p className="text-xs text-muted-foreground">Your network command center</p>}
+          </div>
+          <div className="flex items-center gap-1 shrink-0">
+            {isMobile && onSwitchToGlobe && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={onSwitchToGlobe}
+                className="border-border text-muted-foreground"
+              >
+                <GlobeIcon className="h-4 w-4 mr-1" />
+                Globe
+              </Button>
+            )}
+            {!isCollapsed && (
+              <Button
+                size="sm"
+                onClick={onAddContact}
+                className="bg-orange-500 hover:bg-orange-600 text-white"
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                Add
+              </Button>
+            )}
+            {isCollapsed && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={onAddContact}
+                      className="h-7 w-7 shrink-0 text-orange-500 hover:text-orange-600"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="text-xs">Add contact</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+            {isCollapsed && onToggleCollapse && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={onToggleCollapse}
+                      className="h-7 w-7 shrink-0 text-muted-foreground hover:text-foreground"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="text-xs">
+                    Expand dashboard
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+          </div>
+        </div>
+      </div>
+
       <ScrollArea className="flex-1 overflow-hidden">
         <div className={isCollapsed ? 'p-3 space-y-3' : 'p-4 md:p-5 space-y-5 md:space-y-6'}>
-          <div className="flex items-center justify-between gap-2">
-            <div className="min-w-0">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button className={`${isCollapsed ? 'text-sm' : 'text-lg'} font-semibold text-foreground truncate hover:text-foreground/80 transition-colors cursor-pointer`}>
-                    Konterra
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-56">
-                  {session?.user && (
-                    <>
-                      <div className="flex items-center gap-2 px-2 py-1.5">
-                        <Avatar className="h-8 w-8">
-                          <AvatarImage src={session.user.image || undefined} />
-                          <AvatarFallback className="text-xs bg-muted text-muted-foreground">
-                            {session.user.name?.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2) || '?'}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium truncate">{session.user.name}</p>
-                          <p className="text-xs text-muted-foreground truncate">{session.user.email}</p>
-                        </div>
-                      </div>
-                      <DropdownMenuSeparator />
-                    </>
-                  )}
-                  <DropdownMenuItem onClick={onOpenContactsBrowser}>
-                    <Users className="h-4 w-4 mr-2" />
-                    Browse Contacts
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={onAddContact}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Contact
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={onOpenInsights}>
-                    <Sparkles className="h-4 w-4 mr-2" />
-                    Insights
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={onOpenSettings}>
-                    <Settings className="h-4 w-4 mr-2" />
-                    Settings
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => signOut({ callbackUrl: '/login' })}>
-                    <LogOut className="h-4 w-4 mr-2" />
-                    Sign Out
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              {!isCollapsed && <p className="text-xs text-muted-foreground">Your network command center</p>}
-            </div>
-            <div className="flex items-center gap-1 shrink-0">
-              {isMobile && onSwitchToGlobe && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={onSwitchToGlobe}
-                  className="border-border text-muted-foreground"
-                >
-                  <GlobeIcon className="h-4 w-4 mr-1" />
-                  Globe
-                </Button>
-              )}
-              {!isCollapsed && (
-                <Button
-                  size="sm"
-                  onClick={onAddContact}
-                  className="bg-orange-500 hover:bg-orange-600 text-white"
-                >
-                  <Plus className="h-4 w-4 mr-1" />
-                  Add
-                </Button>
-              )}
-              {isCollapsed && (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={onAddContact}
-                        className="h-7 w-7 shrink-0 text-orange-500 hover:text-orange-600"
-                      >
-                        <Plus className="h-3.5 w-3.5" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" className="text-xs">Add contact</TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              )}
-              {isCollapsed && onToggleCollapse && (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={onToggleCollapse}
-                        className="h-7 w-7 shrink-0 text-muted-foreground hover:text-foreground"
-                      >
-                        <ChevronRight className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" className="text-xs">
-                      Expand dashboard
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              )}
-            </div>
-          </div>
-
           {!isCollapsed && (
             <>
               <StatsRow contacts={contacts} onContactsClick={onOpenContactsBrowser} loading={contactsLoading} />
