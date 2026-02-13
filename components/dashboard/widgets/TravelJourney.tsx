@@ -26,11 +26,20 @@ function formatYear(d: Date | string): number {
 }
 
 export default function TravelJourney({ trips, loading, onImport, onTripClick }: TravelJourneyProps) {
+  const now = useMemo(() => new Date(), [])
+
   const stats = useMemo(() => {
-    const countries = new Set(trips.map((t) => t.country))
+    const pastCountries = new Set<string>()
+    const futureOnlyCountries = new Set<string>()
+    for (const t of trips) {
+      if (new Date(t.arrivalDate) <= now) pastCountries.add(t.country)
+    }
+    for (const t of trips) {
+      if (new Date(t.arrivalDate) > now && !pastCountries.has(t.country)) futureOnlyCountries.add(t.country)
+    }
     const totalDays = trips.reduce((sum, t) => sum + (t.durationDays || 0), 0)
-    return { total: trips.length, countries: countries.size, totalDays }
-  }, [trips])
+    return { total: trips.length, countries: pastCountries.size, upcomingCountries: futureOnlyCountries.size, totalDays }
+  }, [trips, now])
 
   const sorted = useMemo(() =>
     [...trips].sort((a, b) => new Date(b.arrivalDate).getTime() - new Date(a.arrivalDate).getTime()),
@@ -101,7 +110,7 @@ export default function TravelJourney({ trips, loading, onImport, onTripClick }:
         </Button>
       </div>
 
-      <div className="grid grid-cols-3 gap-2">
+      <div className={`grid ${stats.upcomingCountries > 0 ? 'grid-cols-4' : 'grid-cols-3'} gap-2`}>
         <div className={`${GLASS.control} rounded-lg p-2 text-center`}>
           <p className="text-sm font-semibold text-foreground">{stats.total}</p>
           <p className="text-[9px] text-muted-foreground">Trips</p>
@@ -110,6 +119,12 @@ export default function TravelJourney({ trips, loading, onImport, onTripClick }:
           <p className="text-sm font-semibold text-foreground">{stats.countries}</p>
           <p className="text-[9px] text-muted-foreground">Countries</p>
         </div>
+        {stats.upcomingCountries > 0 && (
+          <div className={`${GLASS.control} rounded-lg p-2 text-center`}>
+            <p className="text-sm font-semibold text-green-400">{stats.upcomingCountries}</p>
+            <p className="text-[9px] text-muted-foreground">Upcoming</p>
+          </div>
+        )}
         <div className={`${GLASS.control} rounded-lg p-2 text-center`}>
           <p className="text-sm font-semibold text-foreground">{stats.totalDays}</p>
           <p className="text-[9px] text-muted-foreground">Days</p>
@@ -127,14 +142,15 @@ export default function TravelJourney({ trips, loading, onImport, onTripClick }:
               const idx = globalIdx++
               const nextInSorted = sorted[idx + 1]
               const isLastOverall = idx === sorted.length - 1
+              const isFuture = new Date(trip.arrivalDate) > now
 
               return (
                 <div key={trip.id}>
                   <button
                     onClick={() => onTripClick?.(trip)}
-                    className="w-full text-left pl-5 pr-2 py-1.5 rounded-md hover:bg-blue-500/5 transition-colors relative group"
+                    className={`w-full text-left pl-5 pr-2 py-1.5 rounded-md transition-colors relative group ${isFuture ? 'hover:bg-green-500/5' : 'hover:bg-blue-500/5'}`}
                   >
-                    <div className="absolute left-[-3.5px] top-[11px] w-2 h-2 rounded-full bg-blue-400 border-2 border-background ring-1 ring-blue-400/40" />
+                    <div className={`absolute left-[-3.5px] top-[11px] w-2 h-2 rounded-full border-2 border-background ring-1 ${isFuture ? 'bg-green-400 ring-green-400/40' : 'bg-blue-400 ring-blue-400/40'}`} />
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-medium text-foreground truncate">
                         {trip.city}
@@ -155,16 +171,21 @@ export default function TravelJourney({ trips, loading, onImport, onTripClick }:
                       </div>
                     </div>
                   </button>
-                  {!isLastOverall && nextInSorted && (
-                    <div className="relative pl-5 py-0.5 flex items-center gap-1.5">
-                      <MoveDown className="h-2.5 w-2.5 text-blue-400/40" />
-                      <span className="text-[9px] text-blue-400/50 font-medium">
-                        {nextInSorted.city === trip.city && nextInSorted.country === trip.country
-                          ? 'stayed'
-                          : `${nextInSorted.city}, ${nextInSorted.country}`}
-                      </span>
-                    </div>
-                  )}
+                  {!isLastOverall && nextInSorted && (() => {
+                    const nextFuture = new Date(nextInSorted.arrivalDate) > now
+                    const connColor = nextFuture ? 'text-green-400/40' : 'text-blue-400/40'
+                    const connTextColor = nextFuture ? 'text-green-400/50' : 'text-blue-400/50'
+                    return (
+                      <div className="relative pl-5 py-0.5 flex items-center gap-1.5">
+                        <MoveDown className={`h-2.5 w-2.5 ${connColor}`} />
+                        <span className={`text-[9px] ${connTextColor} font-medium`}>
+                          {nextInSorted.city === trip.city && nextInSorted.country === trip.country
+                            ? 'stayed'
+                            : `${nextInSorted.city}, ${nextInSorted.country}`}
+                        </span>
+                      </div>
+                    )
+                  })()}
                 </div>
               )
             })}

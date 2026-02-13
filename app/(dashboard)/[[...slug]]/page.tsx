@@ -90,6 +90,16 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
   }, [])
 
   const data = useGlobeData()
+
+  const mergedVisitedCountries = useMemo(() => {
+    const merged = new Set(data.visitedCountries)
+    const now = new Date()
+    for (const t of data.trips) {
+      if (new Date(t.arrivalDate) <= now) merged.add(t.country)
+    }
+    return merged
+  }, [data.visitedCountries, data.trips])
+
   const filters = useContactFilters(data.contacts, data.userTags)
   const nav = usePanelNavigation(slug, data.contacts, data.connections, isMobile, setMobileView)
 
@@ -282,7 +292,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
         onCountryClick={handleCountryClick}
         onTripPointClick={handleTripPointClick}
         display={displayOptions}
-        visitedCountries={data.visitedCountries}
+        visitedCountries={mergedVisitedCountries}
         connections={data.connections}
         countryConnections={data.countryConnections}
         highlightedContactIds={highlightedContactIds}
@@ -325,7 +335,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
         onClose={nav.handleCloseSettings}
         displayOptions={displayOptions}
         onDisplayChange={setDisplayOptions}
-        visitedCountries={data.visitedCountries}
+        visitedCountries={mergedVisitedCountries}
         onToggleVisitedCountry={data.handleCountryVisitToggle}
         onOpenImport={() => setImportDialogOpen(true)}
         onOpenExport={() => setExportDialogOpen(true)}
@@ -333,7 +343,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
         onDeleteAllContacts={data.reloadContacts}
         contactCount={data.contacts.length}
         connectionCount={data.connections.length}
-        visitedCountryCount={data.visitedCountries.size}
+        visitedCountryCount={mergedVisitedCountries.size}
         contactCountsByCountry={contactCountsByCountry}
       />
 
@@ -431,7 +441,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
           open={countryPopupOpen}
           onSelect={handleCountryPopupSelect}
           onClose={closeCountryPopup}
-          visited={data.visitedCountries.has(countryPopup.country)}
+          visited={mergedVisitedCountries.has(countryPopup.country)}
           onToggleVisited={() => data.handleCountryVisitToggle(countryPopup.country)}
           onAddContact={handleAddContactToCountry}
           indirectContacts={indirectPopupContacts}

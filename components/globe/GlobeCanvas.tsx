@@ -441,21 +441,26 @@ export default memo(function GlobeCanvas({
 
   const isTravelMode = display.globeViewMode === 'travel'
 
+  const now = useMemo(() => new Date(), [])
+
   const travelPoints: GlobePoint[] = useMemo(() => {
     if (!isTravelMode || trips.length === 0) return []
     const sorted = [...trips].sort((a, b) => new Date(a.arrivalDate).getTime() - new Date(b.arrivalDate).getTime())
     return sorted
       .filter((t) => t.lat != null && t.lng != null)
-      .map((t) => ({
-        id: `trip:${t.id}`,
-        lat: t.lat!,
-        lng: t.lng!,
-        name: t.city,
-        city: t.country,
-        color: '#3b82f6',
-        size: 0.5,
-      }))
-  }, [isTravelMode, trips])
+      .map((t) => {
+        const isFuture = new Date(t.arrivalDate) > now
+        return {
+          id: `trip:${t.id}`,
+          lat: t.lat!,
+          lng: t.lng!,
+          name: t.city,
+          city: t.country,
+          color: isFuture ? '#22c55e' : '#3b82f6',
+          size: 0.5,
+        }
+      })
+  }, [isTravelMode, trips, now])
 
   const travelArcs: GlobeArc[] = useMemo(() => {
     if (!isTravelMode || trips.length === 0) return EMPTY_ARCS
@@ -464,22 +469,30 @@ export default memo(function GlobeCanvas({
       .sort((a, b) => new Date(a.arrivalDate).getTime() - new Date(b.arrivalDate).getTime())
     const result: GlobeArc[] = []
     for (let i = 0; i < sorted.length - 1; i++) {
+      const nextIsFuture = new Date(sorted[i + 1].arrivalDate) > now
       result.push({
         startLat: sorted[i].lat!,
         startLng: sorted[i].lng!,
         endLat: sorted[i + 1].lat!,
         endLng: sorted[i + 1].lng!,
-        color: 'rgba(96, 165, 250, 0.6)',
+        color: nextIsFuture ? 'rgba(74, 222, 128, 0.6)' : 'rgba(96, 165, 250, 0.6)',
         isTravel: true,
       })
     }
     return result
-  }, [isTravelMode, trips])
+  }, [isTravelMode, trips, now])
 
-  const travelCountries = useMemo(() => {
+  const pastTravelCountries = useMemo(() => {
     if (!isTravelMode) return new Set<string>()
-    return new Set(trips.map((t) => t.country))
-  }, [isTravelMode, trips])
+    return new Set(trips.filter((t) => new Date(t.arrivalDate) <= now).map((t) => t.country))
+  }, [isTravelMode, trips, now])
+
+  const futureTravelCountries = useMemo(() => {
+    if (!isTravelMode) return new Set<string>()
+    const future = new Set(trips.filter((t) => new Date(t.arrivalDate) > now).map((t) => t.country))
+    for (const c of pastTravelCountries) future.delete(c)
+    return future
+  }, [isTravelMode, trips, now, pastTravelCountries])
 
   const activePoints = isTravelMode ? travelPoints : points
   const allArcs = useMemo(() => {
@@ -581,6 +594,7 @@ export default memo(function GlobeCanvas({
     if (isTravelMode) {
       const tripCount = trips.filter((t) => t.country === name).length
       if (tripCount > 0) parts.push(`${tripCount} trip${tripCount === 1 ? '' : 's'}`)
+      if (futureTravelCountries.has(name)) parts.push('Upcoming')
     } else {
       const count = countryContactCount.get(name) || 0
       const indirectCount = countryConnectionCountMap.get(name) || 0
@@ -592,14 +606,15 @@ export default memo(function GlobeCanvas({
     }
     const label = parts.join(' <span style="opacity:0.4">&middot;</span> ')
     return `<div style="background:${bg};color:${textColor};padding:5px 10px;border-radius:6px;font-size:11px;backdrop-filter:blur(12px);border:1px solid ${border};font-family:system-ui,sans-serif;line-height:1.4;box-shadow:0 2px 8px rgba(0,0,0,${isDark ? '0.4' : '0.08'})">${label}</div>`
-  }, [isDark, countryContactCount, countryConnectionCountMap, visitedCountries, userCountry, isTravelMode, trips])
+  }, [isDark, countryContactCount, countryConnectionCountMap, visitedCountries, userCountry, isTravelMode, trips, futureTravelCountries])
 
   const getPolygonCapColor = useCallback((feat: object) => {
     const f = feat as { id?: string }
     const name = countryNames[String(f.id)]
     if (name) {
       if (isTravelMode) {
-        if (travelCountries.has(name)) return isDark ? 'rgba(59, 130, 246, 0.35)' : 'rgba(59, 130, 246, 0.2)'
+        if (futureTravelCountries.has(name)) return isDark ? 'rgba(74, 222, 128, 0.25)' : 'rgba(74, 222, 128, 0.15)'
+        if (pastTravelCountries.has(name)) return isDark ? 'rgba(59, 130, 246, 0.35)' : 'rgba(59, 130, 246, 0.2)'
         return isDark ? 'rgba(15, 25, 55, 0.85)' : 'rgba(180, 195, 220, 0.7)'
       }
       const count = countryContactCount.get(name) || 0
@@ -618,7 +633,7 @@ export default memo(function GlobeCanvas({
       if (userCountry && name === userCountry) return isDark ? 'rgba(34, 197, 94, 0.25)' : 'rgba(34, 197, 94, 0.15)'
     }
     return isDark ? 'rgba(15, 25, 55, 0.85)' : 'rgba(180, 195, 220, 0.7)'
-  }, [isDark, countryContactCount, visitedCountries, indirectOnlyCountries, userCountry, isTravelMode, travelCountries])
+  }, [isDark, countryContactCount, visitedCountries, indirectOnlyCountries, userCountry, isTravelMode, pastTravelCountries, futureTravelCountries])
 
   const getPolygonSideColor = useCallback(
     () => isDark ? 'rgba(10, 18, 40, 0.6)' : 'rgba(160, 180, 210, 0.5)',
@@ -631,7 +646,8 @@ export default memo(function GlobeCanvas({
       const name = countryNames[String(f.id)]
       if (name) {
         if (isTravelMode) {
-          if (travelCountries.has(name)) return isDark ? 'rgba(59, 130, 246, 0.6)' : 'rgba(59, 130, 246, 0.4)'
+          if (futureTravelCountries.has(name)) return isDark ? 'rgba(74, 222, 128, 0.5)' : 'rgba(74, 222, 128, 0.35)'
+          if (pastTravelCountries.has(name)) return isDark ? 'rgba(59, 130, 246, 0.6)' : 'rgba(59, 130, 246, 0.4)'
           return isDark ? 'rgba(40, 70, 130, 0.35)' : 'rgba(100, 130, 180, 0.3)'
         }
         const isVisited = visitedCountries?.has(name)
@@ -645,7 +661,7 @@ export default memo(function GlobeCanvas({
       }
       return isDark ? 'rgba(40, 70, 130, 0.35)' : 'rgba(100, 130, 180, 0.3)'
     },
-    [isDark, visitedCountries, countryContactCount, indirectOnlyCountries, userCountry, isTravelMode, travelCountries]
+    [isDark, visitedCountries, countryContactCount, indirectOnlyCountries, userCountry, isTravelMode, pastTravelCountries, futureTravelCountries]
   )
 
   const getPointColor = useCallback((point: object) => (point as GlobePoint).color, [])
@@ -700,14 +716,27 @@ export default memo(function GlobeCanvas({
           <div className={`absolute top-14 right-4 ${GLASS.control} rounded-lg px-2.5 py-2 flex flex-col gap-1`}>
             <div className="flex items-center gap-1.5">
               <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#3b82f6' }} />
-              <span className="text-[10px] text-muted-foreground">Trip waypoint</span>
+              <span className="text-[10px] text-muted-foreground">Past trip</span>
             </div>
             <div className="flex items-center gap-1.5">
               <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? 'rgba(59, 130, 246, 0.35)' : 'rgba(59, 130, 246, 0.2)' }} />
               <span className="text-[10px] text-muted-foreground">Visited country</span>
             </div>
+            {futureTravelCountries.size > 0 && (
+              <>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#22c55e' }} />
+                  <span className="text-[10px] text-muted-foreground">Upcoming trip</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? 'rgba(74, 222, 128, 0.25)' : 'rgba(74, 222, 128, 0.15)' }} />
+                  <span className="text-[10px] text-muted-foreground">Upcoming country</span>
+                </div>
+              </>
+            )}
             <div className="text-[9px] text-muted-foreground/60 mt-0.5">
-              {trips.length} trips &middot; {travelCountries.size} countries
+              {trips.length} trips &middot; {pastTravelCountries.size} countries
+              {futureTravelCountries.size > 0 && ` \u00b7 ${futureTravelCountries.size} upcoming`}
             </div>
           </div>
         )
