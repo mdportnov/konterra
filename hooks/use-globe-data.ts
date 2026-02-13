@@ -105,12 +105,40 @@ export function useGlobeData() {
     }
   }, [])
 
+  const tripGeocodingRef = useRef(false)
+
+  const runTripBatchGeocode = useCallback(async () => {
+    if (tripGeocodingRef.current) return
+    tripGeocodingRef.current = true
+    try {
+      let remaining = Infinity
+      while (remaining > 0) {
+        const res = await fetch('/api/geocode/trips', { method: 'POST' })
+        if (!res.ok) break
+        const data = await res.json()
+        remaining = data.remaining ?? 0
+        if (data.geocoded > 0) {
+          await fetchTrips().then(setTrips)
+        }
+        if (remaining === 0 || data.geocoded === 0) break
+      }
+    } catch {} finally {
+      tripGeocodingRef.current = false
+    }
+  }, [])
+
   useEffect(() => {
     if (!loading && needsGeocodeRef.current) {
       needsGeocodeRef.current = false
       runBatchGeocode()
     }
   }, [loading, runBatchGeocode])
+
+  useEffect(() => {
+    if (!tripsLoading && trips.length > 0 && trips.some((t) => t.lat == null)) {
+      runTripBatchGeocode()
+    }
+  }, [tripsLoading, trips, runTripBatchGeocode])
 
   const visitedToggleInFlight = useRef(new Set<string>())
 
