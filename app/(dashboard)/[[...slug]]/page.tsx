@@ -13,7 +13,7 @@ import DuplicatesDialog from '@/components/dedup/DuplicatesDialog'
 import ExportDialog from '@/components/export/ExportDialog'
 import ConnectionInsightsPanel from '@/components/insights/ConnectionInsightsPanel'
 import CountryPopup from '@/components/globe/CountryPopup'
-import { PANEL_WIDTH, GLASS, Z } from '@/lib/constants/ui'
+import { PANEL_WIDTH, GLASS, Z, TRANSITION } from '@/lib/constants/ui'
 import { displayDefaults } from '@/types/display'
 import type { DisplayOptions } from '@/types/display'
 import type { Contact, ContactCountryConnection } from '@/lib/db/schema'
@@ -21,6 +21,8 @@ import { useIsMobile } from '@/hooks/use-mobile'
 import { useGlobeData } from '@/hooks/use-globe-data'
 import { useContactFilters } from '@/hooks/use-contact-filters'
 import { usePanelNavigation } from '@/hooks/use-panel-navigation'
+import { ChevronRight } from 'lucide-react'
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
 
 const GlobeCanvas = dynamic(() => import('@/components/globe/GlobeCanvas'), { ssr: false })
 
@@ -28,6 +30,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
   const { slug } = use(params)
   const isMobile = useIsMobile()
   const [mobileView, setMobileView] = useState<'globe' | 'dashboard'>('dashboard')
+  const [sidebarOpen, setSidebarOpen] = useState(true)
   const [importDialogOpen, setImportDialogOpen] = useState(false)
   const [dupDialogOpen, setDupDialogOpen] = useState(false)
   const [exportDialogOpen, setExportDialogOpen] = useState(false)
@@ -109,6 +112,17 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
     nav.handleAddContact(country ? { country } : undefined)
   }, [closeCountryPopup, nav.handleAddContact, countryPopup?.country])
 
+  const contactCountsByCountry = useMemo(() => {
+    const map = new Map<string, number>()
+    for (const c of data.contacts) {
+      if (c.country) map.set(c.country, (map.get(c.country) || 0) + 1)
+    }
+    for (const cc of data.countryConnections) {
+      map.set(cc.country, (map.get(cc.country) || 0) + 1)
+    }
+    return map
+  }, [data.contacts, data.countryConnections])
+
   const showDashboard = !isMobile || mobileView === 'dashboard'
   const showGlobe = !isMobile || mobileView === 'globe'
 
@@ -183,6 +197,10 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
         onOpenExport={() => setExportDialogOpen(true)}
         onOpenDuplicates={() => setDupDialogOpen(true)}
         onDeleteAllContacts={data.reloadContacts}
+        contactCount={data.contacts.length}
+        connectionCount={data.connections.length}
+        visitedCountryCount={data.visitedCountries.size}
+        contactCountsByCountry={contactCountsByCountry}
       />
 
       <ImportDialog
@@ -303,13 +321,35 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
   return (
     <div className="fixed inset-0 flex overflow-hidden bg-background">
       <div
-        className="shrink-0 h-full"
-        style={{ width: PANEL_WIDTH.dashboard.min }}
+        className={`shrink-0 h-full ${TRANSITION.panel}`}
+        style={{
+          width: PANEL_WIDTH.dashboard.min,
+          marginLeft: sidebarOpen ? 0 : -PANEL_WIDTH.dashboard.min,
+        }}
       >
         <DashboardPanel
           {...dashboardProps}
+          onCollapse={() => setSidebarOpen(false)}
         />
       </div>
+      {!sidebarOpen && (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={() => setSidebarOpen(true)}
+                className={`fixed left-0 top-4 h-7 w-5 flex items-center justify-center cursor-pointer ${GLASS.control} border-l-0 rounded-r-sm hover:bg-accent ${TRANSITION.color} text-muted-foreground hover:text-foreground`}
+                style={{ zIndex: Z.sidebarToggle }}
+              >
+                <ChevronRight className="h-3.5 w-3.5" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="right" className="text-xs">
+              Open sidebar
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      )}
       <div className="relative flex-1 overflow-hidden globe-bg">
         {globeSection}
       </div>

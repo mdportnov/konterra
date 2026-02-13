@@ -7,11 +7,19 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { LogOut, Loader2, Pencil, Check, X } from 'lucide-react'
+import { Separator } from '@/components/ui/separator'
+import { LogOut, Loader2, Pencil, Check, X, Users, Globe, Link2, CalendarDays } from 'lucide-react'
 import { toast } from 'sonner'
-import type { ProfileTabProps, SessionUser } from './types'
+import type { ProfileTabProps } from './types'
 
-export function ProfileTab({ open }: ProfileTabProps) {
+interface SessionUser {
+  name?: string | null
+  email?: string | null
+  image?: string | null
+  createdAt?: string | null
+}
+
+export function ProfileTab({ open, contactCount, connectionCount, visitedCountryCount }: ProfileTabProps) {
   const [user, setUser] = useState<SessionUser | null>(null)
   const [signingOut, setSigningOut] = useState(false)
   const [editingName, setEditingName] = useState(false)
@@ -67,6 +75,17 @@ export function ProfileTab({ open }: ProfileTabProps) {
     }
   }
 
+  const memberSince = user?.createdAt
+    ? new Date(user.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+    : null
+
+  const stats = [
+    { label: 'Contacts', value: contactCount, icon: Users },
+    { label: 'Countries', value: visitedCountryCount, icon: Globe },
+    { label: 'Connections', value: connectionCount, icon: Link2 },
+    { label: 'Member since', value: memberSince || '...', icon: CalendarDays },
+  ]
+
   return (
     <div className="flex flex-col h-full">
       <ScrollArea className="flex-1">
@@ -113,6 +132,18 @@ export function ProfileTab({ open }: ProfileTabProps) {
               </div>
             )}
             <p className="text-sm text-muted-foreground">{user?.email}</p>
+          </div>
+
+          <Separator className="bg-border" />
+
+          <div className="grid grid-cols-2 gap-3">
+            {stats.map(({ label, value, icon: Icon }) => (
+              <div key={label} className="rounded-lg border border-border bg-muted/30 p-3 text-center space-y-1">
+                <Icon className="h-4 w-4 mx-auto text-muted-foreground/60" />
+                <p className="text-lg font-semibold text-foreground">{value}</p>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{label}</p>
+              </div>
+            ))}
           </div>
         </div>
       </ScrollArea>

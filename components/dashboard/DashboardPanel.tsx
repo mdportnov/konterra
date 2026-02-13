@@ -7,10 +7,9 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
-import { Search, X, ChevronDown, ChevronRight, Plus, Globe as GlobeIcon, Settings, Sparkles, LogOut, Star, SlidersHorizontal, ArrowUpDown, List, LayoutGrid, Rows3, CheckSquare, Square, Trash2, Tag, MapPin } from 'lucide-react'
+import { Search, X, ChevronDown, ChevronLeft, Plus, Globe as GlobeIcon, Settings, Sparkles, LogOut, Star, SlidersHorizontal, ArrowUpDown, List, LayoutGrid, Rows3, CheckSquare, Square, Trash2, Tag, MapPin } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
-import { GLASS } from '@/lib/constants/ui'
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
 import { useHotkey } from '@/hooks/use-hotkey'
 import { useSession, signOut } from 'next-auth/react'
@@ -60,8 +59,7 @@ interface DashboardPanelProps {
   isMobile?: boolean
   onSwitchToGlobe?: () => void
   contactsLoading?: boolean
-  collapsed?: boolean
-  onToggleCollapse?: () => void
+  onCollapse?: () => void
   onSelectionChange?: (ids: Set<string>) => void
   onBulkDelete?: (ids: string[]) => void
 }
@@ -85,8 +83,7 @@ export default function DashboardPanel({
   isMobile,
   onSwitchToGlobe,
   contactsLoading = false,
-  collapsed = false,
-  onToggleCollapse,
+  onCollapse,
   onSelectionChange,
   onBulkDelete,
 }: DashboardPanelProps) {
@@ -241,8 +238,6 @@ export default function DashboardPanel({
 
   const hasFilters = search || selectedTags.length > 0 || selectedCountries.length > 0 || selectedRatings.size > 0 || selectedRelTypes.length > 0
 
-  const isCollapsed = collapsed && !isMobile
-
   const toggleSelectContact = useCallback((id: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev)
@@ -253,9 +248,8 @@ export default function DashboardPanel({
   }, [])
 
   const selectAll = useCallback(() => {
-    const visible = isCollapsed ? filteredContacts : pagedContacts
-    setSelectedIds(new Set(visible.map((c) => c.id)))
-  }, [isCollapsed, filteredContacts, pagedContacts])
+    setSelectedIds(new Set(pagedContacts.map((c) => c.id)))
+  }, [pagedContacts])
 
   const deselectAll = useCallback(() => {
     setSelectedIds(new Set())
@@ -338,7 +332,7 @@ export default function DashboardPanel({
 
   if (sidebarView === 'detail' && selectedContact) {
     return (
-      <div className={`h-full w-full flex flex-col overflow-hidden ${isCollapsed ? `${GLASS.panel} border-r border-border` : ''}`}>
+      <div className="h-full w-full flex flex-col overflow-hidden">
         <ContactDetailContent
           contact={selectedContact}
           onEdit={(c) => onEditContact?.(c)}
@@ -354,15 +348,13 @@ export default function DashboardPanel({
   }
 
   return (
-    <div
-      className={`h-full w-full flex flex-col overflow-hidden ${isCollapsed ? `${GLASS.panel} border-r border-border` : ''}`}
-    >
-      <div className={isCollapsed ? 'p-3 pb-0' : 'px-4 pt-4 md:px-5 md:pt-5'}>
+    <div className="h-full w-full flex flex-col overflow-hidden">
+      <div className="px-4 pt-4 md:px-5 md:pt-5">
         <div className="flex items-center justify-between gap-2">
           <div className="min-w-0">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className={`${isCollapsed ? 'text-sm' : 'text-lg'} font-semibold text-foreground truncate hover:text-foreground/80 transition-colors cursor-pointer`}>
+                <button className="text-lg font-semibold text-foreground truncate hover:text-foreground/80 transition-colors cursor-pointer">
                   Konterra
                 </button>
               </DropdownMenuTrigger>
@@ -403,7 +395,7 @@ export default function DashboardPanel({
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            {!isCollapsed && <p className="text-xs text-muted-foreground">Your network command center</p>}
+            <p className="text-xs text-muted-foreground">Your network command center</p>
           </div>
           <div className="flex items-center gap-1 shrink-0">
             {isMobile && onSwitchToGlobe && (
@@ -417,48 +409,29 @@ export default function DashboardPanel({
                 Globe
               </Button>
             )}
-            {!isCollapsed && (
-              <Button
-                size="sm"
-                onClick={onAddContact}
-                className="bg-orange-500 hover:bg-orange-600 text-white"
-              >
-                <Plus className="h-4 w-4 mr-1" />
-                Add
-              </Button>
-            )}
-            {isCollapsed && (
+            <Button
+              size="sm"
+              onClick={onAddContact}
+              className="bg-orange-500 hover:bg-orange-600 text-white"
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              Add
+            </Button>
+            {onCollapse && !isMobile && (
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
                       size="icon"
                       variant="ghost"
-                      onClick={onAddContact}
-                      className="h-7 w-7 shrink-0 text-orange-500 hover:text-orange-600"
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom" className="text-xs">Add contact</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            )}
-            {isCollapsed && onToggleCollapse && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={onToggleCollapse}
+                      onClick={onCollapse}
                       className="h-7 w-7 shrink-0 text-muted-foreground hover:text-foreground"
                     >
-                      <ChevronRight className="h-4 w-4" />
+                      <ChevronLeft className="h-4 w-4" />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent side="bottom" className="text-xs">
-                    Expand dashboard
+                    Collapse sidebar
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -468,63 +441,57 @@ export default function DashboardPanel({
       </div>
 
       <ScrollArea className="flex-1 overflow-hidden">
-        <div className={isCollapsed ? 'p-3 space-y-3' : 'p-4 md:p-5 space-y-5 md:space-y-6'}>
-          {!isCollapsed && (
-            <>
-              <StatsRow contacts={contacts} loading={contactsLoading} />
-              <NetworkHealth contacts={contacts} interactions={recentInteractions} loading={contactsLoading || interactionsLoading} />
-              <ReconnectAlerts contacts={contacts} onContactClick={onContactClick} loading={contactsLoading} />
-              <FavorLedger favors={favors} contacts={contacts} onContactClick={onContactClick} loading={contactsLoading || favorsLoading} />
-              <ConnectionInsightsSummary
-                contacts={contacts}
-                connections={connections}
-                interactions={recentInteractions}
-                favors={favors}
-                onOpenInsights={onOpenInsights || (() => {})}
-                loading={contactsLoading || interactionsLoading || favorsLoading}
-              />
-              <TopCountriesChart contacts={contacts} loading={contactsLoading} />
-              <ActivityTimeline
-                interactions={recentInteractions}
-                onContactClick={(contactId) => {
-                  const c = contacts.find((x) => x.id === contactId)
-                  if (c) onContactClick(c)
-                }}
-                loading={interactionsLoading}
-              />
-              <Separator className="bg-border" />
-            </>
-          )}
+        <div className="p-4 md:p-5 space-y-5 md:space-y-6">
+          <StatsRow contacts={contacts} loading={contactsLoading} />
+          <NetworkHealth contacts={contacts} interactions={recentInteractions} loading={contactsLoading || interactionsLoading} />
+          <ReconnectAlerts contacts={contacts} onContactClick={onContactClick} loading={contactsLoading} />
+          <FavorLedger favors={favors} contacts={contacts} onContactClick={onContactClick} loading={contactsLoading || favorsLoading} />
+          <ConnectionInsightsSummary
+            contacts={contacts}
+            connections={connections}
+            interactions={recentInteractions}
+            favors={favors}
+            onOpenInsights={onOpenInsights || (() => {})}
+            loading={contactsLoading || interactionsLoading || favorsLoading}
+          />
+          <TopCountriesChart contacts={contacts} loading={contactsLoading} />
+          <ActivityTimeline
+            interactions={recentInteractions}
+            onContactClick={(contactId) => {
+              const c = contacts.find((x) => x.id === contactId)
+              if (c) onContactClick(c)
+            }}
+            loading={interactionsLoading}
+          />
+          <Separator className="bg-border" />
 
           <div className="space-y-3">
-            {!isCollapsed && (
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Contacts</span>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs text-muted-foreground/60">
-                    {filteredContacts.length} of {contacts.length}
-                  </span>
-                  <ViewModeToggle mode={viewMode} onChange={setViewMode} />
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          onClick={() => selectMode ? exitSelectMode() : setSelectMode(true)}
-                          className={`p-1 rounded transition-colors ${selectMode ? 'text-orange-500 bg-orange-500/10' : 'text-muted-foreground/60 hover:text-muted-foreground'}`}
-                        >
-                          <CheckSquare className="h-3.5 w-3.5" />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent side="bottom" className="text-xs">
-                        {selectMode ? 'Exit selection' : 'Select contacts'}
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Contacts</span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-muted-foreground/60">
+                  {filteredContacts.length} of {contacts.length}
+                </span>
+                <ViewModeToggle mode={viewMode} onChange={setViewMode} />
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={() => selectMode ? exitSelectMode() : setSelectMode(true)}
+                        className={`p-1 rounded transition-colors ${selectMode ? 'text-orange-500 bg-orange-500/10' : 'text-muted-foreground/60 hover:text-muted-foreground'}`}
+                      >
+                        <CheckSquare className="h-3.5 w-3.5" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="text-xs">
+                      {selectMode ? 'Exit selection' : 'Select contacts'}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
-            )}
+            </div>
 
-            {selectMode && !isCollapsed && (
+            {selectMode && (
               <BulkActionBar
                 selectedCount={selectedIds.size}
                 totalVisible={pagedContacts.length}
@@ -545,19 +512,18 @@ export default function DashboardPanel({
             )}
 
             <div className="relative">
-              <Search className={`absolute ${isCollapsed ? 'left-2.5' : 'left-3'} top-1/2 -translate-y-1/2 ${isCollapsed ? 'h-3.5 w-3.5' : 'h-4 w-4'} text-muted-foreground`} />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 ref={searchRef}
-                placeholder={isCollapsed ? 'Search...' : 'Search contacts... (\u2318K)'}
+                placeholder="Search contacts... (\u2318K)"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className={`${isCollapsed ? 'pl-8 h-7 text-xs' : 'pl-9'} bg-muted/50 border-border text-foreground placeholder:text-muted-foreground/60 focus:border-ring`}
+                className="pl-9 bg-muted/50 border-border text-foreground placeholder:text-muted-foreground/60 focus:border-ring"
               />
             </div>
 
-            {!isCollapsed && (
-              <div className="space-y-2">
-                <button
+            <div className="space-y-2">
+              <button
                   onClick={() => setFiltersOpen(!filtersOpen)}
                   className="flex items-center gap-1.5 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
                 >
@@ -705,15 +671,13 @@ export default function DashboardPanel({
                   )}
                 </div>
               </div>
-            )}
 
             {contactsLoading ? (
-              <ContactListSkeleton isCollapsed={isCollapsed} viewMode={viewMode} />
+              <ContactListSkeleton viewMode={viewMode} />
             ) : (
               <ContactListView
-                contacts={isCollapsed ? filteredContacts : pagedContacts}
-                viewMode={isCollapsed ? 'list' : viewMode}
-                isCollapsed={isCollapsed}
+                contacts={pagedContacts}
+                viewMode={viewMode}
                 selectMode={selectMode}
                 selectedIds={selectedIds}
                 selectedContact={selectedContact}
@@ -901,8 +865,8 @@ function BulkActionBar({
   )
 }
 
-function ContactListSkeleton({ isCollapsed, viewMode }: { isCollapsed: boolean; viewMode: ViewMode }) {
-  if (viewMode === 'grid' && !isCollapsed) {
+function ContactListSkeleton({ viewMode }: { viewMode: ViewMode }) {
+  if (viewMode === 'grid') {
     return (
       <div className="grid grid-cols-2 gap-2">
         {Array.from({ length: 8 }).map((_, i) => (
@@ -917,12 +881,12 @@ function ContactListSkeleton({ isCollapsed, viewMode }: { isCollapsed: boolean; 
   }
   return (
     <div className="space-y-0.5">
-      {Array.from({ length: isCollapsed ? 8 : 6 }).map((_, i) => (
-        <div key={i} className={isCollapsed ? 'flex items-center gap-2 p-1.5 rounded-md' : 'flex items-center gap-2 px-2 py-1.5'}>
+      {Array.from({ length: 6 }).map((_, i) => (
+        <div key={i} className="flex items-center gap-2 px-2 py-1.5">
           <Skeleton className="h-7 w-7 rounded-full shrink-0" />
           <div className="flex-1 space-y-1">
             <Skeleton className="h-3.5 w-28" />
-            {!isCollapsed && viewMode !== 'compact' && <Skeleton className="h-3 w-20" />}
+            {viewMode !== 'compact' && <Skeleton className="h-3 w-20" />}
           </div>
         </div>
       ))}
@@ -933,7 +897,6 @@ function ContactListSkeleton({ isCollapsed, viewMode }: { isCollapsed: boolean; 
 function ContactListView({
   contacts,
   viewMode,
-  isCollapsed,
   selectMode,
   selectedIds,
   selectedContact,
@@ -942,14 +905,13 @@ function ContactListView({
 }: {
   contacts: Contact[]
   viewMode: ViewMode
-  isCollapsed: boolean
   selectMode: boolean
   selectedIds: Set<string>
   selectedContact: Contact | null
   onContactClick: (c: Contact) => void
   onToggleSelect: (id: string) => void
 }) {
-  if (viewMode === 'grid' && !isCollapsed) {
+  if (viewMode === 'grid') {
     return (
       <div className="grid grid-cols-2 gap-2">
         {contacts.map((contact) => (
@@ -967,7 +929,7 @@ function ContactListView({
     )
   }
 
-  if (viewMode === 'compact' && !isCollapsed) {
+  if (viewMode === 'compact') {
     return (
       <div className="space-y-0">
         <div className="grid grid-cols-[auto_1fr_auto_auto] gap-x-2 text-[9px] uppercase tracking-wider text-muted-foreground/50 px-2 pb-1 border-b border-border/50">
@@ -993,49 +955,16 @@ function ContactListView({
 
   return (
     <div className="space-y-0.5">
-      {contacts.map((contact) => {
-        const initials = contact.name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
-        const isSelected = selectedContact?.id === contact.id
-
-        if (isCollapsed) {
-          return (
-            <button
-              key={contact.id}
-              onClick={() => onContactClick(contact)}
-              className={`w-full text-left flex items-center gap-2 p-1.5 rounded-md transition-colors ${
-                isSelected
-                  ? 'bg-accent border border-accent-foreground/20'
-                  : 'hover:bg-muted/50'
-              }`}
-            >
-              <Avatar className={`h-7 w-7 shrink-0 ${
-                contact.gender === 'male'
-                  ? 'ring-1 ring-blue-400/30'
-                  : contact.gender === 'female'
-                    ? 'ring-1 ring-pink-400/30'
-                    : ''
-              }`}>
-                <AvatarImage src={contact.photo || undefined} />
-                <AvatarFallback className="text-[10px] bg-muted text-muted-foreground">
-                  {initials}
-                </AvatarFallback>
-              </Avatar>
-              <span className="text-xs font-medium truncate text-foreground">{contact.name}</span>
-            </button>
-          )
-        }
-
-        return (
-          <ContactRow
-            key={contact.id}
-            contact={contact}
-            selectMode={selectMode}
-            isChecked={selectedIds.has(contact.id)}
-            onSelect={onContactClick}
-            onToggleSelect={() => onToggleSelect(contact.id)}
-          />
-        )
-      })}
+      {contacts.map((contact) => (
+        <ContactRow
+          key={contact.id}
+          contact={contact}
+          selectMode={selectMode}
+          isChecked={selectedIds.has(contact.id)}
+          onSelect={onContactClick}
+          onToggleSelect={() => onToggleSelect(contact.id)}
+        />
+      ))}
     </div>
   )
 }

@@ -1,11 +1,5 @@
 import type { DisplayOptions } from '@/types/display'
 
-export interface SessionUser {
-  name?: string | null
-  email?: string | null
-  image?: string | null
-}
-
 export const TABS = [
   { value: 'profile', label: 'Profile' },
   { value: 'settings', label: 'Settings' },
@@ -20,6 +14,9 @@ export function isTab(v: string): v is Tab {
 
 export interface ProfileTabProps {
   open: boolean
+  contactCount: number
+  connectionCount: number
+  visitedCountryCount: number
 }
 
 export interface SettingsTabProps {
@@ -34,4 +31,5 @@ export interface SettingsTabProps {
 export interface CountriesTabProps {
   visitedCountries?: Set<string>
   onToggleVisitedCountry?: (country: string) => void
+  contactCountsByCountry: Map<string, number>
 }

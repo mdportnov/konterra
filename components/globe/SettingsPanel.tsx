@@ -23,6 +23,10 @@ interface SettingsPanelProps {
   onOpenExport?: () => void
   onOpenDuplicates?: () => void
   onDeleteAllContacts?: () => void
+  contactCount: number
+  connectionCount: number
+  visitedCountryCount: number
+  contactCountsByCountry: Map<string, number>
 }
 
 export default function SettingsPanel({
@@ -36,6 +40,10 @@ export default function SettingsPanel({
   onOpenExport,
   onOpenDuplicates,
   onDeleteAllContacts,
+  contactCount,
+  connectionCount,
+  visitedCountryCount,
+  contactCountsByCountry,
 }: SettingsPanelProps) {
   const [tab, setTab] = useState<Tab>('profile')
 
@@ -78,7 +86,12 @@ export default function SettingsPanel({
 
         <div className="flex-1 min-h-0">
           {tab === 'profile' && (
-            <ProfileTab open={open} />
+            <ProfileTab
+              open={open}
+              contactCount={contactCount}
+              connectionCount={connectionCount}
+              visitedCountryCount={visitedCountryCount}
+            />
           )}
           {tab === 'settings' && (
             <SettingsTab
@@ -94,6 +107,7 @@ export default function SettingsPanel({
             <CountriesTab
               visitedCountries={visitedCountries}
               onToggleVisitedCountry={onToggleVisitedCountry}
+              contactCountsByCountry={contactCountsByCountry}
             />
           )}
         </div>

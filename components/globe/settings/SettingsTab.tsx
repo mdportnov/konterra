@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Loader2, Upload, Download, Trash2, Copy } from 'lucide-react'
@@ -56,26 +56,25 @@ export function SettingsTab({
             <span className="text-sm text-muted-foreground">Theme</span>
             <ThemeToggle />
           </div>
-          <div>
-            <span className="text-xs text-muted-foreground mb-2 block">Connections</span>
-            <ToggleGroup
-              type="single"
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-muted-foreground">Connections</span>
+            <Select
               value={displayOptions.arcMode}
               onValueChange={(v) => {
-                if (v && isArcMode(v)) onDisplayChange({ ...displayOptions, arcMode: v })
+                if (isArcMode(v)) onDisplayChange({ ...displayOptions, arcMode: v })
               }}
-              className="w-full"
             >
-              {ARC_MODES.map(({ value, label }) => (
-                <ToggleGroupItem
-                  key={value}
-                  value={value}
-                  className="flex-1 text-xs data-[state=on]:bg-accent data-[state=on]:text-foreground text-muted-foreground/60 hover:text-muted-foreground hover:bg-accent/50"
-                >
-                  {label}
-                </ToggleGroupItem>
-              ))}
-            </ToggleGroup>
+              <SelectTrigger className="w-[130px] h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ARC_MODES.map(({ value, label }) => (
+                  <SelectItem key={value} value={value} className="text-xs">
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 

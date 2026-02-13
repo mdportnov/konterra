@@ -24,7 +24,7 @@ export async function createWaitlistEntry(data: { email: string; name: string; m
 export async function getUserById(id: string) {
   return db.query.users.findFirst({
     where: eq(users.id, id),
-    columns: { id: true, email: true, name: true, image: true },
+    columns: { id: true, email: true, name: true, image: true, createdAt: true },
   })
 }
 
