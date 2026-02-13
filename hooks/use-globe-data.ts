@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { toast } from 'sonner'
-import { fetchContacts, fetchConnections, fetchVisitedCountries, fetchTags, fetchRecentInteractions, fetchAllFavors, fetchAllCountryConnections } from '@/lib/api'
-import type { Contact, ContactConnection, ContactCountryConnection, Tag, Interaction, Favor } from '@/lib/db/schema'
+import { fetchContacts, fetchConnections, fetchVisitedCountries, fetchTags, fetchRecentInteractions, fetchAllFavors, fetchAllCountryConnections, fetchTrips } from '@/lib/api'
+import type { Contact, ContactConnection, ContactCountryConnection, Tag, Interaction, Favor, Trip } from '@/lib/db/schema'
 
 export function useGlobeData() {
   const [contacts, setContacts] = useState<Contact[]>([])
@@ -13,6 +13,8 @@ export function useGlobeData() {
   const [userTags, setUserTags] = useState<Tag[]>([])
   const [allInteractions, setAllInteractions] = useState<(Interaction & { contactName: string })[]>([])
   const [allFavors, setAllFavors] = useState<Favor[]>([])
+  const [trips, setTrips] = useState<Trip[]>([])
+  const [tripsLoading, setTripsLoading] = useState(true)
   const [loading, setLoading] = useState(true)
 
   const pendingContactIdRef = useRef<string | null>(null)
@@ -64,6 +66,7 @@ export function useGlobeData() {
 
     fetchRecentInteractions(signal).then(setAllInteractions).catch(() => {})
     fetchAllFavors(signal).then(setAllFavors).catch(() => {})
+    fetchTrips(signal).then(setTrips).catch(() => {}).finally(() => setTripsLoading(false))
 
     return () => controller.abort()
   }, [load])
@@ -74,6 +77,10 @@ export function useGlobeData() {
 
   const reloadConnections = useCallback(() => {
     return fetchConnections().then((data) => { if (Array.isArray(data)) setConnections(data) }).catch(() => { toast.error('Failed to reload connections') })
+  }, [])
+
+  const reloadTrips = useCallback(() => {
+    return fetchTrips().then(setTrips).catch(() => { toast.error('Failed to reload trips') })
   }, [])
 
   const geocodingRef = useRef(false)
@@ -175,10 +182,12 @@ export function useGlobeData() {
     userTags, setUserTags,
     allInteractions,
     allFavors,
+    trips, setTrips, tripsLoading,
     loading,
     pendingContactIdRef,
     reloadContacts,
     reloadConnections,
+    reloadTrips,
     runBatchGeocode,
     handleCountryVisitToggle,
     handleCountryConnectionsChange,

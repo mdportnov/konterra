@@ -22,10 +22,11 @@ import ActivityTimeline from './widgets/ActivityTimeline'
 import ReconnectAlerts from './widgets/ReconnectAlerts'
 import NetworkHealth from './widgets/NetworkHealth'
 import FavorLedger from './widgets/FavorLedger'
+import TravelJourney from './widgets/TravelJourney'
 import ConnectionInsightsSummary from './widgets/ConnectionInsightsSummary'
 import ContactDetailContent from '@/components/globe/ContactDetailContent'
 import { fetchRecentInteractions, fetchAllFavors, bulkDeleteContacts, bulkTagContacts } from '@/lib/api'
-import type { Contact, ContactConnection, ContactCountryConnection, Interaction, Favor } from '@/lib/db/schema'
+import type { Contact, ContactConnection, ContactCountryConnection, Interaction, Favor, Trip } from '@/lib/db/schema'
 import type { ConnectedContact } from '@/components/globe/ContactDetail'
 import type { SidebarView } from '@/hooks/use-panel-navigation'
 
@@ -65,6 +66,10 @@ interface DashboardPanelProps {
   onCollapse?: () => void
   onSelectionChange?: (ids: Set<string>) => void
   onBulkDelete?: (ids: string[]) => void
+  trips?: Trip[]
+  tripsLoading?: boolean
+  onImportTrips?: () => void
+  onTripClick?: (trip: Trip) => void
 }
 
 export default function DashboardPanel({
@@ -90,6 +95,10 @@ export default function DashboardPanel({
   onCollapse,
   onSelectionChange,
   onBulkDelete,
+  trips = [],
+  tripsLoading = false,
+  onImportTrips,
+  onTripClick,
 }: DashboardPanelProps) {
   const { data: session } = useSession()
   const [search, setSearch] = useState('')
@@ -515,6 +524,12 @@ export default function DashboardPanel({
             favors={favors}
             onOpenInsights={onOpenInsights || (() => {})}
             loading={contactsLoading || interactionsLoading || favorsLoading}
+          />
+          <TravelJourney
+            trips={trips}
+            loading={tripsLoading}
+            onImport={onImportTrips || (() => {})}
+            onTripClick={onTripClick}
           />
           <TopCountriesChart contacts={contacts} loading={contactsLoading} />
           <ActivityTimeline

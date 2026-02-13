@@ -1,4 +1,4 @@
-import type { Contact, ContactConnection, ContactCountryConnection, Interaction, Favor, Tag } from '@/lib/db/schema'
+import type { Contact, ContactConnection, ContactCountryConnection, Interaction, Favor, Tag, Trip } from '@/lib/db/schema'
 
 interface PaginatedResponse<T> {
   data: T[]
@@ -100,4 +100,8 @@ export async function bulkTagContacts(ids: string[], action: 'addTag' | 'removeT
   })
   if (!res.ok) throw new Error('Bulk tag operation failed')
   return res.json()
+}
+
+export async function fetchTrips(signal?: AbortSignal): Promise<Trip[]> {
+  return apiFetch<Trip[]>('/api/trips', signal)
 }

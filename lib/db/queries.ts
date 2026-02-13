@@ -1,7 +1,7 @@
 import { db } from './index'
-import { users, contacts, interactions, contactConnections, contactCountryConnections, introductions, favors, visitedCountries, waitlist, tags } from './schema'
+import { users, contacts, interactions, contactConnections, contactCountryConnections, introductions, favors, visitedCountries, waitlist, tags, trips } from './schema'
 import { eq, and, or, desc, sql, arrayContains, inArray } from 'drizzle-orm'
-import type { NewContact, NewContactConnection, NewContactCountryConnection, NewIntroduction, NewFavor } from './schema'
+import type { NewContact, NewContactConnection, NewContactCountryConnection, NewIntroduction, NewFavor, NewTrip } from './schema'
 
 export async function deleteAllContactsByUserId(userId: string) {
   return db.delete(contacts).where(eq(contacts.userId, userId))
@@ -783,4 +783,38 @@ export async function renameTag(id: string, userId: string, newName: string) {
       .returning()
     return updated
   })
+}
+
+export async function getTripsByUserId(userId: string) {
+  return db.query.trips.findMany({
+    where: eq(trips.userId, userId),
+    orderBy: (trips, { desc }) => [desc(trips.arrivalDate)],
+  })
+}
+
+export async function createTrip(data: NewTrip) {
+  const [trip] = await db.insert(trips).values(data).returning()
+  return trip
+}
+
+export async function createTripsBulk(data: NewTrip[]) {
+  if (data.length === 0) return []
+  const BATCH_SIZE = 50
+  return db.transaction(async (tx) => {
+    const results: (typeof trips.$inferSelect)[] = []
+    for (let i = 0; i < data.length; i += BATCH_SIZE) {
+      const batch = data.slice(i, i + BATCH_SIZE)
+      const rows = await tx.insert(trips).values(batch).returning()
+      results.push(...rows)
+    }
+    return results
+  })
+}
+
+export async function deleteTrip(id: string, userId: string) {
+  await db.delete(trips).where(and(eq(trips.id, id), eq(trips.userId, userId)))
+}
+
+export async function deleteAllTrips(userId: string) {
+  return db.delete(trips).where(eq(trips.userId, userId))
 }

@@ -248,6 +248,24 @@ export const visitedCountries = pgTable('visited_countries', {
   uniqueIndex('visited_countries_user_country_idx').on(t.userId, t.country),
 ])
 
+export const trips = pgTable('trips', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: text('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  arrivalDate: date('arrival_date', { mode: 'date' }).notNull(),
+  departureDate: date('departure_date', { mode: 'date' }),
+  durationDays: integer('duration_days'),
+  city: text('city').notNull(),
+  country: text('country').notNull(),
+  lat: doublePrecision('lat'),
+  lng: doublePrecision('lng'),
+  notes: text('notes'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (t) => [
+  index('trips_user_id_idx').on(t.userId),
+  index('trips_arrival_date_idx').on(t.arrivalDate),
+])
+
 export type User = typeof users.$inferSelect
 export type Contact = typeof contacts.$inferSelect
 export type NewContact = typeof contacts.$inferInsert
@@ -262,6 +280,8 @@ export type Introduction = typeof introductions.$inferSelect
 export type NewIntroduction = typeof introductions.$inferInsert
 export type Favor = typeof favors.$inferSelect
 export type NewFavor = typeof favors.$inferInsert
+export type Trip = typeof trips.$inferSelect
+export type NewTrip = typeof trips.$inferInsert
 
 export const waitlistStatusEnum = pgEnum('waitlist_status', ['pending', 'approved', 'rejected'])
 

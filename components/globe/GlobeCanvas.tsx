@@ -4,7 +4,7 @@ import { memo, useRef, useEffect, useState, useCallback, useMemo } from 'react'
 import dynamic from 'next/dynamic'
 import { feature } from 'topojson-client'
 import { MeshPhongMaterial, Color } from 'three'
-import type { Contact, ContactConnection, ContactCountryConnection } from '@/lib/db/schema'
+import type { Contact, ContactConnection, ContactCountryConnection, Trip } from '@/lib/db/schema'
 import { countryNames, buildCountryLabels } from './data/country-centroids'
 import type { DisplayOptions } from '@/types/display'
 import ClusterPopup from './ClusterPopup'
@@ -54,6 +54,7 @@ interface GlobeCanvasProps {
   connections?: ContactConnection[]
   countryConnections?: ContactCountryConnection[]
   highlightedContactIds?: Set<string>
+  trips?: Trip[]
 }
 
 const EMPTY_ARCS: GlobeArc[] = []
@@ -63,7 +64,7 @@ function ContactDensityLegend({ isDark, visitedCountries, hasIndirect, showUserC
   const hasVisited = visitedCountries && visitedCountries.size > 0
 
   return (
-    <div className={`absolute top-4 right-4 ${GLASS.control} rounded-lg px-2.5 py-2 flex flex-col gap-1`}>
+    <div className={`absolute top-14 right-4 ${GLASS.control} rounded-lg px-2.5 py-2 flex flex-col gap-1`}>
       <div className="flex items-center gap-1.5">
         <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? 'rgba(234, 88, 12, 0.35)' : 'rgba(234, 88, 12, 0.25)' }} />
         <span className="text-[10px] text-muted-foreground">1-2 contacts</span>
@@ -124,6 +125,7 @@ export default memo(function GlobeCanvas({
   connections = [],
   countryConnections = [],
   highlightedContactIds,
+  trips = [],
 }: GlobeCanvasProps) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const globeRef = useRef<any>(null)
@@ -434,7 +436,52 @@ export default memo(function GlobeCanvas({
     return result
   }, [countryConnections, contacts, countryCentroids, display.arcMode, selectedContact])
 
-  const allArcs = useMemo(() => [...arcs, ...countryArcs], [arcs, countryArcs])
+  const isTravelMode = display.globeViewMode === 'travel'
+
+  const travelPoints: GlobePoint[] = useMemo(() => {
+    if (!isTravelMode || trips.length === 0) return []
+    const sorted = [...trips].sort((a, b) => new Date(a.arrivalDate).getTime() - new Date(b.arrivalDate).getTime())
+    return sorted
+      .filter((t) => t.lat != null && t.lng != null)
+      .map((t) => ({
+        id: `trip:${t.id}`,
+        lat: t.lat!,
+        lng: t.lng!,
+        name: t.city,
+        city: t.country,
+        color: '#3b82f6',
+        size: 0.5,
+      }))
+  }, [isTravelMode, trips])
+
+  const travelArcs: GlobeArc[] = useMemo(() => {
+    if (!isTravelMode || trips.length === 0 || display.arcMode === 'off') return EMPTY_ARCS
+    const sorted = [...trips]
+      .filter((t) => t.lat != null && t.lng != null)
+      .sort((a, b) => new Date(a.arrivalDate).getTime() - new Date(b.arrivalDate).getTime())
+    const result: GlobeArc[] = []
+    for (let i = 0; i < sorted.length - 1; i++) {
+      result.push({
+        startLat: sorted[i].lat!,
+        startLng: sorted[i].lng!,
+        endLat: sorted[i + 1].lat!,
+        endLng: sorted[i + 1].lng!,
+        color: 'rgba(59, 130, 246, 0.5)',
+      })
+    }
+    return result
+  }, [isTravelMode, trips, display.arcMode])
+
+  const travelCountries = useMemo(() => {
+    if (!isTravelMode) return new Set<string>()
+    return new Set(trips.map((t) => t.country))
+  }, [isTravelMode, trips])
+
+  const activePoints = isTravelMode ? travelPoints : points
+  const allArcs = useMemo(() => {
+    if (isTravelMode) return travelArcs
+    return [...arcs, ...countryArcs]
+  }, [isTravelMode, travelArcs, arcs, countryArcs])
 
   const getArcStroke = useCallback((arc: object) => {
     return (arc as GlobeArc).type === 'country' ? 0.25 : 0.4
@@ -514,25 +561,34 @@ export default memo(function GlobeCanvas({
     const f = feat as { id?: string }
     const name = countryNames[String(f.id)]
     if (!name) return ''
-    const count = countryContactCount.get(name) || 0
-    const indirectCount = countryConnectionCountMap.get(name) || 0
-    const isVisited = visitedCountries?.has(name)
-    const parts: string[] = [`<b>${name}</b>`]
-    if (count > 0) parts.push(`${count} contact${count === 1 ? '' : 's'}`)
-    if (indirectCount > 0) parts.push(`${indirectCount} indirect tie${indirectCount === 1 ? '' : 's'}`)
-    if (isVisited) parts.push('Visited')
-    if (userCountry && name === userCountry) parts.push('Your location')
-    const label = parts.join(' <span style="opacity:0.4">&middot;</span> ')
     const bg = isDark ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.9)'
     const textColor = isDark ? 'rgba(255,255,255,0.95)' : 'rgba(20,30,50,0.9)'
     const border = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'
+    const parts: string[] = [`<b>${name}</b>`]
+    if (isTravelMode) {
+      const tripCount = trips.filter((t) => t.country === name).length
+      if (tripCount > 0) parts.push(`${tripCount} trip${tripCount === 1 ? '' : 's'}`)
+    } else {
+      const count = countryContactCount.get(name) || 0
+      const indirectCount = countryConnectionCountMap.get(name) || 0
+      const isVisited = visitedCountries?.has(name)
+      if (count > 0) parts.push(`${count} contact${count === 1 ? '' : 's'}`)
+      if (indirectCount > 0) parts.push(`${indirectCount} indirect tie${indirectCount === 1 ? '' : 's'}`)
+      if (isVisited) parts.push('Visited')
+      if (userCountry && name === userCountry) parts.push('Your location')
+    }
+    const label = parts.join(' <span style="opacity:0.4">&middot;</span> ')
     return `<div style="background:${bg};color:${textColor};padding:5px 10px;border-radius:6px;font-size:11px;backdrop-filter:blur(12px);border:1px solid ${border};font-family:system-ui,sans-serif;line-height:1.4;box-shadow:0 2px 8px rgba(0,0,0,${isDark ? '0.4' : '0.08'})">${label}</div>`
-  }, [isDark, countryContactCount, countryConnectionCountMap, visitedCountries, userCountry])
+  }, [isDark, countryContactCount, countryConnectionCountMap, visitedCountries, userCountry, isTravelMode, trips])
 
   const getPolygonCapColor = useCallback((feat: object) => {
     const f = feat as { id?: string }
     const name = countryNames[String(f.id)]
     if (name) {
+      if (isTravelMode) {
+        if (travelCountries.has(name)) return isDark ? 'rgba(59, 130, 246, 0.35)' : 'rgba(59, 130, 246, 0.2)'
+        return isDark ? 'rgba(15, 25, 55, 0.85)' : 'rgba(180, 195, 220, 0.7)'
+      }
       const count = countryContactCount.get(name) || 0
       const isVisited = visitedCountries?.has(name)
       const isIndirectOnly = indirectOnlyCountries.has(name)
@@ -549,7 +605,7 @@ export default memo(function GlobeCanvas({
       if (userCountry && name === userCountry) return isDark ? 'rgba(34, 197, 94, 0.25)' : 'rgba(34, 197, 94, 0.15)'
     }
     return isDark ? 'rgba(15, 25, 55, 0.85)' : 'rgba(180, 195, 220, 0.7)'
-  }, [isDark, countryContactCount, visitedCountries, indirectOnlyCountries, userCountry])
+  }, [isDark, countryContactCount, visitedCountries, indirectOnlyCountries, userCountry, isTravelMode, travelCountries])
 
   const getPolygonSideColor = useCallback(
     () => isDark ? 'rgba(10, 18, 40, 0.6)' : 'rgba(160, 180, 210, 0.5)',
@@ -561,6 +617,10 @@ export default memo(function GlobeCanvas({
       const f = feat as { id?: string }
       const name = countryNames[String(f.id)]
       if (name) {
+        if (isTravelMode) {
+          if (travelCountries.has(name)) return isDark ? 'rgba(59, 130, 246, 0.6)' : 'rgba(59, 130, 246, 0.4)'
+          return isDark ? 'rgba(40, 70, 130, 0.35)' : 'rgba(100, 130, 180, 0.3)'
+        }
         const isVisited = visitedCountries?.has(name)
         const hasContacts = (countryContactCount.get(name) || 0) > 0
         const isIndirectOnly = indirectOnlyCountries.has(name)
@@ -572,7 +632,7 @@ export default memo(function GlobeCanvas({
       }
       return isDark ? 'rgba(40, 70, 130, 0.35)' : 'rgba(100, 130, 180, 0.3)'
     },
-    [isDark, visitedCountries, countryContactCount, indirectOnlyCountries, userCountry]
+    [isDark, visitedCountries, countryContactCount, indirectOnlyCountries, userCountry, isTravelMode, travelCountries]
   )
 
   const getPointColor = useCallback((point: object) => (point as GlobePoint).color, [])
@@ -596,7 +656,7 @@ export default memo(function GlobeCanvas({
         polygonLabel={getPolygonLabel}
         polygonAltitude={0.006}
         onPolygonClick={handlePolygonClick}
-        pointsData={points}
+        pointsData={activePoints}
         pointLat="lat"
         pointLng="lng"
         pointColor={getPointColor}
@@ -615,7 +675,25 @@ export default memo(function GlobeCanvas({
         arcDashAnimateTime={display.arcMode === 'animated' ? 1800 : 0}
         arcStroke={getArcStroke}
       />
-      {(hasCountryContacts || (visitedCountries && visitedCountries.size > 0) || countryConnections.length > 0 || !!userCountry) && <ContactDensityLegend isDark={isDark} visitedCountries={visitedCountries} hasIndirect={countryConnections.length > 0} showUserCountry={!!userCountry} />}
+      {isTravelMode ? (
+        trips.length > 0 && (
+          <div className={`absolute top-14 right-4 ${GLASS.control} rounded-lg px-2.5 py-2 flex flex-col gap-1`}>
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#3b82f6' }} />
+              <span className="text-[10px] text-muted-foreground">Trip waypoint</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? 'rgba(59, 130, 246, 0.35)' : 'rgba(59, 130, 246, 0.2)' }} />
+              <span className="text-[10px] text-muted-foreground">Visited country</span>
+            </div>
+            <div className="text-[9px] text-muted-foreground/60 mt-0.5">
+              {trips.length} trips &middot; {travelCountries.size} countries
+            </div>
+          </div>
+        )
+      ) : (
+        (hasCountryContacts || (visitedCountries && visitedCountries.size > 0) || countryConnections.length > 0 || !!userCountry) && <ContactDensityLegend isDark={isDark} visitedCountries={visitedCountries} hasIndirect={countryConnections.length > 0} showUserCountry={!!userCountry} />
+      )}
       {clusterData && (
         <ClusterPopup
           open={clusterOpen}

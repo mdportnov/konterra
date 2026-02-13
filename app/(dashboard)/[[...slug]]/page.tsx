@@ -9,6 +9,7 @@ import GlobeFilters from '@/components/globe/GlobeFilters'
 import ContactEditPanel from '@/components/globe/ContactEditPanel'
 import SettingsPanel from '@/components/globe/SettingsPanel'
 import ImportDialog from '@/components/import/ImportDialog'
+import TripImportDialog from '@/components/import/TripImportDialog'
 import WelcomeWizard from '@/components/onboarding/WelcomeWizard'
 import DuplicatesDialog from '@/components/dedup/DuplicatesDialog'
 import ExportDialog from '@/components/export/ExportDialog'
@@ -16,8 +17,10 @@ import ConnectionInsightsPanel from '@/components/insights/ConnectionInsightsPan
 import CountryPopup from '@/components/globe/CountryPopup'
 import { PANEL_WIDTH, GLASS, Z, TRANSITION } from '@/lib/constants/ui'
 import { displayDefaults } from '@/types/display'
+import GlobeViewToggle from '@/components/globe/GlobeViewToggle'
 import type { DisplayOptions } from '@/types/display'
-import type { Contact, ContactCountryConnection } from '@/lib/db/schema'
+import type { GlobeViewMode } from '@/types/display'
+import type { Contact, ContactCountryConnection, Trip } from '@/lib/db/schema'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { useGlobeData } from '@/hooks/use-globe-data'
 import { useContactFilters } from '@/hooks/use-contact-filters'
@@ -36,6 +39,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
   const [importDialogOpen, setImportDialogOpen] = useState(false)
   const [dupDialogOpen, setDupDialogOpen] = useState(false)
   const [exportDialogOpen, setExportDialogOpen] = useState(false)
+  const [tripImportDialogOpen, setTripImportDialogOpen] = useState(false)
   const [displayOptions, setDisplayOptions] = useState<DisplayOptions>(displayDefaults)
   const [countryPopup, setCountryPopup] = useState<{ country: string; contacts: Contact[]; x: number; y: number } | null>(null)
   const [countryPopupOpen, setCountryPopupOpen] = useState(false)
@@ -125,6 +129,16 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
     return map
   }, [data.contacts, data.countryConnections])
 
+  const handleTripClick = useCallback((trip: Trip) => {
+    if (trip.lat != null && trip.lng != null) {
+      nav.setFlyTarget({ lat: trip.lat, lng: trip.lng, ts: Date.now() })
+    }
+  }, [nav.setFlyTarget])
+
+  const handleViewModeChange = useCallback((mode: GlobeViewMode) => {
+    setDisplayOptions((prev) => ({ ...prev, globeViewMode: mode }))
+  }, [])
+
   const addContactCb = useCallback(() => nav.handleAddContact(), [nav.handleAddContact])
   const openInsightsCb = useCallback(() => nav.handleOpenInsights(), [nav.handleOpenInsights])
   useHotkey('n', addContactCb, { meta: true })
@@ -154,6 +168,10 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
     contactsLoading: data.loading,
     onSelectionChange: handleSelectionChange,
     onBulkDelete: handleBulkDelete,
+    trips: data.trips,
+    tripsLoading: data.tripsLoading,
+    onImportTrips: () => setTripImportDialogOpen(true),
+    onTripClick: handleTripClick,
   } as const
 
   const globeSection = (
@@ -169,6 +187,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
         connections={data.connections}
         countryConnections={data.countryConnections}
         highlightedContactIds={highlightedContactIds}
+        trips={data.trips}
       />
 
       {!data.loading && data.contacts.length === 0 && (
@@ -265,6 +284,16 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
         onInsights={nav.handleOpenInsights}
         isMobile={isMobile}
         onSwitchToDashboard={() => setMobileView('dashboard')}
+      />
+
+      <div className="absolute top-4 right-4 flex items-center gap-2" style={{ zIndex: Z.controls }}>
+        <GlobeViewToggle value={displayOptions.globeViewMode} onChange={handleViewModeChange} />
+      </div>
+
+      <TripImportDialog
+        open={tripImportDialogOpen}
+        onOpenChange={setTripImportDialogOpen}
+        onImportComplete={data.reloadTrips}
       />
 
       <GlobeFilters
