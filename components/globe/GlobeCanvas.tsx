@@ -693,6 +693,7 @@ export default memo(function GlobeCanvas({
         arcDashGap={getArcDashGap}
         arcDashAnimateTime={getArcAnimateTime}
         arcStroke={getArcStroke}
+        arcsTransitionDuration={0}
       />
       {isTravelMode ? (
         trips.length > 0 && (
