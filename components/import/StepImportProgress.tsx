@@ -4,9 +4,11 @@ import { useEffect, useState, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { CheckCircle2, AlertCircle, Loader2 } from 'lucide-react'
 import type { ImportEntry, BulkImportItem } from '@/lib/import/types'
+import type { KonterraExport } from '@/lib/export/types'
 
 interface StepImportProgressProps {
   entries: ImportEntry[]
+  konterraData?: KonterraExport | null
   onComplete: () => void
 }
 
@@ -15,6 +17,7 @@ interface ImportResult {
   updated: number
   skipped: number
   errors: string[]
+  relationsImported?: boolean
 }
 
 const BATCH_SIZE = 100
@@ -23,6 +26,12 @@ const MERGE_FIELDS = [
   'name', 'email', 'phone', 'company', 'role', 'city', 'country',
   'website', 'notes', 'birthday', 'telegram', 'linkedin', 'twitter',
   'instagram', 'github', 'timezone', 'gender', 'tags',
+  'photo', 'metAt', 'metDate', 'lastContactedAt', 'nextFollowUp',
+  'communicationStyle', 'preferredChannel', 'responseSpeed', 'language',
+  'personalInterests', 'professionalGoals', 'painPoints',
+  'influenceLevel', 'networkReach', 'trustLevel',
+  'loyaltyIndicator', 'financialCapacity', 'motivations',
+  'secondaryLocations', 'rating', 'relationshipType',
 ] as const
 
 function entriesToBulkItems(entries: ImportEntry[]): BulkImportItem[] {
@@ -63,9 +72,10 @@ function entriesToBulkItems(entries: ImportEntry[]): BulkImportItem[] {
   })
 }
 
-export default function StepImportProgress({ entries, onComplete }: StepImportProgressProps) {
+export default function StepImportProgress({ entries, konterraData, onComplete }: StepImportProgressProps) {
   const [progress, setProgress] = useState(0)
   const [total, setTotal] = useState(0)
+  const [statusText, setStatusText] = useState('')
   const [result, setResult] = useState<ImportResult | null>(null)
   const [resultVisible, setResultVisible] = useState(false)
   const started = useRef(false)
@@ -79,12 +89,15 @@ export default function StepImportProgress({ entries, onComplete }: StepImportPr
     for (let i = 0; i < items.length; i += BATCH_SIZE) {
       batches.push(items.slice(i, i + BATCH_SIZE))
     }
-    setTotal(batches.length)
+    const hasRelations = !!konterraData
+    const totalSteps = batches.length + (hasRelations ? 1 : 0)
+    setTotal(totalSteps)
 
     const agg: ImportResult = { created: 0, updated: 0, skipped: 0, errors: [] }
 
     ;(async () => {
       for (let i = 0; i < batches.length; i++) {
+        setStatusText(`Importing contacts... batch ${i + 1} of ${batches.length}`)
         try {
           const res = await fetch('/api/contacts/bulk', {
             method: 'POST',
@@ -108,12 +121,35 @@ export default function StepImportProgress({ entries, onComplete }: StepImportPr
         setProgress(i + 1)
       }
 
+      if (hasRelations) {
+        setStatusText('Importing connections, interactions, and other data...')
+        try {
+          const res = await fetch('/api/import/konterra-relations', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(konterraData),
+          })
+
+          if (!res.ok) {
+            const body = await res.json().catch(() => ({ error: 'Request failed' }))
+            agg.errors.push(body.error || 'Relations import failed')
+          } else {
+            const data = await res.json()
+            agg.relationsImported = true
+            if (data.errors?.length) agg.errors.push(...data.errors)
+          }
+        } catch {
+          agg.errors.push('Relations import network error')
+        }
+        setProgress(totalSteps)
+      }
+
       setResult(agg)
       requestAnimationFrame(() => {
         requestAnimationFrame(() => setResultVisible(true))
       })
     })()
-  }, [entries])
+  }, [entries, konterraData])
 
   const pct = total > 0 ? Math.round((progress / total) * 100) : 0
 
@@ -139,6 +175,11 @@ export default function StepImportProgress({ entries, onComplete }: StepImportPr
           <p className="text-xs text-muted-foreground">
             {result.created} created, {result.updated} updated, {result.skipped} skipped
           </p>
+          {result.relationsImported && (
+            <p className="text-xs text-muted-foreground">
+              Connections, interactions, and other data restored
+            </p>
+          )}
         </div>
 
         {hasErrors && (
@@ -158,7 +199,7 @@ export default function StepImportProgress({ entries, onComplete }: StepImportPr
     <div className="space-y-4 text-center py-4">
       <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mx-auto" />
       <p className="text-sm text-muted-foreground">
-        Importing... batch {progress} of {total}
+        {statusText}
       </p>
       <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
         <div

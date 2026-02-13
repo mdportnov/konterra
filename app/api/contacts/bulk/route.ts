@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { createContactsBulk, updateContact, getOrCreateSelfContact, createConnectionsBulk } from '@/lib/db/queries'
 import { validateContact, safeParseBody } from '@/lib/validation'
-import { toStringOrNull, toDateOrNull, unauthorized, badRequest } from '@/lib/api-utils'
+import { toStringOrNull, toDateOrNull, toArrayOrNull, toNumberOrNull, unauthorized, badRequest } from '@/lib/api-utils'
 import { getCountryCoords } from '@/lib/country-coords'
 import type { NewContact, NewContactConnection } from '@/lib/db/schema'
 
@@ -14,7 +14,8 @@ interface BulkItem {
 
 function buildNewContactData(userId: string, c: Record<string, unknown>): NewContact {
   const country = toStringOrNull(c.country)
-  const coords = country ? getCountryCoords(country) : null
+  const hasCoords = typeof c.lat === 'number' && typeof c.lng === 'number'
+  const coords = hasCoords ? { lat: c.lat as number, lng: c.lng as number } : (country ? getCountryCoords(country) : null)
   return {
     userId,
     name: c.name as string,
@@ -36,38 +37,60 @@ function buildNewContactData(userId: string, c: Record<string, unknown>): NewCon
     website: toStringOrNull(c.website),
     tags: Array.isArray(c.tags) ? c.tags as string[] : null,
     notes: toStringOrNull(c.notes),
-    meta: null,
-    secondaryLocations: null,
-    rating: typeof c.rating === 'number' ? c.rating : null,
+    meta: c.meta ?? null,
+    secondaryLocations: toArrayOrNull(c.secondaryLocations),
+    rating: toNumberOrNull(c.rating),
     gender: toStringOrNull(c.gender) as 'male' | 'female' | null,
-    relationshipType: null,
-    metAt: null,
-    metDate: null,
-    lastContactedAt: null,
-    nextFollowUp: null,
+    relationshipType: toStringOrNull(c.relationshipType) as NewContact['relationshipType'],
+    metAt: toStringOrNull(c.metAt),
+    metDate: c.metDate ? toDateOrNull(c.metDate) : null,
+    lastContactedAt: c.lastContactedAt ? toDateOrNull(c.lastContactedAt) : null,
+    nextFollowUp: c.nextFollowUp ? toDateOrNull(c.nextFollowUp) : null,
+    communicationStyle: toStringOrNull(c.communicationStyle) as NewContact['communicationStyle'],
+    preferredChannel: toStringOrNull(c.preferredChannel) as NewContact['preferredChannel'],
+    responseSpeed: toStringOrNull(c.responseSpeed) as NewContact['responseSpeed'],
     timezone: toStringOrNull(c.timezone),
+    language: toStringOrNull(c.language),
     birthday: c.birthday ? toDateOrNull(c.birthday) : null,
+    personalInterests: toArrayOrNull(c.personalInterests),
+    professionalGoals: toArrayOrNull(c.professionalGoals),
+    painPoints: toArrayOrNull(c.painPoints),
+    influenceLevel: toNumberOrNull(c.influenceLevel),
+    networkReach: toNumberOrNull(c.networkReach),
+    trustLevel: toNumberOrNull(c.trustLevel),
+    loyaltyIndicator: toStringOrNull(c.loyaltyIndicator) as NewContact['loyaltyIndicator'],
+    financialCapacity: toStringOrNull(c.financialCapacity) as NewContact['financialCapacity'],
+    motivations: toArrayOrNull(c.motivations),
   }
 }
 
 const UPDATABLE_FIELDS = [
   'name', 'email', 'phone', 'company', 'role', 'city', 'country', 'address',
   'website', 'notes', 'telegram', 'linkedin', 'twitter', 'instagram',
-  'github', 'timezone', 'gender', 'tags', 'birthday',
+  'github', 'timezone', 'gender', 'tags', 'birthday', 'photo', 'metAt',
+  'relationshipType', 'communicationStyle', 'preferredChannel', 'responseSpeed',
+  'language', 'loyaltyIndicator', 'financialCapacity',
 ] as const
+
+const DATE_FIELDS = new Set(['birthday', 'metDate', 'lastContactedAt', 'nextFollowUp'])
+const ARRAY_FIELDS = new Set(['tags', 'secondaryLocations', 'personalInterests', 'professionalGoals', 'painPoints', 'motivations'])
+const NUMBER_FIELDS = new Set(['rating', 'influenceLevel', 'networkReach', 'trustLevel'])
 
 function buildUpdateData(c: Record<string, unknown>): Partial<NewContact> {
   const data: Record<string, unknown> = {}
+  const allFields = [...UPDATABLE_FIELDS, 'metDate', 'lastContactedAt', 'nextFollowUp',
+    'secondaryLocations', 'personalInterests', 'professionalGoals', 'painPoints',
+    'motivations', 'rating', 'influenceLevel', 'networkReach', 'trustLevel'] as const
 
-  for (const field of UPDATABLE_FIELDS) {
+  for (const field of allFields) {
     if (!(field in c) || c[field] === undefined) continue
 
-    if (field === 'tags') {
-      data[field] = Array.isArray(c[field]) ? c[field] : null
-    } else if (field === 'gender') {
-      data[field] = toStringOrNull(c[field]) as 'male' | 'female' | null
-    } else if (field === 'birthday') {
+    if (DATE_FIELDS.has(field)) {
       data[field] = c[field] ? toDateOrNull(c[field]) : null
+    } else if (ARRAY_FIELDS.has(field)) {
+      data[field] = Array.isArray(c[field]) ? c[field] : null
+    } else if (NUMBER_FIELDS.has(field)) {
+      data[field] = toNumberOrNull(c[field])
     } else {
       data[field] = toStringOrNull(c[field])
     }

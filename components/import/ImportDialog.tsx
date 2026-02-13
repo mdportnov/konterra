@@ -8,6 +8,7 @@ import StepDedupReview from './StepDedupReview'
 import StepImportProgress from './StepImportProgress'
 import type { ImportSource } from './StepSourceSelect'
 import type { ParsedContact, ImportEntry } from '@/lib/import/types'
+import type { KonterraExport } from '@/lib/export/types'
 import type { Contact } from '@/lib/db/schema'
 import { findDuplicates, deduplicateParsed } from '@/lib/import/dedup'
 
@@ -71,6 +72,7 @@ export default function ImportDialog({ open, onOpenChange, existingContacts, onI
   const [source, setSource] = useState<ImportSource | null>(null)
   const [entries, setEntries] = useState<ImportEntry[]>([])
   const [intraDupCount, setIntraDupCount] = useState(0)
+  const [konterraData, setKonterraData] = useState<KonterraExport | null>(null)
   const contentRef = useRef<HTMLDivElement>(null)
 
   const reset = useCallback(() => {
@@ -78,6 +80,7 @@ export default function ImportDialog({ open, onOpenChange, existingContacts, onI
     setSource(null)
     setEntries([])
     setIntraDupCount(0)
+    setKonterraData(null)
   }, [])
 
   const handleOpenChange = useCallback((v: boolean) => {
@@ -90,7 +93,8 @@ export default function ImportDialog({ open, onOpenChange, existingContacts, onI
     setStep('parse')
   }, [])
 
-  const handleParsed = useCallback((contacts: ParsedContact[]) => {
+  const handleParsed = useCallback((contacts: ParsedContact[], kData?: KonterraExport) => {
+    setKonterraData(kData ?? null)
     const { unique, removedCount } = deduplicateParsed(contacts)
     setIntraDupCount(removedCount)
     const result = findDuplicates(unique, existingContacts)
@@ -143,6 +147,7 @@ export default function ImportDialog({ open, onOpenChange, existingContacts, onI
           <AnimatedStep active={step === 'importing'}>
             <StepImportProgress
               entries={entries}
+              konterraData={konterraData}
               onComplete={handleComplete}
             />
           </AnimatedStep>

@@ -1,14 +1,20 @@
 'use client'
 
-import { FileSpreadsheet, MessageCircle, Contact } from 'lucide-react'
+import { FileSpreadsheet, MessageCircle, Contact, Globe } from 'lucide-react'
 
-export type ImportSource = 'google-csv' | 'telegram-json' | 'vcard'
+export type ImportSource = 'konterra-json' | 'google-csv' | 'telegram-json' | 'vcard'
 
 interface StepSourceSelectProps {
   onSelect: (source: ImportSource) => void
 }
 
 const sources = [
+  {
+    id: 'konterra-json' as ImportSource,
+    label: 'Konterra',
+    description: 'Konterra JSON export (.konterra.json)',
+    icon: Globe,
+  },
   {
     id: 'google-csv' as ImportSource,
     label: 'Google Contacts',

@@ -582,6 +582,90 @@ export async function getAllIntroductionsByUserId(userId: string) {
   })
 }
 
+export async function createInteractionsBulk(data: { contactId: string; type: string; date: Date; location: string | null; notes: string | null }[]) {
+  if (data.length === 0) return []
+  const BATCH_SIZE = 50
+  return db.transaction(async (tx) => {
+    const results: (typeof interactions.$inferSelect)[] = []
+    for (let i = 0; i < data.length; i += BATCH_SIZE) {
+      const batch = data.slice(i, i + BATCH_SIZE)
+      const rows = await tx.insert(interactions).values(batch as (typeof interactions.$inferInsert)[]).returning()
+      results.push(...rows)
+    }
+    return results
+  })
+}
+
+export async function createFavorsBulk(data: NewFavor[]) {
+  if (data.length === 0) return []
+  const BATCH_SIZE = 50
+  return db.transaction(async (tx) => {
+    const results: (typeof favors.$inferSelect)[] = []
+    for (let i = 0; i < data.length; i += BATCH_SIZE) {
+      const batch = data.slice(i, i + BATCH_SIZE)
+      const rows = await tx.insert(favors).values(batch).returning()
+      results.push(...rows)
+    }
+    return results
+  })
+}
+
+export async function createIntroductionsBulk(data: NewIntroduction[]) {
+  if (data.length === 0) return []
+  const BATCH_SIZE = 50
+  return db.transaction(async (tx) => {
+    const results: (typeof introductions.$inferSelect)[] = []
+    for (let i = 0; i < data.length; i += BATCH_SIZE) {
+      const batch = data.slice(i, i + BATCH_SIZE)
+      const rows = await tx
+        .insert(introductions)
+        .values(batch)
+        .onConflictDoNothing()
+        .returning()
+      results.push(...rows)
+    }
+    return results
+  })
+}
+
+export async function createCountryConnectionsBulk(data: NewContactCountryConnection[]) {
+  if (data.length === 0) return []
+  const BATCH_SIZE = 50
+  return db.transaction(async (tx) => {
+    const results: (typeof contactCountryConnections.$inferSelect)[] = []
+    for (let i = 0; i < data.length; i += BATCH_SIZE) {
+      const batch = data.slice(i, i + BATCH_SIZE)
+      const rows = await tx
+        .insert(contactCountryConnections)
+        .values(batch)
+        .onConflictDoNothing()
+        .returning()
+      results.push(...rows)
+    }
+    return results
+  })
+}
+
+export async function createTagsBulk(userId: string, tagData: { name: string; color?: string | null }[]) {
+  if (tagData.length === 0) return []
+  const results: (typeof tags.$inferSelect)[] = []
+  for (const t of tagData) {
+    const tag = await createTag(userId, t.name, t.color ?? undefined)
+    if (tag) results.push(tag)
+  }
+  return results
+}
+
+export async function addVisitedCountriesBulk(userId: string, countries: string[]) {
+  if (countries.length === 0) return
+  for (const country of countries) {
+    await db
+      .insert(visitedCountries)
+      .values({ userId, country })
+      .onConflictDoNothing({ target: [visitedCountries.userId, visitedCountries.country] })
+  }
+}
+
 export async function renameTag(id: string, userId: string, newName: string) {
   const tag = await db.query.tags.findFirst({
     where: and(eq(tags.id, id), eq(tags.userId, userId)),
