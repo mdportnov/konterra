@@ -9,6 +9,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { LogOut, Loader2, Pencil, Check, X, Users, Globe, Link2, CalendarDays } from 'lucide-react'
+import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
 import type { ProfileTabProps } from './types'
 
@@ -91,47 +92,57 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
       <ScrollArea className="flex-1">
         <div className="p-6 space-y-6">
           <div className="flex flex-col items-center gap-3 pt-2">
-            <Avatar className="h-20 w-20 border-2 border-border">
-              <AvatarImage src={user?.image || undefined} />
-              <AvatarFallback className="bg-orange-500/20 text-orange-600 dark:text-orange-300 text-xl">
-                {initials}
-              </AvatarFallback>
-            </Avatar>
-            {editingName ? (
-              <div className="flex items-center gap-1 w-full max-w-[240px]">
-                <Input
-                  value={nameValue}
-                  onChange={(e) => setNameValue(e.target.value)}
-                  className="h-8 text-sm text-center"
-                  autoFocus
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleSaveName()
-                    if (e.key === 'Escape') handleCancelEdit()
-                  }}
-                />
-                <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={handleSaveName}>
-                  <Check className="h-4 w-4" />
-                </Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={handleCancelEdit}>
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
+            {!user ? (
+              <>
+                <Skeleton className="h-20 w-20 rounded-full" />
+                <Skeleton className="h-5 w-32" />
+                <Skeleton className="h-4 w-40" />
+              </>
             ) : (
-              <div className="flex items-center gap-1">
-                <p className="font-medium text-foreground text-lg">{user?.name || 'User'}</p>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={handleEditName}>
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Edit name</TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
+              <>
+                <Avatar className="h-20 w-20 border-2 border-border">
+                  <AvatarImage src={user.image || undefined} />
+                  <AvatarFallback className="bg-orange-500/20 text-orange-600 dark:text-orange-300 text-xl">
+                    {initials}
+                  </AvatarFallback>
+                </Avatar>
+                {editingName ? (
+                  <div className="flex items-center gap-1 w-full max-w-[240px]">
+                    <Input
+                      value={nameValue}
+                      onChange={(e) => setNameValue(e.target.value)}
+                      className="h-8 text-sm text-center"
+                      autoFocus
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleSaveName()
+                        if (e.key === 'Escape') handleCancelEdit()
+                      }}
+                    />
+                    <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={handleSaveName}>
+                      <Check className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={handleCancelEdit}>
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1">
+                    <p className="font-medium text-foreground text-lg">{user.name || 'User'}</p>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={handleEditName}>
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Edit name</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                )}
+                <p className="text-sm text-muted-foreground">{user.email}</p>
+              </>
             )}
-            <p className="text-sm text-muted-foreground">{user?.email}</p>
           </div>
 
           <Separator className="bg-border" />

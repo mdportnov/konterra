@@ -541,7 +541,7 @@ export default function DashboardPanel({
             const selfContact = contacts.find((c) => c.isSelf)
             return selfContact ? <SelfProfileCard contact={selfContact} onOpenSettings={onOpenSettings || (() => {})} /> : null
           })()}
-          {contacts.length < 3 && (
+          {!contactsLoading && contacts.length < 3 && (
             <GettingStartedCard
               contacts={contacts}
               connections={connections}
