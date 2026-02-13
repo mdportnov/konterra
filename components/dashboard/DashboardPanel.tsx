@@ -1,13 +1,13 @@
 'use client'
 
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
-import { Search, X, MapPin, Building2, ChevronDown, ChevronRight, Plus, Globe as GlobeIcon, Settings, Sparkles, LogOut, Star, SlidersHorizontal, ArrowUpDown } from 'lucide-react'
+import { Search, X, ChevronDown, ChevronRight, Plus, Globe as GlobeIcon, Settings, Sparkles, LogOut, Star, SlidersHorizontal, ArrowUpDown, List, LayoutGrid, Rows3, CheckSquare, Square, Trash2, Tag, MapPin } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
 import { GLASS } from '@/lib/constants/ui'
@@ -23,12 +23,14 @@ import NetworkHealth from './widgets/NetworkHealth'
 import FavorLedger from './widgets/FavorLedger'
 import ConnectionInsightsSummary from './widgets/ConnectionInsightsSummary'
 import ContactDetailContent from '@/components/globe/ContactDetailContent'
-import { fetchRecentInteractions, fetchAllFavors } from '@/lib/api'
+import { fetchRecentInteractions, fetchAllFavors, bulkDeleteContacts, bulkTagContacts } from '@/lib/api'
 import type { Contact, ContactConnection, ContactCountryConnection, Interaction, Favor } from '@/lib/db/schema'
 import type { ConnectedContact } from '@/components/globe/ContactDetail'
 import type { SidebarView } from '@/hooks/use-panel-navigation'
 
 type SortKey = 'name' | 'rating' | 'lastContacted' | 'updatedAt'
+type ViewMode = 'list' | 'grid' | 'compact'
+
 const SORT_OPTIONS: { key: SortKey; label: string }[] = [
   { key: 'name', label: 'Name' },
   { key: 'rating', label: 'Rating' },
@@ -37,6 +39,7 @@ const SORT_OPTIONS: { key: SortKey; label: string }[] = [
 ]
 const PAGE_SIZE = 50
 const RELATIONSHIP_TYPES = ['friend', 'business', 'investor', 'conference', 'mentor', 'colleague', 'family', 'dating'] as const
+const VIEW_MODE_KEY = 'konterra-view-mode'
 
 interface DashboardPanelProps {
   contacts: Contact[]
@@ -59,6 +62,8 @@ interface DashboardPanelProps {
   contactsLoading?: boolean
   collapsed?: boolean
   onToggleCollapse?: () => void
+  onSelectionChange?: (ids: Set<string>) => void
+  onBulkDelete?: (ids: string[]) => void
 }
 
 export default function DashboardPanel({
@@ -82,6 +87,8 @@ export default function DashboardPanel({
   contactsLoading = false,
   collapsed = false,
   onToggleCollapse,
+  onSelectionChange,
+  onBulkDelete,
 }: DashboardPanelProps) {
   const { data: session } = useSession()
   const [search, setSearch] = useState('')
@@ -99,6 +106,23 @@ export default function DashboardPanel({
   const [interactionsLoading, setInteractionsLoading] = useState(true)
   const [favorsLoading, setFavorsLoading] = useState(true)
   const searchRef = useRef<HTMLInputElement>(null)
+
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    try { return (localStorage.getItem(VIEW_MODE_KEY) as ViewMode) || 'list' } catch { return 'list' }
+  })
+  const [selectMode, setSelectMode] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [bulkTagInput, setBulkTagInput] = useState('')
+  const [showBulkTagInput, setShowBulkTagInput] = useState(false)
+  const [bulkActionLoading, setBulkActionLoading] = useState(false)
+
+  useEffect(() => {
+    try { localStorage.setItem(VIEW_MODE_KEY, viewMode) } catch {}
+  }, [viewMode])
+
+  useEffect(() => {
+    onSelectionChange?.(selectedIds)
+  }, [selectedIds, onSelectionChange])
 
   useEffect(() => {
     fetchRecentInteractions()
@@ -218,6 +242,99 @@ export default function DashboardPanel({
   const hasFilters = search || selectedTags.length > 0 || selectedCountries.length > 0 || selectedRatings.size > 0 || selectedRelTypes.length > 0
 
   const isCollapsed = collapsed && !isMobile
+
+  const toggleSelectContact = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }, [])
+
+  const selectAll = useCallback(() => {
+    const visible = isCollapsed ? filteredContacts : pagedContacts
+    setSelectedIds(new Set(visible.map((c) => c.id)))
+  }, [isCollapsed, filteredContacts, pagedContacts])
+
+  const deselectAll = useCallback(() => {
+    setSelectedIds(new Set())
+  }, [])
+
+  const exitSelectMode = useCallback(() => {
+    setSelectMode(false)
+    setSelectedIds(new Set())
+    setShowBulkTagInput(false)
+    setBulkTagInput('')
+  }, [])
+
+  const handleBulkDelete = useCallback(async () => {
+    if (selectedIds.size === 0) return
+    const ids = [...selectedIds]
+    setBulkActionLoading(true)
+    try {
+      await bulkDeleteContacts(ids)
+      toast.success(`Deleted ${ids.length} contact${ids.length !== 1 ? 's' : ''}`)
+      onBulkDelete?.(ids)
+      exitSelectMode()
+    } catch {
+      toast.error('Failed to delete contacts')
+    } finally {
+      setBulkActionLoading(false)
+    }
+  }, [selectedIds, onBulkDelete, exitSelectMode])
+
+  const handleBulkAddTag = useCallback(async () => {
+    if (selectedIds.size === 0 || !bulkTagInput.trim()) return
+    const ids = [...selectedIds]
+    setBulkActionLoading(true)
+    try {
+      const result = await bulkTagContacts(ids, 'addTag', bulkTagInput.trim())
+      toast.success(`Tagged ${result.updated} contact${result.updated !== 1 ? 's' : ''}`)
+      onBulkDelete?.([] as string[])
+      setShowBulkTagInput(false)
+      setBulkTagInput('')
+    } catch {
+      toast.error('Failed to add tag')
+    } finally {
+      setBulkActionLoading(false)
+    }
+  }, [selectedIds, bulkTagInput, onBulkDelete])
+
+  const handleBulkRemoveTag = useCallback(async (tag: string) => {
+    if (selectedIds.size === 0) return
+    const ids = [...selectedIds]
+    setBulkActionLoading(true)
+    try {
+      const result = await bulkTagContacts(ids, 'removeTag', tag)
+      toast.success(`Removed tag from ${result.updated} contact${result.updated !== 1 ? 's' : ''}`)
+      onBulkDelete?.([] as string[])
+    } catch {
+      toast.error('Failed to remove tag')
+    } finally {
+      setBulkActionLoading(false)
+    }
+  }, [selectedIds, onBulkDelete])
+
+  const handleContactClickWithSelect = useCallback((contact: Contact) => {
+    if (selectMode) {
+      toggleSelectContact(contact.id)
+    } else {
+      onContactClick(contact)
+    }
+  }, [selectMode, toggleSelectContact, onContactClick])
+
+  const commonTagsInSelection = useMemo(() => {
+    if (selectedIds.size === 0) return []
+    const tagCounts = new Map<string, number>()
+    contacts.filter((c) => selectedIds.has(c.id)).forEach((c) => {
+      c.tags?.forEach((t) => tagCounts.set(t, (tagCounts.get(t) || 0) + 1))
+    })
+    return Array.from(tagCounts.entries())
+      .filter(([, count]) => count > 0)
+      .sort(([, a], [, b]) => b - a)
+      .map(([tag]) => tag)
+  }, [selectedIds, contacts])
 
   if (sidebarView === 'detail' && selectedContact) {
     return (
@@ -383,10 +500,48 @@ export default function DashboardPanel({
             {!isCollapsed && (
               <div className="flex items-center justify-between">
                 <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Contacts</span>
-                <span className="text-xs text-muted-foreground/60">
-                  {filteredContacts.length} of {contacts.length}
-                </span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-muted-foreground/60">
+                    {filteredContacts.length} of {contacts.length}
+                  </span>
+                  <ViewModeToggle mode={viewMode} onChange={setViewMode} />
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => selectMode ? exitSelectMode() : setSelectMode(true)}
+                          className={`p-1 rounded transition-colors ${selectMode ? 'text-orange-500 bg-orange-500/10' : 'text-muted-foreground/60 hover:text-muted-foreground'}`}
+                        >
+                          <CheckSquare className="h-3.5 w-3.5" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" className="text-xs">
+                        {selectMode ? 'Exit selection' : 'Select contacts'}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
               </div>
+            )}
+
+            {selectMode && !isCollapsed && (
+              <BulkActionBar
+                selectedCount={selectedIds.size}
+                totalVisible={pagedContacts.length}
+                onSelectAll={selectAll}
+                onDeselectAll={deselectAll}
+                onDelete={handleBulkDelete}
+                onAddTag={() => setShowBulkTagInput(!showBulkTagInput)}
+                loading={bulkActionLoading}
+                showTagInput={showBulkTagInput}
+                tagInput={bulkTagInput}
+                onTagInputChange={setBulkTagInput}
+                onTagSubmit={handleBulkAddTag}
+                commonTags={commonTagsInSelection}
+                onRemoveTag={handleBulkRemoveTag}
+                allTags={allTags}
+                onExit={exitSelectMode}
+              />
             )}
 
             <div className="relative">
@@ -552,63 +707,335 @@ export default function DashboardPanel({
               </div>
             )}
 
-            <div className={isCollapsed ? 'space-y-0.5' : 'space-y-0.5'}>
-              {contactsLoading ? Array.from({ length: isCollapsed ? 8 : 6 }).map((_, i) => (
-                <div key={i} className={isCollapsed ? 'flex items-center gap-2 p-1.5 rounded-md' : 'flex items-center gap-2 px-2 py-1.5'}>
-                  <Skeleton className="h-7 w-7 rounded-full shrink-0" />
-                  <div className="flex-1 space-y-1">
-                    <Skeleton className="h-3.5 w-28" />
-                    {!isCollapsed && <Skeleton className="h-3 w-20" />}
-                  </div>
-                </div>
-              )) : (isCollapsed ? filteredContacts : pagedContacts).map((contact) => {
-                const initials = contact.name
-                  .split(' ')
-                  .map((n) => n[0])
-                  .join('')
-                  .toUpperCase()
-                  .slice(0, 2)
-                const isSelected = selectedContact?.id === contact.id
-
-                if (isCollapsed) {
-                  return (
-                    <button
-                      key={contact.id}
-                      onClick={() => onContactClick(contact)}
-                      className={`w-full text-left flex items-center gap-2 p-1.5 rounded-md transition-colors ${
-                        isSelected
-                          ? 'bg-accent border border-accent-foreground/20'
-                          : 'hover:bg-muted/50'
-                      }`}
-                    >
-                      <Avatar className={`h-7 w-7 shrink-0 ${
-                        contact.gender === 'male'
-                          ? 'ring-1 ring-blue-400/30'
-                          : contact.gender === 'female'
-                            ? 'ring-1 ring-pink-400/30'
-                            : ''
-                      }`}>
-                        <AvatarImage src={contact.photo || undefined} />
-                        <AvatarFallback className="text-[10px] bg-muted text-muted-foreground">
-                          {initials}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="text-xs font-medium truncate text-foreground">{contact.name}</span>
-                    </button>
-                  )
-                }
-
-                return (
-                  <ContactRow key={contact.id} contact={contact} onSelect={onContactClick} />
-                )
-              })}
-              {!contactsLoading && filteredContacts.length === 0 && (
-                <p className="text-xs text-muted-foreground/60 text-center py-6">No contacts found</p>
-              )}
-            </div>
+            {contactsLoading ? (
+              <ContactListSkeleton isCollapsed={isCollapsed} viewMode={viewMode} />
+            ) : (
+              <ContactListView
+                contacts={isCollapsed ? filteredContacts : pagedContacts}
+                viewMode={isCollapsed ? 'list' : viewMode}
+                isCollapsed={isCollapsed}
+                selectMode={selectMode}
+                selectedIds={selectedIds}
+                selectedContact={selectedContact}
+                onContactClick={handleContactClickWithSelect}
+                onToggleSelect={toggleSelectContact}
+              />
+            )}
+            {!contactsLoading && filteredContacts.length === 0 && (
+              <p className="text-xs text-muted-foreground/60 text-center py-6">No contacts found</p>
+            )}
           </div>
         </div>
       </ScrollArea>
+    </div>
+  )
+}
+
+function ViewModeToggle({ mode, onChange }: { mode: ViewMode; onChange: (m: ViewMode) => void }) {
+  const modes: { key: ViewMode; icon: typeof List; label: string }[] = [
+    { key: 'list', icon: List, label: 'List' },
+    { key: 'grid', icon: LayoutGrid, label: 'Grid' },
+    { key: 'compact', icon: Rows3, label: 'Compact' },
+  ]
+
+  return (
+    <TooltipProvider>
+      <div className="flex items-center gap-0.5 bg-muted/50 rounded-md p-0.5">
+        {modes.map(({ key, icon: Icon, label }) => (
+          <Tooltip key={key}>
+            <TooltipTrigger asChild>
+              <button
+                onClick={() => onChange(key)}
+                className={`p-1 rounded transition-colors ${
+                  mode === key
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground/60 hover:text-muted-foreground'
+                }`}
+              >
+                <Icon className="h-3 w-3" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="text-xs">{label} view</TooltipContent>
+          </Tooltip>
+        ))}
+      </div>
+    </TooltipProvider>
+  )
+}
+
+function BulkActionBar({
+  selectedCount,
+  totalVisible,
+  onSelectAll,
+  onDeselectAll,
+  onDelete,
+  onAddTag,
+  loading,
+  showTagInput,
+  tagInput,
+  onTagInputChange,
+  onTagSubmit,
+  commonTags,
+  onRemoveTag,
+  allTags,
+  onExit,
+}: {
+  selectedCount: number
+  totalVisible: number
+  onSelectAll: () => void
+  onDeselectAll: () => void
+  onDelete: () => void
+  onAddTag: () => void
+  loading: boolean
+  showTagInput: boolean
+  tagInput: string
+  onTagInputChange: (v: string) => void
+  onTagSubmit: () => void
+  commonTags: string[]
+  onRemoveTag: (tag: string) => void
+  allTags: string[]
+  onExit: () => void
+}) {
+  return (
+    <div className="space-y-2 animate-in fade-in slide-in-from-top-1 duration-150">
+      <div className="flex items-center gap-2 bg-muted/50 rounded-lg p-2">
+        <div className="flex items-center gap-1.5 flex-1 min-w-0">
+          <span className="text-[10px] font-medium text-foreground shrink-0">
+            {selectedCount} selected
+          </span>
+          <button
+            onClick={selectedCount === totalVisible ? onDeselectAll : onSelectAll}
+            className="text-[10px] text-orange-500 hover:text-orange-600 transition-colors shrink-0"
+          >
+            {selectedCount === totalVisible ? 'Deselect all' : 'Select all'}
+          </button>
+        </div>
+        <div className="flex items-center gap-1 shrink-0">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={onAddTag}
+                  disabled={loading || selectedCount === 0}
+                  className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-background transition-colors disabled:opacity-40"
+                >
+                  <Tag className="h-3.5 w-3.5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="text-xs">Tag selected</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={onDelete}
+                  disabled={loading || selectedCount === 0}
+                  className="p-1.5 rounded-md text-red-500 hover:text-red-600 hover:bg-red-500/10 transition-colors disabled:opacity-40"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="text-xs">Delete selected</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <button
+            onClick={onExit}
+            className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-background transition-colors"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </div>
+
+      {showTagInput && (
+        <div className="space-y-1.5 bg-muted/30 rounded-lg p-2">
+          <div className="flex gap-1.5">
+            <Input
+              value={tagInput}
+              onChange={(e) => onTagInputChange(e.target.value)}
+              placeholder="Tag name..."
+              className="h-7 text-xs bg-background"
+              onKeyDown={(e) => { if (e.key === 'Enter') onTagSubmit() }}
+            />
+            <Button
+              size="sm"
+              onClick={onTagSubmit}
+              disabled={loading || !tagInput.trim()}
+              className="h-7 px-2 text-xs bg-orange-500 hover:bg-orange-600 text-white shrink-0"
+            >
+              Add
+            </Button>
+          </div>
+          {allTags.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {allTags.slice(0, 10).map((t) => (
+                <button
+                  key={t}
+                  onClick={() => onTagInputChange(t)}
+                  className="text-[10px] px-1.5 py-0.5 rounded bg-muted hover:bg-muted/80 text-muted-foreground transition-colors"
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+          )}
+          {commonTags.length > 0 && (
+            <div>
+              <span className="text-[9px] text-muted-foreground/50 uppercase tracking-wider">Remove tag:</span>
+              <div className="flex flex-wrap gap-1 mt-1">
+                {commonTags.slice(0, 8).map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => onRemoveTag(t)}
+                    className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors flex items-center gap-0.5"
+                  >
+                    <X className="h-2.5 w-2.5" />
+                    {t}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ContactListSkeleton({ isCollapsed, viewMode }: { isCollapsed: boolean; viewMode: ViewMode }) {
+  if (viewMode === 'grid' && !isCollapsed) {
+    return (
+      <div className="grid grid-cols-2 gap-2">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <div key={i} className="rounded-lg border border-border p-3 space-y-2">
+            <Skeleton className="h-10 w-10 rounded-full mx-auto" />
+            <Skeleton className="h-3.5 w-20 mx-auto" />
+            <Skeleton className="h-3 w-16 mx-auto" />
+          </div>
+        ))}
+      </div>
+    )
+  }
+  return (
+    <div className="space-y-0.5">
+      {Array.from({ length: isCollapsed ? 8 : 6 }).map((_, i) => (
+        <div key={i} className={isCollapsed ? 'flex items-center gap-2 p-1.5 rounded-md' : 'flex items-center gap-2 px-2 py-1.5'}>
+          <Skeleton className="h-7 w-7 rounded-full shrink-0" />
+          <div className="flex-1 space-y-1">
+            <Skeleton className="h-3.5 w-28" />
+            {!isCollapsed && viewMode !== 'compact' && <Skeleton className="h-3 w-20" />}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function ContactListView({
+  contacts,
+  viewMode,
+  isCollapsed,
+  selectMode,
+  selectedIds,
+  selectedContact,
+  onContactClick,
+  onToggleSelect,
+}: {
+  contacts: Contact[]
+  viewMode: ViewMode
+  isCollapsed: boolean
+  selectMode: boolean
+  selectedIds: Set<string>
+  selectedContact: Contact | null
+  onContactClick: (c: Contact) => void
+  onToggleSelect: (id: string) => void
+}) {
+  if (viewMode === 'grid' && !isCollapsed) {
+    return (
+      <div className="grid grid-cols-2 gap-2">
+        {contacts.map((contact) => (
+          <ContactCard
+            key={contact.id}
+            contact={contact}
+            selectMode={selectMode}
+            isChecked={selectedIds.has(contact.id)}
+            isSelected={selectedContact?.id === contact.id}
+            onClick={() => onContactClick(contact)}
+            onToggleSelect={() => onToggleSelect(contact.id)}
+          />
+        ))}
+      </div>
+    )
+  }
+
+  if (viewMode === 'compact' && !isCollapsed) {
+    return (
+      <div className="space-y-0">
+        <div className="grid grid-cols-[auto_1fr_auto_auto] gap-x-2 text-[9px] uppercase tracking-wider text-muted-foreground/50 px-2 pb-1 border-b border-border/50">
+          {selectMode && <span />}
+          <span>Name</span>
+          <span>Location</span>
+          <span>Rating</span>
+        </div>
+        {contacts.map((contact) => (
+          <ContactCompactRow
+            key={contact.id}
+            contact={contact}
+            selectMode={selectMode}
+            isChecked={selectedIds.has(contact.id)}
+            isSelected={selectedContact?.id === contact.id}
+            onClick={() => onContactClick(contact)}
+            onToggleSelect={() => onToggleSelect(contact.id)}
+          />
+        ))}
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-0.5">
+      {contacts.map((contact) => {
+        const initials = contact.name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
+        const isSelected = selectedContact?.id === contact.id
+
+        if (isCollapsed) {
+          return (
+            <button
+              key={contact.id}
+              onClick={() => onContactClick(contact)}
+              className={`w-full text-left flex items-center gap-2 p-1.5 rounded-md transition-colors ${
+                isSelected
+                  ? 'bg-accent border border-accent-foreground/20'
+                  : 'hover:bg-muted/50'
+              }`}
+            >
+              <Avatar className={`h-7 w-7 shrink-0 ${
+                contact.gender === 'male'
+                  ? 'ring-1 ring-blue-400/30'
+                  : contact.gender === 'female'
+                    ? 'ring-1 ring-pink-400/30'
+                    : ''
+              }`}>
+                <AvatarImage src={contact.photo || undefined} />
+                <AvatarFallback className="text-[10px] bg-muted text-muted-foreground">
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
+              <span className="text-xs font-medium truncate text-foreground">{contact.name}</span>
+            </button>
+          )
+        }
+
+        return (
+          <ContactRow
+            key={contact.id}
+            contact={contact}
+            selectMode={selectMode}
+            isChecked={selectedIds.has(contact.id)}
+            onSelect={onContactClick}
+            onToggleSelect={() => onToggleSelect(contact.id)}
+          />
+        )
+      })}
     </div>
   )
 }
@@ -650,7 +1077,13 @@ function PaginationRow({ current, total, onChange }: { current: number; total: n
   )
 }
 
-function ContactRow({ contact, onSelect }: { contact: Contact; onSelect: (c: Contact) => void }) {
+function ContactRow({ contact, selectMode, isChecked, onSelect, onToggleSelect }: {
+  contact: Contact
+  selectMode: boolean
+  isChecked: boolean
+  onSelect: (c: Contact) => void
+  onToggleSelect: () => void
+}) {
   const initials = contact.name
     .split(' ')
     .map((n) => n[0])
@@ -660,9 +1093,19 @@ function ContactRow({ contact, onSelect }: { contact: Contact; onSelect: (c: Con
 
   return (
     <button
-      onClick={() => onSelect(contact)}
-      className="w-full text-left px-2 py-1.5 rounded-md hover:bg-muted/50 flex items-center gap-2 transition-colors"
+      onClick={() => selectMode ? onToggleSelect() : onSelect(contact)}
+      className={`w-full text-left px-2 py-1.5 rounded-md flex items-center gap-2 transition-colors ${
+        isChecked ? 'bg-orange-500/10 ring-1 ring-orange-500/20' : 'hover:bg-muted/50'
+      }`}
     >
+      {selectMode && (
+        <span className="shrink-0 text-muted-foreground">
+          {isChecked
+            ? <CheckSquare className="h-3.5 w-3.5 text-orange-500" />
+            : <Square className="h-3.5 w-3.5" />
+          }
+        </span>
+      )}
       <Avatar className="h-7 w-7 shrink-0">
         <AvatarImage src={contact.photo || undefined} />
         <AvatarFallback className="text-[10px] bg-muted text-muted-foreground">
@@ -683,6 +1126,136 @@ function ContactRow({ contact, onSelect }: { contact: Contact; onSelect: (c: Con
           <span className="text-[10px] text-muted-foreground">{contact.rating}</span>
         </div>
       )}
+    </button>
+  )
+}
+
+function ContactCard({ contact, selectMode, isChecked, isSelected, onClick, onToggleSelect }: {
+  contact: Contact
+  selectMode: boolean
+  isChecked: boolean
+  isSelected: boolean
+  onClick: () => void
+  onToggleSelect: () => void
+}) {
+  const initials = contact.name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
+
+  return (
+    <button
+      onClick={() => selectMode ? onToggleSelect() : onClick()}
+      className={`relative w-full text-left rounded-lg border p-3 transition-colors ${
+        isChecked
+          ? 'border-orange-500/40 bg-orange-500/5'
+          : isSelected
+            ? 'border-accent-foreground/20 bg-accent'
+            : 'border-border hover:bg-muted/50'
+      }`}
+    >
+      {selectMode && (
+        <span className="absolute top-2 right-2 text-muted-foreground">
+          {isChecked
+            ? <CheckSquare className="h-3.5 w-3.5 text-orange-500" />
+            : <Square className="h-3.5 w-3.5" />
+          }
+        </span>
+      )}
+      <div className="flex flex-col items-center text-center gap-1.5">
+        <Avatar className={`h-10 w-10 ${
+          contact.gender === 'male'
+            ? 'ring-2 ring-blue-400/30'
+            : contact.gender === 'female'
+              ? 'ring-2 ring-pink-400/30'
+              : ''
+        }`}>
+          <AvatarImage src={contact.photo || undefined} />
+          <AvatarFallback className="text-xs bg-muted text-muted-foreground">
+            {initials}
+          </AvatarFallback>
+        </Avatar>
+        <div className="min-w-0 w-full">
+          <p className="text-xs font-medium text-foreground truncate">{contact.name}</p>
+          {(contact.role || contact.company) && (
+            <p className="text-[10px] text-muted-foreground truncate">
+              {contact.role || contact.company}
+            </p>
+          )}
+          {contact.country && (
+            <p className="text-[10px] text-muted-foreground/60 truncate flex items-center justify-center gap-0.5 mt-0.5">
+              <MapPin className="h-2.5 w-2.5" />
+              {[contact.city, contact.country].filter(Boolean).join(', ')}
+            </p>
+          )}
+        </div>
+        {contact.rating && contact.rating > 0 && (
+          <div className="flex items-center gap-0.5">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Star key={i} className={`h-2.5 w-2.5 ${i < contact.rating! ? 'text-orange-400 fill-orange-400' : 'text-muted-foreground/20'}`} />
+            ))}
+          </div>
+        )}
+        {contact.tags && contact.tags.length > 0 && (
+          <div className="flex flex-wrap gap-0.5 justify-center">
+            {contact.tags.slice(0, 2).map((tag) => (
+              <span key={tag} className="text-[9px] px-1 py-0.5 rounded bg-muted text-muted-foreground">
+                {tag}
+              </span>
+            ))}
+            {contact.tags.length > 2 && (
+              <span className="text-[9px] text-muted-foreground/50">+{contact.tags.length - 2}</span>
+            )}
+          </div>
+        )}
+      </div>
+    </button>
+  )
+}
+
+function ContactCompactRow({ contact, selectMode, isChecked, isSelected, onClick, onToggleSelect }: {
+  contact: Contact
+  selectMode: boolean
+  isChecked: boolean
+  isSelected: boolean
+  onClick: () => void
+  onToggleSelect: () => void
+}) {
+  return (
+    <button
+      onClick={() => selectMode ? onToggleSelect() : onClick()}
+      className={`w-full text-left grid grid-cols-[auto_1fr_auto_auto] gap-x-2 items-center px-2 py-1 border-b border-border/30 transition-colors ${
+        isChecked
+          ? 'bg-orange-500/10'
+          : isSelected
+            ? 'bg-accent'
+            : 'hover:bg-muted/30'
+      }`}
+    >
+      {selectMode ? (
+        <span className="text-muted-foreground w-4">
+          {isChecked
+            ? <CheckSquare className="h-3 w-3 text-orange-500" />
+            : <Square className="h-3 w-3" />
+          }
+        </span>
+      ) : null}
+      <span className="text-[11px] font-medium text-foreground truncate" style={!selectMode ? { gridColumn: '1 / 2' } : undefined}>
+        {contact.name}
+        {contact.company && (
+          <span className="text-muted-foreground/60 font-normal ml-1">{contact.company}</span>
+        )}
+      </span>
+      <span className="text-[10px] text-muted-foreground/60 truncate text-right">
+        {[contact.city, contact.country].filter(Boolean).join(', ') || '\u2014'}
+      </span>
+      <span className="text-[10px] text-right w-6">
+        {contact.rating && contact.rating > 0 ? (
+          <span className="flex items-center gap-0.5 justify-end">
+            <Star className="h-2.5 w-2.5 text-orange-400 fill-orange-400" />
+            <span className="text-muted-foreground">{contact.rating}</span>
+          </span>
+        ) : (
+          <span className="text-muted-foreground/30">&mdash;</span>
+        )}
+      </span>
     </button>
   )
 }

@@ -81,3 +81,23 @@ export async function fetchAllCountryConnections(signal?: AbortSignal): Promise<
 export async function fetchContactCountryConnections(contactId: string, signal?: AbortSignal): Promise<ContactCountryConnection[]> {
   return apiFetch<ContactCountryConnection[]>(`/api/contacts/${contactId}/country-connections`, signal)
 }
+
+export async function bulkDeleteContacts(ids: string[]): Promise<{ deleted: number }> {
+  const res = await fetch('/api/contacts/bulk', {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ids }),
+  })
+  if (!res.ok) throw new Error('Bulk delete failed')
+  return res.json()
+}
+
+export async function bulkTagContacts(ids: string[], action: 'addTag' | 'removeTag', tag: string): Promise<{ updated: number }> {
+  const res = await fetch('/api/contacts/bulk', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ids, action, tag }),
+  })
+  if (!res.ok) throw new Error('Bulk tag operation failed')
+  return res.json()
+}
