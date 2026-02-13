@@ -195,7 +195,15 @@ export default memo(function GlobeCanvas({
   useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
-        (pos) => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        (pos) => {
+          const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude }
+          setUserLocation(loc)
+          fetch('/api/me/location', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(loc),
+          }).catch(() => {})
+        },
         () => {},
         { enableHighAccuracy: false, timeout: 10000 }
       )
@@ -323,6 +331,15 @@ export default memo(function GlobeCanvas({
     if (noMainArcs && !selectedContact) return EMPTY_ARCS
 
     const contactMap = new Map(contacts.filter((c) => c.lat && c.lng).map((c) => [c.id, c]))
+
+    if (userLocation) {
+      for (const c of contacts) {
+        if (c.isSelf && !contactMap.has(c.id)) {
+          contactMap.set(c.id, { ...c, lat: userLocation.lat, lng: userLocation.lng })
+        }
+      }
+    }
+
     const result: GlobeArc[] = []
     const selectedId = selectedContact?.id
 
@@ -347,7 +364,7 @@ export default memo(function GlobeCanvas({
       })
     }
     return result
-  }, [contacts, connections, display.arcMode, selectedContact])
+  }, [contacts, connections, display.arcMode, selectedContact, userLocation])
 
   const countryCentroids = useMemo(() => {
     const map = new Map<string, { lat: number; lng: number }>()
