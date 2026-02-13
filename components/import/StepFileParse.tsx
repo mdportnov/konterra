@@ -9,27 +9,38 @@ import type { ParsedContact } from '@/lib/import/types'
 import { parseGoogleCSV } from '@/lib/import/parse-google-csv'
 import { parseTelegramJSON } from '@/lib/import/parse-telegram'
 import { parseVCards } from '@/lib/import/parse-vcard'
+import { parseKonterraJSON } from '@/lib/import/parse-konterra'
 import { enrichLocationFields } from '@/lib/import/parse-address'
+import type { KonterraExport } from '@/lib/export/types'
 
 interface StepFileParseProps {
   source: ImportSource
-  onParsed: (contacts: ParsedContact[]) => void
+  onParsed: (contacts: ParsedContact[], konterraData?: KonterraExport) => void
   onBack: () => void
 }
 
 const acceptMap: Record<ImportSource, string> = {
+  'konterra-json': '.json',
   'google-csv': '.csv',
   'telegram-json': '.json',
   'vcard': '.vcf,.vcard',
 }
 
 const labelMap: Record<ImportSource, string> = {
+  'konterra-json': 'Konterra JSON',
   'google-csv': 'Google Contacts CSV',
   'telegram-json': 'Telegram JSON',
   'vcard': 'vCard file (.vcf)',
 }
 
 const instructions: Record<ImportSource, { steps: string[] }> = {
+  'konterra-json': {
+    steps: [
+      'Open the Settings menu in Konterra',
+      'Click "Export" and select "Konterra" format',
+      'Upload the downloaded .konterra.json file',
+    ],
+  },
   'google-csv': {
     steps: [
       'Open contacts.google.com',
@@ -83,6 +94,7 @@ export default function StepFileParse({ source, onParsed, onBack }: StepFilePars
   const [error, setError] = useState<string | null>(null)
   const [fileName, setFileName] = useState<string | null>(null)
   const [dragging, setDragging] = useState(false)
+  const konterraDataRef = useRef<KonterraExport | undefined>(undefined)
   const inputRef = useRef<HTMLInputElement>(null)
   const dragCounter = useRef(0)
 
@@ -114,8 +126,15 @@ export default function StepFileParse({ source, onParsed, onBack }: StepFilePars
       try {
         const text = reader.result as string
         let result: ParsedContact[]
+        konterraDataRef.current = undefined
 
         switch (source) {
+          case 'konterra-json': {
+            const parsed = parseKonterraJSON(text)
+            result = parsed.contacts
+            konterraDataRef.current = parsed.fullExport
+            break
+          }
           case 'google-csv':
             result = parseGoogleCSV(text)
             break
@@ -133,7 +152,9 @@ export default function StepFileParse({ source, onParsed, onBack }: StepFilePars
           return
         }
 
-        result = enrichLocationFields(result)
+        if (source !== 'konterra-json') {
+          result = enrichLocationFields(result)
+        }
         setParsed(result)
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Failed to parse file')
@@ -259,7 +280,7 @@ export default function StepFileParse({ source, onParsed, onBack }: StepFilePars
 
       <div className="flex justify-between pt-2">
         <Button variant="outline" onClick={onBack}>Back</Button>
-        <Button onClick={() => parsed && onParsed(parsed)} disabled={!parsed}>
+        <Button onClick={() => parsed && onParsed(parsed, konterraDataRef.current)} disabled={!parsed}>
           Continue
         </Button>
       </div>
