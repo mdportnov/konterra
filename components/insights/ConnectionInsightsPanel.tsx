@@ -1,16 +1,20 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Skeleton } from '@/components/ui/skeleton'
 import { GLASS } from '@/lib/constants/ui'
+import { toast } from 'sonner'
 import {
   Users, ShieldAlert, Lightbulb, ChevronDown, MapPin,
   ArrowRightLeft, Link2, Unlink, TrendingUp, TrendingDown, Minus,
   Crown, Triangle, Handshake, Globe as GlobeIcon, Star,
+  MessageSquare, X, AlarmClockOff,
 } from 'lucide-react'
 import {
   computeNetworkMetrics,
@@ -246,6 +250,90 @@ export default function ConnectionInsightsPanel({
     [contacts, connections]
   )
 
+  const [dismissed, setDismissed] = useState<Set<string>>(() => {
+    if (typeof window === 'undefined') return new Set()
+    try {
+      const stored = localStorage.getItem('konterra-dismissed-risks')
+      return stored ? new Set(JSON.parse(stored)) : new Set()
+    } catch { return new Set() }
+  })
+
+  const [snoozed, setSnoozed] = useState<Map<string, number>>(() => {
+    if (typeof window === 'undefined') return new Map()
+    try {
+      const stored = localStorage.getItem('konterra-snoozed-risks')
+      return stored ? new Map(Object.entries(JSON.parse(stored))) : new Map()
+    } catch { return new Map() }
+  })
+
+  const [quickLogContact, setQuickLogContact] = useState<Contact | null>(null)
+  const [quickLogForm, setQuickLogForm] = useState({ type: 'call', notes: '' })
+
+  const handleDismissRisk = useCallback((key: string) => {
+    const next = new Set(dismissed)
+    next.add(key)
+    setDismissed(next)
+    localStorage.setItem('konterra-dismissed-risks', JSON.stringify([...next]))
+  }, [dismissed])
+
+  const handleSnoozeRisk = useCallback((key: string) => {
+    const next = new Map(snoozed)
+    next.set(key, Date.now() + 30 * 86400000)
+    setSnoozed(next)
+    localStorage.setItem('konterra-snoozed-risks', JSON.stringify(Object.fromEntries(next)))
+    toast.success('Snoozed for 30 days')
+  }, [snoozed])
+
+  const handleQuickLogFromRisk = useCallback((contact: Contact) => {
+    setQuickLogContact(contact)
+    setQuickLogForm({ type: 'call', notes: '' })
+  }, [])
+
+  const submitQuickLog = useCallback(async () => {
+    if (!quickLogContact) return
+    try {
+      const res = await fetch(`/api/contacts/${quickLogContact.id}/interactions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: quickLogForm.type, notes: quickLogForm.notes || null, date: new Date().toISOString() }),
+      })
+      if (res.ok) {
+        toast.success('Interaction logged')
+        setQuickLogContact(null)
+      }
+    } catch { toast.error('Failed to log interaction') }
+  }, [quickLogContact, quickLogForm])
+
+  const handleIntroduce = useCallback(async (suggestion: IntroductionSuggestion) => {
+    try {
+      const res = await fetch('/api/introductions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contactAId: suggestion.contactA.id,
+          contactBId: suggestion.contactB.id,
+          initiatedBy: 'self',
+          status: 'planned',
+        }),
+      })
+      if (res.ok) toast.success('Introduction planned')
+      else {
+        const body = await res.json().catch(() => ({}))
+        toast.error(body.error || 'Failed to create introduction')
+      }
+    } catch { toast.error('Failed to create introduction') }
+  }, [])
+
+  const now = Date.now()
+  const filteredRisks = useMemo(() =>
+    risks.filter((r) => {
+      const key = `${r.contact.id}-${r.type}`
+      if (dismissed.has(key)) return false
+      const snoozeUntil = snoozed.get(key)
+      if (snoozeUntil && snoozeUntil > now) return false
+      return true
+    }), [risks, dismissed, snoozed, now])
+
   if (loading) return <LoadingSkeleton />
 
   if (contacts.length === 0) {
@@ -262,7 +350,7 @@ export default function ConnectionInsightsPanel({
 
   const maxTypeCount = typeBreakdown.length > 0 ? typeBreakdown[0].count : 1
   const maxStrengthCount = Math.max(...strengthDist.map((s) => s.count), 1)
-  const highRisks = risks.filter((r) => r.severity === 'high').length
+  const highRisks = filteredRisks.filter((r) => r.severity === 'high').length
 
   return (
     <ScrollArea className="h-full">
@@ -485,6 +573,7 @@ export default function ConnectionInsightsPanel({
                   key={i}
                   suggestion={suggestion}
                   onContactClick={onContactClick}
+                  onIntroduce={handleIntroduce}
                 />
               ))}
             </div>
@@ -493,13 +582,33 @@ export default function ConnectionInsightsPanel({
 
         <Separator className="bg-border" />
 
-        {risks.length > 0 && (
+        {filteredRisks.length > 0 && (
           <Section title="Risk Alerts" icon={ShieldAlert} badge={highRisks > 0 ? highRisks : undefined}>
             <div className="space-y-1.5">
-              {risks.slice(0, 8).map((risk, i) => (
-                <RiskCard key={i} risk={risk} onContactClick={onContactClick} />
+              {filteredRisks.slice(0, 8).map((risk, i) => (
+                <RiskCard
+                  key={i}
+                  risk={risk}
+                  onContactClick={onContactClick}
+                  onDismiss={handleDismissRisk}
+                  onSnooze={handleSnoozeRisk}
+                  onQuickLog={handleQuickLogFromRisk}
+                />
               ))}
             </div>
+            {quickLogContact && (
+              <div className="mt-2 p-2 rounded-lg bg-accent/50 border border-border space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-medium text-foreground">Log interaction with {quickLogContact.name}</span>
+                  <button onClick={() => setQuickLogContact(null)} className="text-muted-foreground/40 hover:text-foreground cursor-pointer"><X className="h-3 w-3" /></button>
+                </div>
+                <select value={quickLogForm.type} onChange={(e) => setQuickLogForm((p) => ({ ...p, type: e.target.value }))} className="w-full h-6 text-[10px] rounded border border-input bg-muted/50 px-1 text-foreground cursor-pointer">
+                  {(['meeting', 'call', 'message', 'email', 'event', 'note'] as const).map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
+                <Input value={quickLogForm.notes} onChange={(e) => setQuickLogForm((p) => ({ ...p, notes: e.target.value }))} placeholder="Notes..." className="h-6 text-[10px] bg-muted/50" />
+                <Button size="sm" className="h-6 text-[10px] w-full bg-orange-500 hover:bg-orange-600 text-white" onClick={submitQuickLog}>Log</Button>
+              </div>
+            )}
           </Section>
         )}
 
@@ -617,9 +726,10 @@ function ClusterCard({ cluster, onContactClick }: {
   )
 }
 
-function IntroductionCard({ suggestion, onContactClick }: {
+function IntroductionCard({ suggestion, onContactClick, onIntroduce }: {
   suggestion: IntroductionSuggestion
   onContactClick: (contact: Contact) => void
+  onIntroduce?: (suggestion: IntroductionSuggestion) => void
 }) {
   return (
     <div className={`${GLASS.control} rounded-lg p-2.5 space-y-1.5`}>
@@ -650,40 +760,67 @@ function IntroductionCard({ suggestion, onContactClick }: {
           <span className="text-xs text-foreground font-medium truncate">{suggestion.contactB.name}</span>
         </button>
       </div>
-      <div className="flex flex-wrap gap-1">
-        {suggestion.reasons.map((reason, i) => (
-          <Badge key={i} variant="outline" className="text-[9px] px-1.5 py-0 border-green-500/20 text-green-600 dark:text-green-400">
-            {reason}
-          </Badge>
-        ))}
+      <div className="flex items-center gap-1">
+        <div className="flex flex-wrap gap-1 flex-1">
+          {suggestion.reasons.map((reason, i) => (
+            <Badge key={i} variant="outline" className="text-[9px] px-1.5 py-0 border-green-500/20 text-green-600 dark:text-green-400">
+              {reason}
+            </Badge>
+          ))}
+        </div>
+        {onIntroduce && (
+          <button
+            onClick={() => onIntroduce(suggestion)}
+            className="text-[9px] px-1.5 py-0.5 rounded bg-green-500/10 hover:bg-green-500/20 text-green-600 dark:text-green-400 cursor-pointer transition-colors shrink-0"
+          >
+            Introduce
+          </button>
+        )}
       </div>
     </div>
   )
 }
 
-function RiskCard({ risk, onContactClick }: {
+function RiskCard({ risk, onContactClick, onDismiss, onSnooze, onQuickLog }: {
   risk: RiskAlert
   onContactClick: (contact: Contact) => void
+  onDismiss?: (key: string) => void
+  onSnooze?: (key: string) => void
+  onQuickLog?: (contact: Contact) => void
 }) {
   const style = SEVERITY_STYLES[risk.severity]
+  const key = `${risk.contact.id}-${risk.type}`
   return (
-    <button
-      onClick={() => onContactClick(risk.contact)}
-      className={`w-full text-left p-2.5 rounded-lg border ${style.border} ${style.bg} hover:brightness-110 transition-all focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring`}
-    >
-      <div className="flex items-start gap-2">
-        <div className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${style.dot}`} />
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs font-medium text-foreground">{risk.contact.name}</span>
-            <Badge variant="outline" className={`text-[9px] px-1 py-0 ${style.text} border-current/20`}>
-              {risk.severity}
-            </Badge>
+    <div className={`p-2.5 rounded-lg border ${style.border} ${style.bg} transition-all`}>
+      <button
+        onClick={() => onContactClick(risk.contact)}
+        className="w-full text-left focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+      >
+        <div className="flex items-start gap-2">
+          <div className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${style.dot}`} />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-medium text-foreground">{risk.contact.name}</span>
+              <Badge variant="outline" className={`text-[9px] px-1 py-0 ${style.text} border-current/20`}>
+                {risk.severity}
+              </Badge>
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-0.5">{risk.description}</p>
           </div>
-          <p className="text-[10px] text-muted-foreground mt-0.5">{risk.description}</p>
         </div>
+      </button>
+      <div className="flex gap-1 mt-1.5 ml-3.5">
+        {onQuickLog && (
+          <button onClick={() => onQuickLog(risk.contact)} className="text-[9px] px-1.5 py-0.5 rounded bg-orange-500/10 hover:bg-orange-500/20 text-orange-500 cursor-pointer transition-colors">Reach out</button>
+        )}
+        {onSnooze && (
+          <button onClick={() => onSnooze(key)} className="text-[9px] px-1.5 py-0.5 rounded bg-muted hover:bg-accent text-muted-foreground cursor-pointer transition-colors">Snooze 30d</button>
+        )}
+        {onDismiss && (
+          <button onClick={() => onDismiss(key)} className="text-[9px] px-1.5 py-0.5 rounded bg-muted hover:bg-accent text-muted-foreground cursor-pointer transition-colors">Dismiss</button>
+        )}
       </div>
-    </button>
+    </div>
   )
 }
 

@@ -9,6 +9,7 @@ import GlobeFilters from '@/components/globe/GlobeFilters'
 import ContactEditPanel from '@/components/globe/ContactEditPanel'
 import SettingsPanel from '@/components/globe/SettingsPanel'
 import ImportDialog from '@/components/import/ImportDialog'
+import WelcomeWizard from '@/components/onboarding/WelcomeWizard'
 import DuplicatesDialog from '@/components/dedup/DuplicatesDialog'
 import ExportDialog from '@/components/export/ExportDialog'
 import ConnectionInsightsPanel from '@/components/insights/ConnectionInsightsPanel'
@@ -23,6 +24,7 @@ import { useContactFilters } from '@/hooks/use-contact-filters'
 import { usePanelNavigation } from '@/hooks/use-panel-navigation'
 import { ChevronRight } from 'lucide-react'
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
+import { useHotkey } from '@/hooks/use-hotkey'
 
 const GlobeCanvas = dynamic(() => import('@/components/globe/GlobeCanvas'), { ssr: false })
 
@@ -123,6 +125,11 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
     return map
   }, [data.contacts, data.countryConnections])
 
+  const addContactCb = useCallback(() => nav.handleAddContact(), [nav.handleAddContact])
+  const openInsightsCb = useCallback(() => nav.handleOpenInsights(), [nav.handleOpenInsights])
+  useHotkey('n', addContactCb, { meta: true })
+  useHotkey('i', openInsightsCb, { meta: true })
+
   const showDashboard = !isMobile || mobileView === 'dashboard'
   const showGlobe = !isMobile || mobileView === 'globe'
 
@@ -136,6 +143,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
     onAddContact: nav.handleAddContact,
     onEditContact: nav.handleEditContact,
     onDeleteContact: handleDeleteContact,
+    onReloadContacts: data.reloadContacts,
     connectedContacts: nav.connectedContacts,
     onConnectedContactClick: nav.handleConnectedContactClick,
     allContacts: data.contacts,
@@ -174,6 +182,14 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
             </div>
           </div>
         </div>
+      )}
+
+      {!data.loading && data.contacts.length === 0 && (
+        <WelcomeWizard
+          onAddContact={nav.handleAddContact}
+          onOpenImport={() => setImportDialogOpen(true)}
+          onComplete={data.reloadContacts}
+        />
       )}
 
       <ContactEditPanel

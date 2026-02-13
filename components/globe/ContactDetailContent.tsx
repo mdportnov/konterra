@@ -26,7 +26,7 @@ import { toast } from 'sonner'
 import { StarRating } from '@/components/ui/star-rating'
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
 import { RATING_LABELS } from '@/lib/constants/rating'
-import { trajectoryIcon, trajectoryColor, computeTrajectory, computeRelationshipStrength } from '@/lib/metrics'
+import { trajectoryIcon, trajectoryColor, computeTrajectory, computeRelationshipStrength, computeProfileCompleteness } from '@/lib/metrics'
 import { fetchContactInteractions, fetchContactConnections, fetchContactFavors, fetchContactCountryConnections } from '@/lib/api'
 import type { Contact, Interaction, ContactConnection, ContactCountryConnection, Favor } from '@/lib/db/schema'
 import type { ConnectedContact } from '@/components/globe/ContactDetail'
@@ -35,6 +35,7 @@ export interface ContactDetailContentProps {
   contact: Contact
   onEdit: (contact: Contact) => void
   onDelete?: (contactId: string) => void
+  onReloadContacts?: () => void
   onBack?: () => void
   onClose?: () => void
   connectedContacts?: ConnectedContact[]
@@ -67,6 +68,7 @@ export default function ContactDetailContent({
   contact,
   onEdit,
   onDelete,
+  onReloadContacts,
   onBack,
   onClose,
   connectedContacts = [],
@@ -75,7 +77,6 @@ export default function ContactDetailContent({
   onCountryConnectionsChange,
 }: ContactDetailContentProps) {
   const [confirmDelete, setConfirmDelete] = useState(false)
-  const [deleting, setDeleting] = useState(false)
   const [interactions, setInteractions] = useState<Interaction[]>([])
   const [loadingInteractions, setLoadingInteractions] = useState(false)
   const [showAddInteraction, setShowAddInteraction] = useState(false)
@@ -97,6 +98,10 @@ export default function ContactDetailContent({
   const [newCountryTie, setNewCountryTie] = useState({ country: '', notes: '' })
   const [savingCountryTie, setSavingCountryTie] = useState(false)
   const [showAllInteractions, setShowAllInteractions] = useState(false)
+  const [editingInteraction, setEditingInteraction] = useState<string | null>(null)
+  const [editInteractionData, setEditInteractionData] = useState({ type: '', notes: '', date: '' })
+  const [editingCountryTie, setEditingCountryTie] = useState<string | null>(null)
+  const [editCountryTieNotes, setEditCountryTieNotes] = useState('')
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({ timeline: false, connections: false, favors: false, countryTies: false, profile: false })
   const abortRef = useRef<AbortController | null>(null)
 
@@ -145,22 +150,30 @@ export default function ContactDetailContent({
     .toUpperCase()
     .slice(0, 2)
 
-  const handleDelete = async () => {
-    setDeleting(true)
-    try {
-      const res = await fetch(`/api/contacts/${contact.id}`, { method: 'DELETE' })
-      if (res.ok) {
-        toast.success('Contact deleted')
-        onDelete?.(contact.id)
-      } else {
+  const handleDelete = () => {
+    setConfirmDelete(false)
+    const contactId = contact.id
+    onDelete?.(contactId)
+
+    let cancelled = false
+    const timer = setTimeout(() => {
+      if (cancelled) return
+      fetch(`/api/contacts/${contactId}`, { method: 'DELETE' }).catch(() =>
         toast.error('Failed to delete contact')
-      }
-    } catch {
-      toast.error('Failed to delete contact')
-    } finally {
-      setDeleting(false)
-      setConfirmDelete(false)
-    }
+      )
+    }, 5000)
+
+    toast('Contact deleted', {
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          cancelled = true
+          clearTimeout(timer)
+          onReloadContacts?.()
+        },
+      },
+      duration: 5000,
+    })
   }
 
   const handleAddInteraction = async () => {
@@ -255,21 +268,227 @@ export default function ContactDetailContent({
     }
   }
 
-  const handleDeleteCountryTie = async (connectionId: string) => {
-    try {
-      const res = await fetch(`/api/contacts/${contact.id}/country-connections`, {
+  const handleDeleteCountryTie = (connectionId: string) => {
+    const removed = countryTies.find((t) => t.id === connectionId)
+    if (!removed) return
+    const updated = countryTies.filter((t) => t.id !== connectionId)
+    setCountryTies(updated)
+    onCountryConnectionsChange?.(contact.id, updated)
+
+    let cancelled = false
+    const timer = setTimeout(() => {
+      if (cancelled) return
+      fetch(`/api/contacts/${contact.id}/country-connections`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ connectionId }),
+      }).catch(() => {
+        toast.error('Failed to remove country tie')
+        const restored = [...updated, removed]
+        setCountryTies(restored)
+        onCountryConnectionsChange?.(contact.id, restored)
+      })
+    }, 5000)
+
+    toast('Country tie removed', {
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          cancelled = true
+          clearTimeout(timer)
+          const restored = [...updated, removed]
+          setCountryTies(restored)
+          onCountryConnectionsChange?.(contact.id, restored)
+        },
+      },
+      duration: 5000,
+    })
+  }
+
+  const handleEditInteraction = async (interactionId: string) => {
+    try {
+      const res = await fetch(`/api/contacts/${contact.id}/interactions`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          interactionId,
+          type: editInteractionData.type,
+          date: new Date(editInteractionData.date + 'T12:00:00').toISOString(),
+          notes: editInteractionData.notes || null,
+        }),
       })
       if (res.ok) {
-        const updated = countryTies.filter((t) => t.id !== connectionId)
-        setCountryTies(updated)
-        toast.success('Country tie removed')
-        onCountryConnectionsChange?.(contact.id, updated)
+        const updated = await res.json()
+        setInteractions((prev) => prev.map((i) => (i.id === interactionId ? updated : i)))
+        setEditingInteraction(null)
+        toast.success('Interaction updated')
       }
     } catch {
-      toast.error('Failed to remove country tie')
+      toast.error('Failed to update interaction')
+    }
+  }
+
+  const handleDeleteInteraction = (interactionId: string) => {
+    const removed = interactions.find((i) => i.id === interactionId)
+    if (!removed) return
+    setInteractions((prev) => prev.filter((i) => i.id !== interactionId))
+
+    let cancelled = false
+    const timer = setTimeout(() => {
+      if (cancelled) return
+      fetch(`/api/contacts/${contact.id}/interactions`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ interactionId }),
+      }).catch(() => {
+        toast.error('Failed to delete interaction')
+        setInteractions((prev) => [removed, ...prev])
+      })
+    }, 5000)
+
+    toast('Interaction deleted', {
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          cancelled = true
+          clearTimeout(timer)
+          setInteractions((prev) => [removed, ...prev].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()))
+        },
+      },
+      duration: 5000,
+    })
+  }
+
+  const handleCycleFavorStatus = async (favor: Favor) => {
+    const cycle: Record<string, string> = { active: 'resolved', resolved: 'repaid', repaid: 'active', expired: 'active' }
+    const nextStatus = cycle[favor.status] || 'resolved'
+    try {
+      const res = await fetch(`/api/contacts/${contact.id}/favors`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ favorId: favor.id, status: nextStatus }),
+      })
+      if (res.ok) {
+        const updated = await res.json()
+        setFavorsList((prev) => prev.map((f) => (f.id === favor.id ? updated : f)))
+      }
+    } catch {
+      toast.error('Failed to update favor')
+    }
+  }
+
+  const handleDeleteFavor = (favorId: string) => {
+    const removed = favorsList.find((f) => f.id === favorId)
+    if (!removed) return
+    setFavorsList((prev) => prev.filter((f) => f.id !== favorId))
+
+    let cancelled = false
+    const timer = setTimeout(() => {
+      if (cancelled) return
+      fetch(`/api/contacts/${contact.id}/favors`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ favorId }),
+      }).catch(() => {
+        toast.error('Failed to delete favor')
+        setFavorsList((prev) => [removed, ...prev])
+      })
+    }, 5000)
+
+    toast('Favor deleted', {
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          cancelled = true
+          clearTimeout(timer)
+          setFavorsList((prev) => [removed, ...prev])
+        },
+      },
+      duration: 5000,
+    })
+  }
+
+  const handleDeleteConnection = (connectionId: string) => {
+    const removed = connections.find((c) => c.id === connectionId)
+    if (!removed) return
+    setConnections((prev) => prev.filter((c) => c.id !== connectionId))
+
+    let cancelled = false
+    const timer = setTimeout(() => {
+      if (cancelled) return
+      fetch(`/api/contacts/${contact.id}/connections`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ connectionId }),
+      }).catch(() => {
+        toast.error('Failed to remove connection')
+        setConnections((prev) => [...prev, removed])
+      })
+    }, 5000)
+
+    toast('Connection removed', {
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          cancelled = true
+          clearTimeout(timer)
+          setConnections((prev) => [...prev, removed])
+        },
+      },
+      duration: 5000,
+    })
+  }
+
+  const handleUpdateCountryTieNotes = async (tieId: string) => {
+    try {
+      const res = await fetch(`/api/contacts/${contact.id}/country-connections`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ connectionId: tieId, notes: editCountryTieNotes || null }),
+      })
+      if (res.ok) {
+        const updated = await res.json()
+        const newTies = countryTies.map((t) => (t.id === tieId ? updated : t))
+        setCountryTies(newTies)
+        setEditingCountryTie(null)
+        toast.success('Notes updated')
+        onCountryConnectionsChange?.(contact.id, newTies)
+      }
+    } catch {
+      toast.error('Failed to update notes')
+    }
+  }
+
+  const [showFollowUpPicker, setShowFollowUpPicker] = useState(false)
+
+  const handleSetFollowUp = async (dateStr: string) => {
+    try {
+      const res = await fetch(`/api/contacts/${contact.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nextFollowUp: new Date(dateStr + 'T12:00:00').toISOString() }),
+      })
+      if (res.ok) {
+        toast.success('Follow-up scheduled')
+        setShowFollowUpPicker(false)
+      }
+    } catch {
+      toast.error('Failed to schedule follow-up')
+    }
+  }
+
+  const handleSnoozeFollowUp = async (days: number) => {
+    const newDate = new Date()
+    newDate.setDate(newDate.getDate() + days)
+    try {
+      const res = await fetch(`/api/contacts/${contact.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nextFollowUp: newDate.toISOString() }),
+      })
+      if (res.ok) toast.success(`Follow-up snoozed ${days} days`)
+    } catch {
+      toast.error('Failed to snooze follow-up')
     }
   }
 
@@ -279,6 +498,7 @@ export default function ContactDetailContent({
   const receivedCount = favorsList.filter((f) => f.direction === 'received').length
   const favorNet = givenCount - receivedCount
 
+  const completeness = computeProfileCompleteness(contact)
   const otherContacts = allContacts.filter((c) => c.id !== contact.id)
 
   const getConnectionContactName = (conn: ContactConnection) => {
@@ -351,8 +571,8 @@ export default function ContactDetailContent({
             </DialogHeader>
             <DialogFooter>
               <Button variant="ghost" onClick={() => setConfirmDelete(false)}>Cancel</Button>
-              <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
-                {deleting ? 'Deleting...' : 'Delete'}
+              <Button variant="destructive" onClick={handleDelete}>
+                Delete
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -370,12 +590,24 @@ export default function ContactDetailContent({
       </div>
 
       <div className="flex items-end gap-4 mb-4 mt-4">
-        <Avatar className="h-20 w-20 border-2 border-border shadow-lg">
-          <AvatarImage src={contact.photo || undefined} />
-          <AvatarFallback className="text-xl bg-orange-500/20 text-orange-600 dark:text-orange-300">
-            {initials}
-          </AvatarFallback>
-        </Avatar>
+        <div className="relative">
+          <svg className="absolute -inset-1 h-[88px] w-[88px]" viewBox="0 0 36 36">
+            <circle cx="18" cy="18" r="16" fill="none" stroke="currentColor" className="text-border" strokeWidth="2" />
+            <circle
+              cx="18" cy="18" r="16" fill="none"
+              className={completeness.percent >= 80 ? 'text-green-500' : completeness.percent >= 50 ? 'text-orange-500' : 'text-red-400'}
+              strokeWidth="2" strokeLinecap="round"
+              strokeDasharray={`${completeness.percent} ${100 - completeness.percent}`}
+              strokeDashoffset="25"
+            />
+          </svg>
+          <Avatar className="h-20 w-20 border-2 border-border shadow-lg">
+            <AvatarImage src={contact.photo || undefined} />
+            <AvatarFallback className="text-xl bg-orange-500/20 text-orange-600 dark:text-orange-300">
+              {initials}
+            </AvatarFallback>
+          </Avatar>
+        </div>
         <div className="pb-1">
           <div className="flex items-center gap-2">
             <h2 className="text-xl font-semibold text-foreground">{contact.name}</h2>
@@ -425,6 +657,42 @@ export default function ContactDetailContent({
           </div>
         </div>
       </div>
+
+      <div className="flex items-center gap-2 mb-3">
+        {contact.nextFollowUp && (
+          <div className="flex items-center gap-1.5 text-[11px]">
+            <Clock className={`h-3 w-3 ${new Date(contact.nextFollowUp).getTime() < Date.now() ? 'text-red-500' : 'text-amber-500'}`} />
+            <span className="text-muted-foreground">
+              Follow-up {new Date(contact.nextFollowUp).getTime() < Date.now() ? 'overdue' : new Date(contact.nextFollowUp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+            </span>
+            <button onClick={() => handleSnoozeFollowUp(7)} className="text-[10px] px-1.5 py-0.5 rounded bg-muted hover:bg-accent text-muted-foreground cursor-pointer transition-colors">+7d</button>
+          </div>
+        )}
+        <button
+          onClick={() => setShowFollowUpPicker(!showFollowUpPicker)}
+          className="text-[10px] px-1.5 py-0.5 rounded bg-orange-500/10 hover:bg-orange-500/20 text-orange-600 dark:text-orange-300 cursor-pointer transition-colors ml-auto"
+        >
+          {contact.nextFollowUp ? 'Reschedule' : 'Schedule follow-up'}
+        </button>
+      </div>
+      {showFollowUpPicker && (
+        <div className="mb-3 flex items-center gap-2">
+          <input
+            type="date"
+            min={new Date().toISOString().slice(0, 10)}
+            className="h-7 text-xs rounded-md border border-input bg-muted/50 px-2 text-foreground"
+            onChange={(e) => { if (e.target.value) handleSetFollowUp(e.target.value) }}
+          />
+          <div className="flex gap-1">
+            {[3, 7, 14, 30].map((d) => (
+              <button key={d} onClick={() => handleSnoozeFollowUp(d)} className="text-[10px] px-1.5 py-0.5 rounded bg-muted hover:bg-accent text-muted-foreground cursor-pointer transition-colors">
+                {d}d
+              </button>
+            ))}
+          </div>
+          <button onClick={() => setShowFollowUpPicker(false)} className="text-muted-foreground/40 hover:text-foreground cursor-pointer ml-auto"><X className="h-3 w-3" /></button>
+        </div>
+      )}
 
       <div className="space-y-4">
         {(contact.rating || contact.relationshipType || contact.metAt) && (
@@ -571,6 +839,47 @@ export default function ContactDetailContent({
           </div>
         )}
 
+        {(contact.personalInterests && contact.personalInterests.length > 0) && (
+          <div className="space-y-1">
+            <span className="text-[10px] text-muted-foreground/50 uppercase tracking-wider">Interests</span>
+            <div className="flex flex-wrap gap-1">
+              {contact.personalInterests.map((item) => (
+                <Badge key={item} className="text-[10px] bg-sky-500/15 text-sky-600 dark:text-sky-300 border-sky-500/20">{item}</Badge>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {(contact.professionalGoals && contact.professionalGoals.length > 0) && (
+          <div className="space-y-1">
+            <span className="text-[10px] text-muted-foreground/50 uppercase tracking-wider">Goals</span>
+            <div className="flex flex-wrap gap-1">
+              {contact.professionalGoals.map((item) => (
+                <Badge key={item} className="text-[10px] bg-green-500/15 text-green-600 dark:text-green-300 border-green-500/20">{item}</Badge>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {(contact.painPoints && contact.painPoints.length > 0) && (
+          <div className="space-y-1">
+            <span className="text-[10px] text-muted-foreground/50 uppercase tracking-wider">Pain Points</span>
+            <div className="flex flex-wrap gap-1">
+              {contact.painPoints.map((item) => (
+                <Badge key={item} className="text-[10px] bg-red-500/15 text-red-600 dark:text-red-300 border-red-500/20">{item}</Badge>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {!(contact.personalInterests?.length || contact.professionalGoals?.length || contact.painPoints?.length) && (
+          <div className="flex flex-wrap gap-1">
+            <button onClick={() => onEdit(contact)} className="text-[10px] px-1.5 py-0.5 rounded border border-dashed border-sky-500/20 text-sky-500/50 hover:text-sky-500 hover:border-sky-500/40 transition-colors cursor-pointer">+ interests</button>
+            <button onClick={() => onEdit(contact)} className="text-[10px] px-1.5 py-0.5 rounded border border-dashed border-green-500/20 text-green-500/50 hover:text-green-500 hover:border-green-500/40 transition-colors cursor-pointer">+ goals</button>
+            <button onClick={() => onEdit(contact)} className="text-[10px] px-1.5 py-0.5 rounded border border-dashed border-red-500/20 text-red-500/50 hover:text-red-500 hover:border-red-500/40 transition-colors cursor-pointer">+ pain points</button>
+          </div>
+        )}
+
         {(contact.motivations && contact.motivations.length > 0) && (
           <div className="flex flex-wrap gap-1">
             {contact.motivations.map((m) => (
@@ -579,6 +888,25 @@ export default function ContactDetailContent({
               </Badge>
             ))}
           </div>
+        )}
+
+        {completeness.percent < 80 && (
+          <button
+            onClick={() => onEdit(contact)}
+            className="w-full text-left flex items-center gap-2 p-2 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer"
+          >
+            <div className="relative h-8 w-8 shrink-0">
+              <svg viewBox="0 0 36 36" className="h-8 w-8 -rotate-90">
+                <circle cx="18" cy="18" r="14" fill="none" className="text-border" stroke="currentColor" strokeWidth="3" />
+                <circle cx="18" cy="18" r="14" fill="none" className={completeness.percent >= 50 ? 'text-orange-500' : 'text-red-400'} stroke="currentColor" strokeWidth="3" strokeDasharray={`${completeness.percent * 0.88} ${88 - completeness.percent * 0.88}`} />
+              </svg>
+              <span className="absolute inset-0 flex items-center justify-center text-[8px] font-bold text-muted-foreground">{completeness.percent}%</span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[11px] font-medium text-foreground">Improve profile</p>
+              <p className="text-[10px] text-muted-foreground/60 truncate">Missing: {completeness.missing.slice(0, 3).join(', ')}</p>
+            </div>
+          </button>
         )}
 
         {contact.secondaryLocations && contact.secondaryLocations.length > 0 && (
@@ -693,8 +1021,38 @@ export default function ContactDetailContent({
           <div className="space-y-1">
             {(showAllInteractions ? interactions : interactions.slice(0, 10)).map((item) => {
               const Icon = INTERACTION_ICONS[item.type] || MessageSquare
+              if (editingInteraction === item.id) {
+                return (
+                  <div key={item.id} className="p-2 rounded-lg bg-accent/50 border border-border space-y-2">
+                    <select
+                      value={editInteractionData.type}
+                      onChange={(e) => setEditInteractionData((p) => ({ ...p, type: e.target.value }))}
+                      className="w-full h-7 text-xs rounded-md border border-input bg-muted/50 px-2 text-foreground cursor-pointer"
+                    >
+                      {INTERACTION_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                    <input
+                      type="date"
+                      value={editInteractionData.date}
+                      max={new Date().toISOString().slice(0, 10)}
+                      onChange={(e) => setEditInteractionData((p) => ({ ...p, date: e.target.value }))}
+                      className="w-full h-7 text-xs rounded-md border border-input bg-muted/50 px-2 text-foreground"
+                    />
+                    <Input
+                      value={editInteractionData.notes}
+                      onChange={(e) => setEditInteractionData((p) => ({ ...p, notes: e.target.value }))}
+                      placeholder="Notes..."
+                      className="h-7 text-xs bg-muted/50"
+                    />
+                    <div className="flex gap-1">
+                      <Button size="sm" className="h-6 text-[10px] bg-orange-500 hover:bg-orange-600 text-white" onClick={() => handleEditInteraction(item.id)}>Save</Button>
+                      <Button size="sm" variant="ghost" className="h-6 text-[10px]" onClick={() => setEditingInteraction(null)}>Cancel</Button>
+                    </div>
+                  </div>
+                )
+              }
               return (
-                <div key={item.id} className="flex items-start gap-2 py-1">
+                <div key={item.id} className="flex items-start gap-2 py-1 group">
                   <div className="rounded-md p-1 shrink-0 bg-muted text-muted-foreground">
                     <Icon className="h-3 w-3" />
                   </div>
@@ -704,6 +1062,27 @@ export default function ContactDetailContent({
                       <span className="text-[10px] text-muted-foreground/60">{relativeDate(item.date)}</span>
                     </div>
                     {item.notes && <p className="text-[10px] text-muted-foreground truncate">{item.notes}</p>}
+                  </div>
+                  <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                    <button
+                      onClick={() => {
+                        setEditingInteraction(item.id)
+                        setEditInteractionData({
+                          type: item.type,
+                          notes: item.notes || '',
+                          date: new Date(item.date).toISOString().slice(0, 10),
+                        })
+                      }}
+                      className="text-muted-foreground/40 hover:text-foreground transition-colors cursor-pointer"
+                    >
+                      <Pencil className="h-3 w-3" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteInteraction(item.id)}
+                      className="text-muted-foreground/40 hover:text-red-500 transition-colors cursor-pointer"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </button>
                   </div>
                 </div>
               )
@@ -794,7 +1173,7 @@ export default function ContactDetailContent({
           ) : (
           <div className="space-y-1">
             {connections.map((conn) => (
-              <div key={conn.id} className="flex items-center gap-2 py-1">
+              <div key={conn.id} className="flex items-center gap-2 py-1 group">
                 <Link2 className="h-3 w-3 text-muted-foreground/60 shrink-0" />
                 <span className="text-[11px] text-foreground font-medium">{getConnectionContactName(conn)}</span>
                 <Badge className="text-[9px] bg-muted text-muted-foreground border-border">
@@ -805,6 +1184,12 @@ export default function ContactDetailContent({
                     <div key={i} className={`w-1.5 h-1.5 rounded-full ${i < (conn.strength || 0) ? 'bg-orange-500' : 'bg-border'}`} />
                   ))}
                 </div>
+                <button
+                  onClick={() => handleDeleteConnection(conn.id)}
+                  className="opacity-0 group-hover:opacity-100 text-muted-foreground/40 hover:text-red-500 transition-opacity shrink-0 cursor-pointer"
+                >
+                  <X className="h-3 w-3" />
+                </button>
               </div>
             ))}
             {connections.length === 0 && (
@@ -871,13 +1256,33 @@ export default function ContactDetailContent({
               <div key={tie.id} className="flex items-center gap-2 py-1 group">
                 <Globe className="h-3 w-3 text-purple-500/60 shrink-0" />
                 <span className="text-[11px] text-foreground font-medium">{tie.country}</span>
-                {tie.notes && <span className="text-[10px] text-muted-foreground truncate flex-1">{tie.notes}</span>}
+                {editingCountryTie === tie.id ? (
+                  <div className="flex-1 flex gap-1">
+                    <Input
+                      value={editCountryTieNotes}
+                      onChange={(e) => setEditCountryTieNotes(e.target.value)}
+                      placeholder="Notes..."
+                      className="h-6 text-[10px] bg-muted/50 flex-1"
+                      autoFocus
+                      onKeyDown={(e) => { if (e.key === 'Enter') handleUpdateCountryTieNotes(tie.id); if (e.key === 'Escape') setEditingCountryTie(null) }}
+                    />
+                    <Button size="sm" className="h-6 text-[9px] px-1.5 bg-purple-500 hover:bg-purple-600 text-white" onClick={() => handleUpdateCountryTieNotes(tie.id)}>Save</Button>
+                    <Button size="sm" variant="ghost" className="h-6 text-[9px] px-1.5" onClick={() => setEditingCountryTie(null)}>Cancel</Button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => { setEditingCountryTie(tie.id); setEditCountryTieNotes(tie.notes || '') }}
+                    className="text-[10px] text-muted-foreground truncate flex-1 text-left hover:text-foreground transition-colors cursor-pointer"
+                  >
+                    {tie.notes || <span className="italic text-muted-foreground/30">add notes...</span>}
+                  </button>
+                )}
                 {tie.tags && tie.tags.length > 0 && tie.tags.map((tag) => (
                   <Badge key={tag} className="text-[9px] bg-purple-500/10 text-purple-500 border-purple-500/20">{tag}</Badge>
                 ))}
                 <button
                   onClick={() => handleDeleteCountryTie(tie.id)}
-                  className="opacity-0 group-hover:opacity-100 text-muted-foreground/40 hover:text-red-500 transition-opacity ml-auto shrink-0 cursor-pointer"
+                  className="opacity-0 group-hover:opacity-100 text-muted-foreground/40 hover:text-red-500 transition-opacity shrink-0 cursor-pointer"
                 >
                   <X className="h-3 w-3" />
                 </button>
@@ -960,12 +1365,23 @@ export default function ContactDetailContent({
           ) : (
           <div className="space-y-1">
             {favorsList.map((f) => (
-              <div key={f.id} className="flex items-center gap-2 py-1">
+              <div key={f.id} className="flex items-center gap-2 py-1 group">
                 <span className={`text-xs font-medium ${f.direction === 'given' ? 'text-green-500' : 'text-red-400'}`}>
                   {f.direction === 'given' ? '+' : '-'}
                 </span>
                 <span className="text-[11px] text-foreground capitalize">{f.type}</span>
                 {f.description && <span className="text-[10px] text-muted-foreground truncate flex-1">{f.description}</span>}
+                <button
+                  onClick={() => handleCycleFavorStatus(f)}
+                  className={`text-[9px] px-1.5 py-0.5 rounded-full cursor-pointer transition-colors ${
+                    f.status === 'active' ? 'bg-blue-500/15 text-blue-500 hover:bg-blue-500/25' :
+                    f.status === 'resolved' ? 'bg-green-500/15 text-green-500 hover:bg-green-500/25' :
+                    f.status === 'repaid' ? 'bg-purple-500/15 text-purple-500 hover:bg-purple-500/25' :
+                    'bg-muted text-muted-foreground hover:bg-muted/80'
+                  }`}
+                >
+                  {f.status}
+                </button>
                 <Badge className={`text-[9px] ${
                   f.value === 'critical' ? 'bg-red-500/15 text-red-500' :
                   f.value === 'high' ? 'bg-amber-500/15 text-amber-500' :
@@ -974,6 +1390,12 @@ export default function ContactDetailContent({
                 } border-0`}>
                   {f.value}
                 </Badge>
+                <button
+                  onClick={() => handleDeleteFavor(f.id)}
+                  className="opacity-0 group-hover:opacity-100 text-muted-foreground/40 hover:text-red-500 transition-opacity shrink-0 cursor-pointer"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </button>
               </div>
             ))}
             {favorsList.length === 0 && (

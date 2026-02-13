@@ -7,13 +7,15 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
-import { Search, X, ChevronDown, ChevronLeft, Plus, Globe as GlobeIcon, Settings, Sparkles, LogOut, Star, SlidersHorizontal, ArrowUpDown, List, LayoutGrid, Rows3, CheckSquare, Square, Trash2, Tag, MapPin } from 'lucide-react'
+import { Search, X, ChevronDown, ChevronLeft, Plus, Globe as GlobeIcon, Settings, Sparkles, LogOut, Star, SlidersHorizontal, ArrowUpDown, List, LayoutGrid, Rows3, CheckSquare, Square, Trash2, Tag, MapPin, Clock, Bookmark, Save, Home } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
 import { useHotkey } from '@/hooks/use-hotkey'
 import { useSession, signOut } from 'next-auth/react'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuLabel } from '@/components/ui/dropdown-menu'
+import { useSavedViews } from '@/hooks/use-saved-views'
+import GettingStartedCard from './GettingStartedCard'
 import StatsRow from './widgets/StatsRow'
 import TopCountriesChart from './widgets/TopCountriesChart'
 import ActivityTimeline from './widgets/ActivityTimeline'
@@ -50,6 +52,7 @@ interface DashboardPanelProps {
   onAddContact: () => void
   onEditContact?: (contact: Contact) => void
   onDeleteContact?: (contactId: string) => void
+  onReloadContacts?: () => void
   connectedContacts?: ConnectedContact[]
   onConnectedContactClick?: (cc: ConnectedContact) => void
   allContacts?: Contact[]
@@ -74,6 +77,7 @@ export default function DashboardPanel({
   onAddContact,
   onEditContact,
   onDeleteContact,
+  onReloadContacts,
   connectedContacts = [],
   onConnectedContactClick,
   allContacts,
@@ -112,6 +116,38 @@ export default function DashboardPanel({
   const [bulkTagInput, setBulkTagInput] = useState('')
   const [showBulkTagInput, setShowBulkTagInput] = useState(false)
   const [bulkActionLoading, setBulkActionLoading] = useState(false)
+
+  const { views: savedViews, saveView, deleteView, loadView } = useSavedViews()
+
+  const handleSaveView = useCallback(() => {
+    const name = prompt('View name:')
+    if (!name?.trim()) return
+    saveView(name.trim(), {
+      tags: selectedTags,
+      countries: selectedCountries,
+      ratings: [...selectedRatings],
+      relTypes: selectedRelTypes,
+      sortKey,
+    })
+    toast.success(`Saved view "${name.trim()}"`)
+  }, [selectedTags, selectedCountries, selectedRatings, selectedRelTypes, sortKey, saveView])
+
+  const handleLoadView = useCallback((name: string) => {
+    const view = loadView(name)
+    if (!view) return
+    setSelectedTags(view.tags)
+    setSelectedCountries(view.countries)
+    setSelectedRatings(new Set(view.ratings))
+    setSelectedRelTypes(view.relTypes)
+    setSortKey(view.sortKey as SortKey)
+    setFiltersOpen(true)
+    toast.success(`Loaded view "${name}"`)
+  }, [loadView])
+
+  const handleDeleteView = useCallback((name: string) => {
+    deleteView(name)
+    toast.success(`Deleted view "${name}"`)
+  }, [deleteView])
 
   useEffect(() => {
     try { localStorage.setItem(VIEW_MODE_KEY, viewMode) } catch {}
@@ -262,21 +298,33 @@ export default function DashboardPanel({
     setBulkTagInput('')
   }, [])
 
-  const handleBulkDelete = useCallback(async () => {
+  const handleBulkDelete = useCallback(() => {
     if (selectedIds.size === 0) return
     const ids = [...selectedIds]
-    setBulkActionLoading(true)
-    try {
-      await bulkDeleteContacts(ids)
-      toast.success(`Deleted ${ids.length} contact${ids.length !== 1 ? 's' : ''}`)
-      onBulkDelete?.(ids)
-      exitSelectMode()
-    } catch {
-      toast.error('Failed to delete contacts')
-    } finally {
-      setBulkActionLoading(false)
-    }
-  }, [selectedIds, onBulkDelete, exitSelectMode])
+    onBulkDelete?.(ids)
+    exitSelectMode()
+
+    let cancelled = false
+    const timer = setTimeout(() => {
+      if (cancelled) return
+      bulkDeleteContacts(ids).catch(() => {
+        toast.error('Failed to delete contacts')
+        onReloadContacts?.()
+      })
+    }, 5000)
+
+    toast(`Deleted ${ids.length} contact${ids.length !== 1 ? 's' : ''}`, {
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          cancelled = true
+          clearTimeout(timer)
+          onReloadContacts?.()
+        },
+      },
+      duration: 5000,
+    })
+  }, [selectedIds, onBulkDelete, onReloadContacts, exitSelectMode])
 
   const handleBulkAddTag = useCallback(async () => {
     if (selectedIds.size === 0 || !bulkTagInput.trim()) return
@@ -337,6 +385,7 @@ export default function DashboardPanel({
           contact={selectedContact}
           onEdit={(c) => onEditContact?.(c)}
           onDelete={onDeleteContact}
+          onReloadContacts={onReloadContacts}
           onBack={onBackToList}
           connectedContacts={connectedContacts}
           onConnectedContactClick={onConnectedContactClick}
@@ -442,6 +491,19 @@ export default function DashboardPanel({
 
       <ScrollArea className="flex-1 overflow-hidden">
         <div className="p-4 md:p-5 space-y-5 md:space-y-6">
+          {(() => {
+            const selfContact = contacts.find((c) => c.isSelf)
+            return selfContact ? <SelfProfileCard contact={selfContact} onOpenSettings={onOpenSettings || (() => {})} /> : null
+          })()}
+          {contacts.length < 3 && (
+            <GettingStartedCard
+              contacts={contacts}
+              connections={connections}
+              recentInteractions={recentInteractions}
+              onAddContact={onAddContact}
+              onOpenSettings={onOpenSettings || (() => {})}
+            />
+          )}
           <StatsRow contacts={contacts} loading={contactsLoading} />
           <NetworkHealth contacts={contacts} interactions={recentInteractions} loading={contactsLoading || interactionsLoading} />
           <ReconnectAlerts contacts={contacts} onContactClick={onContactClick} loading={contactsLoading} />
@@ -523,7 +585,8 @@ export default function DashboardPanel({
             </div>
 
             <div className="space-y-2">
-              <button
+              <div className="flex items-center gap-2">
+                <button
                   onClick={() => setFiltersOpen(!filtersOpen)}
                   className="flex items-center gap-1.5 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
                 >
@@ -535,6 +598,63 @@ export default function DashboardPanel({
                     </Badge>
                   )}
                 </button>
+                {activeFilterCount > 0 && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={handleSaveView}
+                          className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          <Save className="h-3 w-3" />
+                          <span>Save view</span>
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" className="text-xs">Save current filters as a view</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
+                {savedViews.length > 0 && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors">
+                        <Bookmark className="h-3 w-3" />
+                        <span>Views</span>
+                        <Badge className="bg-muted text-muted-foreground border-border text-[9px] px-1 py-0 h-3.5 leading-none">
+                          {savedViews.length}
+                        </Badge>
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-52">
+                      <DropdownMenuLabel className="text-[10px] text-muted-foreground">Saved Views</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      {savedViews.map((v) => (
+                        <DropdownMenuItem
+                          key={v.name}
+                          className="flex items-center justify-between gap-2 text-xs"
+                          onSelect={(e) => e.preventDefault()}
+                        >
+                          <button
+                            className="flex-1 text-left truncate"
+                            onClick={() => handleLoadView(v.name)}
+                          >
+                            {v.name}
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleDeleteView(v.name)
+                            }}
+                            className="shrink-0 p-0.5 rounded text-muted-foreground/50 hover:text-red-500 transition-colors"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+              </div>
 
                 {filtersOpen && (
                   <div className="space-y-2 animate-in fade-in slide-in-from-top-1 duration-150">
@@ -1006,6 +1126,56 @@ function PaginationRow({ current, total, onChange }: { current: number; total: n
   )
 }
 
+function SelfProfileCard({ contact, onOpenSettings }: { contact: Contact; onOpenSettings: () => void }) {
+  return (
+    <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/30 border border-border">
+      <Avatar className="h-9 w-9 shrink-0">
+        <AvatarImage src={contact.photo || undefined} />
+        <AvatarFallback className="text-xs bg-orange-500/15 text-orange-500">
+          {contact.name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)}
+        </AvatarFallback>
+      </Avatar>
+      <div className="flex-1 min-w-0">
+        <p className="text-xs font-medium text-foreground truncate">{contact.name}</p>
+        <p className="text-[10px] text-muted-foreground truncate">
+          {[contact.city, contact.country].filter(Boolean).join(', ') || (
+            <button onClick={onOpenSettings} className="text-orange-500 hover:text-orange-600 transition-colors cursor-pointer">
+              Set your location
+            </button>
+          )}
+        </p>
+      </div>
+      {contact.timezone && (
+        <span className="text-[10px] text-muted-foreground/60 shrink-0">{contact.timezone}</span>
+      )}
+      {!contact.country && (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button onClick={onOpenSettings} className="text-muted-foreground/40 hover:text-foreground transition-colors cursor-pointer">
+                <Home className="h-3.5 w-3.5" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="text-xs">Set home base</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      )}
+    </div>
+  )
+}
+
+function FollowUpBadge({ contact }: { contact: Contact }) {
+  if (!contact.nextFollowUp) return null
+  const now = Date.now()
+  const followUp = new Date(contact.nextFollowUp).getTime()
+  const daysUntil = Math.ceil((followUp - now) / 86400000)
+  if (daysUntil > 3) return null
+  const isOverdue = daysUntil <= 0
+  return (
+    <Clock className={`h-3 w-3 shrink-0 ${isOverdue ? 'text-red-500' : 'text-amber-500'}`} />
+  )
+}
+
 function ContactRow({ contact, selectMode, isChecked, onSelect, onToggleSelect }: {
   contact: Contact
   selectMode: boolean
@@ -1049,6 +1219,7 @@ function ContactRow({ contact, selectMode, isChecked, onSelect, onToggleSelect }
           </p>
         )}
       </div>
+      <FollowUpBadge contact={contact} />
       {contact.rating && contact.rating > 0 && (
         <div className="flex items-center gap-0.5 shrink-0">
           <Star className="h-2.5 w-2.5 text-orange-400 fill-orange-400" />
@@ -1115,13 +1286,16 @@ function ContactCard({ contact, selectMode, isChecked, isSelected, onClick, onTo
             </p>
           )}
         </div>
-        {contact.rating && contact.rating > 0 && (
-          <div className="flex items-center gap-0.5">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <Star key={i} className={`h-2.5 w-2.5 ${i < contact.rating! ? 'text-orange-400 fill-orange-400' : 'text-muted-foreground/20'}`} />
-            ))}
-          </div>
-        )}
+        <div className="flex items-center gap-1 justify-center">
+          <FollowUpBadge contact={contact} />
+          {contact.rating && contact.rating > 0 && (
+            <div className="flex items-center gap-0.5">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Star key={i} className={`h-2.5 w-2.5 ${i < contact.rating! ? 'text-orange-400 fill-orange-400' : 'text-muted-foreground/20'}`} />
+              ))}
+            </div>
+          )}
+        </div>
         {contact.tags && contact.tags.length > 0 && (
           <div className="flex flex-wrap gap-0.5 justify-center">
             {contact.tags.slice(0, 2).map((tag) => (
@@ -1175,7 +1349,8 @@ function ContactCompactRow({ contact, selectMode, isChecked, isSelected, onClick
       <span className="text-[10px] text-muted-foreground/60 truncate text-right">
         {[contact.city, contact.country].filter(Boolean).join(', ') || '\u2014'}
       </span>
-      <span className="text-[10px] text-right w-6">
+      <span className="text-[10px] text-right w-6 flex items-center gap-0.5 justify-end">
+        <FollowUpBadge contact={contact} />
         {contact.rating && contact.rating > 0 ? (
           <span className="flex items-center gap-0.5 justify-end">
             <Star className="h-2.5 w-2.5 text-orange-400 fill-orange-400" />

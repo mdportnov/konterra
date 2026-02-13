@@ -196,6 +196,53 @@ export function trajectoryColor(trajectory: Trajectory): string {
   }
 }
 
+export function computeProfileCompleteness(contact: Contact): { percent: number; missing: string[] } {
+  const checks: { group: string; weight: number; filled: boolean }[] = [
+    { group: 'basic', weight: 5, filled: !!contact.name },
+    { group: 'basic', weight: 3, filled: !!contact.company },
+    { group: 'basic', weight: 3, filled: !!contact.role },
+    { group: 'basic', weight: 4, filled: !!contact.country },
+    { group: 'basic', weight: 3, filled: !!contact.city },
+    { group: 'basic', weight: 2, filled: !!contact.photo },
+    { group: 'contact', weight: 3, filled: !!contact.email },
+    { group: 'contact', weight: 3, filled: !!contact.phone },
+    { group: 'contact', weight: 2, filled: !!contact.preferredChannel },
+    { group: 'social', weight: 2, filled: !!contact.linkedin },
+    { group: 'social', weight: 2, filled: !!(contact.twitter || contact.telegram || contact.instagram) },
+    { group: 'relationship', weight: 3, filled: !!contact.relationshipType },
+    { group: 'relationship', weight: 3, filled: !!contact.rating && contact.rating > 0 },
+    { group: 'relationship', weight: 2, filled: !!contact.metAt },
+    { group: 'relationship', weight: 2, filled: !!contact.communicationStyle },
+    { group: 'psychology', weight: 3, filled: !!(contact.personalInterests && contact.personalInterests.length > 0) },
+    { group: 'psychology', weight: 3, filled: !!(contact.professionalGoals && contact.professionalGoals.length > 0) },
+    { group: 'psychology', weight: 2, filled: !!(contact.painPoints && contact.painPoints.length > 0) },
+    { group: 'strategic', weight: 2, filled: !!contact.influenceLevel && contact.influenceLevel > 0 },
+    { group: 'strategic', weight: 2, filled: !!contact.trustLevel && contact.trustLevel > 0 },
+    { group: 'tags', weight: 3, filled: !!(contact.tags && contact.tags.length > 0) },
+  ]
+
+  const totalWeight = checks.reduce((s, c) => s + c.weight, 0)
+  const filledWeight = checks.filter((c) => c.filled).reduce((s, c) => s + c.weight, 0)
+  const percent = Math.round((filledWeight / totalWeight) * 100)
+
+  const groupLabels: Record<string, string> = {
+    basic: 'Basic info',
+    contact: 'Contact info',
+    social: 'Social links',
+    relationship: 'Relationship details',
+    psychology: 'Interests & goals',
+    strategic: 'Strategic assessment',
+    tags: 'Tags',
+  }
+  const missingGroups = new Set<string>()
+  for (const c of checks) {
+    if (!c.filled) missingGroups.add(c.group)
+  }
+  const missing = [...missingGroups].map((g) => groupLabels[g] || g)
+
+  return { percent, missing }
+}
+
 export function upcomingBirthdays(contacts: Contact[], daysAhead: number = 7): Contact[] {
   const now = new Date()
   return contacts.filter((c) => {

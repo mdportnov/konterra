@@ -52,6 +52,8 @@ export async function POST(req: Request) {
 
   const tags: string[] | null = Array.isArray(body.tags) ? body.tags as string[] : null
 
+  const isSelf = body.isSelf === true
+
   const contact = await createContact({
     userId: session.user.id,
     name: body.name as string,
@@ -82,18 +84,22 @@ export async function POST(req: Request) {
     metDate: toDateOrNull(body.metDate),
     lastContactedAt: toDateOrNull(body.lastContactedAt),
     nextFollowUp: toDateOrNull(body.nextFollowUp),
+    timezone: toStringOrNull(body.timezone),
+    isSelf,
   })
 
-  try {
-    const selfContact = await getOrCreateSelfContact(session.user.id, session.user.name ?? 'Me')
-    await createConnection({
-      userId: session.user.id,
-      sourceContactId: selfContact.id,
-      targetContactId: contact.id,
-      connectionType: 'knows',
-    })
-  } catch (e) {
-    console.error('Auto-connect error:', e)
+  if (!isSelf) {
+    try {
+      const selfContact = await getOrCreateSelfContact(session.user.id, session.user.name ?? 'Me')
+      await createConnection({
+        userId: session.user.id,
+        sourceContactId: selfContact.id,
+        targetContactId: contact.id,
+        connectionType: 'knows',
+      })
+    } catch (e) {
+      console.error('Auto-connect error:', e)
+    }
   }
 
   return success(contact, 201)

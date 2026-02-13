@@ -155,6 +155,46 @@ export async function createInteraction(data: {
   })
 }
 
+export async function updateInteraction(id: string, contactId: string, data: Partial<typeof interactions.$inferInsert>) {
+  return db.transaction(async (tx) => {
+    const [interaction] = await tx
+      .update(interactions)
+      .set({ ...data, updatedAt: new Date() })
+      .where(and(eq(interactions.id, id), eq(interactions.contactId, contactId)))
+      .returning()
+    if (interaction && data.date) {
+      const allForContact = await tx.query.interactions.findMany({
+        where: eq(interactions.contactId, contactId),
+        orderBy: (interactions, { desc }) => [desc(interactions.date)],
+        columns: { date: true },
+      })
+      if (allForContact.length > 0) {
+        await tx
+          .update(contacts)
+          .set({ lastContactedAt: allForContact[0].date, updatedAt: new Date() })
+          .where(eq(contacts.id, contactId))
+      }
+    }
+    return interaction
+  })
+}
+
+export async function deleteInteraction(id: string, contactId: string) {
+  return db.transaction(async (tx) => {
+    await tx.delete(interactions).where(and(eq(interactions.id, id), eq(interactions.contactId, contactId)))
+    const remaining = await tx.query.interactions.findMany({
+      where: eq(interactions.contactId, contactId),
+      orderBy: (interactions, { desc }) => [desc(interactions.date)],
+      columns: { date: true },
+    })
+    const lastDate = remaining.length > 0 ? remaining[0].date : null
+    await tx
+      .update(contacts)
+      .set({ lastContactedAt: lastDate, updatedAt: new Date() })
+      .where(eq(contacts.id, contactId))
+  })
+}
+
 export async function getRecentInteractions(userId: string, limit = 15, offset = 0) {
   const rows = await db
     .select({
@@ -399,6 +439,21 @@ export async function getAllCountryConnections(userId: string) {
 
 export async function createCountryConnection(data: NewContactCountryConnection) {
   const [conn] = await db.insert(contactCountryConnections).values(data).returning()
+  return conn
+}
+
+export async function updateCountryConnection(id: string, contactId: string, userId: string, data: { notes?: string | null; tags?: string[] | null }) {
+  const [conn] = await db
+    .update(contactCountryConnections)
+    .set(data)
+    .where(
+      and(
+        eq(contactCountryConnections.id, id),
+        eq(contactCountryConnections.contactId, contactId),
+        eq(contactCountryConnections.userId, userId)
+      )
+    )
+    .returning()
   return conn
 }
 
