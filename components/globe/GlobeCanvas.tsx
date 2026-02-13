@@ -458,7 +458,7 @@ export default memo(function GlobeCanvas({
   }, [isTravelMode, trips])
 
   const travelArcs: GlobeArc[] = useMemo(() => {
-    if (!isTravelMode || trips.length === 0 || display.arcMode === 'off') return EMPTY_ARCS
+    if (!isTravelMode || trips.length === 0) return EMPTY_ARCS
     const sorted = [...trips]
       .filter((t) => t.lat != null && t.lng != null)
       .sort((a, b) => new Date(a.arrivalDate).getTime() - new Date(b.arrivalDate).getTime())
@@ -469,12 +469,12 @@ export default memo(function GlobeCanvas({
         startLng: sorted[i].lng!,
         endLat: sorted[i + 1].lat!,
         endLng: sorted[i + 1].lng!,
-        color: ['rgba(147, 197, 253, 0.3)', 'rgba(59, 130, 246, 0.7)'] as [string, string],
+        color: 'rgba(96, 165, 250, 0.6)',
         isTravel: true,
       })
     }
     return result
-  }, [isTravelMode, trips, display.arcMode])
+  }, [isTravelMode, trips])
 
   const travelCountries = useMemo(() => {
     if (!isTravelMode) return new Set<string>()
@@ -488,18 +488,18 @@ export default memo(function GlobeCanvas({
   }, [isTravelMode, travelArcs, arcs, countryArcs])
 
   const getArcStroke = useCallback((arc: object) => {
-    if ((arc as GlobeArc).isTravel) return 0.5
+    if ((arc as GlobeArc).isTravel) return 1.2
     return (arc as GlobeArc).type === 'country' ? 0.25 : 0.4
   }, [])
 
   const getArcDashLength = useCallback((arc: object) => {
-    if ((arc as GlobeArc).isTravel) return 0.4
+    if ((arc as GlobeArc).isTravel) return 1
     if ((arc as GlobeArc).type === 'country') return 0.3
     return display.arcMode === 'static' ? 1 : 0.5
   }, [display.arcMode])
 
   const getArcDashGap = useCallback((arc: object) => {
-    if ((arc as GlobeArc).isTravel) return 0.2
+    if ((arc as GlobeArc).isTravel) return 0
     if ((arc as GlobeArc).type === 'country') return 0.2
     return display.arcMode === 'static' ? 0 : 0.3
   }, [display.arcMode])
@@ -653,7 +653,7 @@ export default memo(function GlobeCanvas({
 
   const getArcColor = useCallback((arc: object) => (arc as GlobeArc).color, [])
   const getArcAnimateTime = useCallback((arc: object) => {
-    if ((arc as GlobeArc).isTravel) return 2500
+    if ((arc as GlobeArc).isTravel) return 0
     return display.arcMode === 'animated' ? 1800 : 0
   }, [display.arcMode])
 
