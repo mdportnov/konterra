@@ -27,6 +27,7 @@ export function useClickOutside(
       startPos.current = null
       if (wasDrag) return
       if (ref.current && !ref.current.contains(e.target as Node)) {
+        if ((e.target as HTMLElement).closest?.('[data-globe-panel]')) return
         handler()
       }
     }

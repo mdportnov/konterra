@@ -68,20 +68,27 @@ export function usePanelNavigation(
             setFlyTarget({ lat: c.lat, lng: c.lng, ts: Date.now() })
           }
         }
+        if (isMobile) setMobileView('dashboard')
       } else if (s.sidebarView === 'list' && s.panel === null) {
         setSelectedContact(null)
         setEditingContact(null)
+        if (isMobile) setMobileView('dashboard')
       }
       if (s.panel === 'edit' && s.contactId) {
         const c = contacts.find((x) => x.id === s.contactId)
         if (c) setEditingContact(c)
+        if (isMobile) setMobileView('globe')
       } else if (s.panel === 'edit' && s.isNew) {
         setEditingContact(null)
+        if (isMobile) setMobileView('globe')
+      }
+      if (s.panel === 'settings' || s.panel === 'insights') {
+        if (isMobile) setMobileView('globe')
       }
     }
     window.addEventListener('popstate', onPopState)
     return () => window.removeEventListener('popstate', onPopState)
-  }, [contacts])
+  }, [contacts, isMobile, setMobileView])
 
   const flyToContact = useCallback((c: Contact, fallback?: { lat: number; lng: number }) => {
     if (c.lat != null && c.lng != null) {
@@ -107,13 +114,15 @@ export function usePanelNavigation(
     setSidebarView('list')
     setSelectedContact(null)
     pushUrl('/')
-  }, [])
+    if (isMobile) setMobileView('dashboard')
+  }, [isMobile, setMobileView])
 
   const handleEditContact = useCallback((contact: Contact) => {
     setEditingContact(contact)
     setActivePanel('edit')
     pushUrl(stateToUrl('edit', 'list', contact.id))
-  }, [])
+    if (isMobile) setMobileView('globe')
+  }, [isMobile, setMobileView])
 
   const [editPrefill, setEditPrefill] = useState<Record<string, string>>({})
 
@@ -134,7 +143,8 @@ export function usePanelNavigation(
     } else {
       pushUrl('/')
     }
-  }, [selectedContact])
+    if (isMobile) setMobileView('dashboard')
+  }, [selectedContact, isMobile, setMobileView])
 
   const handleContactSaved = useCallback((saved: Contact, setContacts: React.Dispatch<React.SetStateAction<Contact[]>>) => {
     setContacts((prev) => {
@@ -151,7 +161,8 @@ export function usePanelNavigation(
     setActivePanel(null)
     setEditingContact(null)
     pushUrl(stateToUrl(null, 'detail', saved.id))
-  }, [])
+    if (isMobile) setMobileView('dashboard')
+  }, [isMobile, setMobileView])
 
   const handleDeleteContact = useCallback((contactId: string, setContacts: React.Dispatch<React.SetStateAction<Contact[]>>, setConnections: React.Dispatch<React.SetStateAction<ContactConnection[]>>, setCountryConnections?: React.Dispatch<React.SetStateAction<ContactCountryConnection[]>>) => {
     setContacts((prev) => prev.filter((c) => c.id !== contactId))
@@ -161,17 +172,24 @@ export function usePanelNavigation(
     setSidebarView('list')
     setActivePanel(null)
     pushUrl('/')
-  }, [])
+    if (isMobile) setMobileView('dashboard')
+  }, [isMobile, setMobileView])
 
   const handleOpenSettings = useCallback(() => {
     setActivePanel('settings')
     pushUrl('/settings')
-  }, [])
+    if (isMobile) setMobileView('globe')
+  }, [isMobile, setMobileView])
 
   const handleCloseSettings = useCallback(() => {
     setActivePanel(null)
-    pushUrl('/')
-  }, [])
+    if (selectedContact && sidebarView === 'detail') {
+      pushUrl(stateToUrl(null, 'detail', selectedContact.id))
+    } else {
+      pushUrl('/')
+    }
+    if (isMobile) setMobileView('dashboard')
+  }, [selectedContact, sidebarView, isMobile, setMobileView])
 
   const handleOpenInsights = useCallback(() => {
     setActivePanel('insights')
@@ -181,8 +199,13 @@ export function usePanelNavigation(
 
   const handleCloseInsights = useCallback(() => {
     setActivePanel(null)
-    pushUrl('/')
-  }, [])
+    if (selectedContact && sidebarView === 'detail') {
+      pushUrl(stateToUrl(null, 'detail', selectedContact.id))
+    } else {
+      pushUrl('/')
+    }
+    if (isMobile) setMobileView('dashboard')
+  }, [selectedContact, sidebarView, isMobile, setMobileView])
 
   const connectedContacts: ConnectedContact[] = useMemo(() => {
     if (!selectedContact) return []

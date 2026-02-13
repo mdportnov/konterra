@@ -37,10 +37,10 @@ export default function GlobePanel({
     onClose?.()
   }, [onClose])
 
-  useClickOutside(panelRef, handleClose, open && !!onClose)
-  useHotkey('Escape', handleClose, { enabled: open && !!onClose })
-
   const z = zIndex ?? (side === 'left' ? Z.sidebar : Z.detail)
+
+  useClickOutside(panelRef, handleClose, open && !!onClose)
+  useHotkey('Escape', handleClose, { enabled: open && !!onClose, priority: z })
 
   const translateClosed = side === 'left' ? '-translate-x-full' : 'translate-x-full'
   const borderSide = side === 'left' ? 'border-r' : 'border-l'
@@ -53,6 +53,7 @@ export default function GlobePanel({
   return (
     <div
       ref={panelRef}
+      data-globe-panel
       className={cn(
         'fixed top-0 h-full',
         side === 'left' ? 'left-0' : 'right-0',

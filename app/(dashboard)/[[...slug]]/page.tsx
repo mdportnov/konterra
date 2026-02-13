@@ -31,7 +31,6 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
   const [importDialogOpen, setImportDialogOpen] = useState(false)
   const [dupDialogOpen, setDupDialogOpen] = useState(false)
   const [exportDialogOpen, setExportDialogOpen] = useState(false)
-  const [dashboardExpanded, setDashboardExpanded] = useState(false)
   const [displayOptions, setDisplayOptions] = useState<DisplayOptions>(displayDefaults)
   const [countryPopup, setCountryPopup] = useState<{ country: string; contacts: Contact[]; x: number; y: number } | null>(null)
   const [countryPopupOpen, setCountryPopupOpen] = useState(false)
@@ -109,14 +108,6 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
     closeCountryPopup()
     nav.handleAddContact(country ? { country } : undefined)
   }, [closeCountryPopup, nav.handleAddContact, countryPopup?.country])
-
-  const openDashboard = useCallback(() => setDashboardExpanded(true), [])
-  const closeDashboard = useCallback(() => setDashboardExpanded(false), [])
-
-  const handleContactClick = useCallback((c: Contact) => {
-    nav.handleContactClick(c)
-    if (!dashboardExpanded) setDashboardExpanded(true)
-  }, [nav.handleContactClick, dashboardExpanded])
 
   const showDashboard = !isMobile || mobileView === 'dashboard'
   const showGlobe = !isMobile || mobileView === 'globe'
@@ -313,32 +304,15 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
     <div className="fixed inset-0 flex overflow-hidden bg-background">
       <div
         className="shrink-0 h-full"
-        style={{ width: PANEL_WIDTH.dashboard.collapsed }}
+        style={{ width: PANEL_WIDTH.dashboard.min }}
       >
         <DashboardPanel
           {...dashboardProps}
-          onContactClick={handleContactClick}
-          collapsed
-          onToggleCollapse={openDashboard}
         />
       </div>
       <div className="relative flex-1 overflow-hidden globe-bg">
         {globeSection}
       </div>
-      <GlobePanel
-        open={dashboardExpanded}
-        side="left"
-        width={PANEL_WIDTH.dashboard.min}
-        glass="panel"
-        onClose={closeDashboard}
-      >
-        <DashboardPanel
-          {...dashboardProps}
-          onContactClick={handleContactClick}
-          collapsed={false}
-          onToggleCollapse={closeDashboard}
-        />
-      </GlobePanel>
     </div>
   )
 }
