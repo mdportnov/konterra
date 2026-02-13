@@ -117,7 +117,7 @@ export default function TravelJourney({ trips, loading, onImport, onTripClick }:
       </div>
 
       <div className="relative ml-2.5">
-        <div className="absolute left-0 top-2 bottom-2 w-px bg-blue-400/20" />
+        <div className="absolute left-0 top-2 bottom-2 w-0.5 bg-blue-400/30 rounded-full" />
         {groupedByYear.map(([year, yearTrips], gi) => (
           <div key={year}>
             <div className="sticky top-0 z-10 bg-background/90 backdrop-blur-sm py-1.5 pl-5 -ml-0.5">
@@ -134,7 +134,7 @@ export default function TravelJourney({ trips, loading, onImport, onTripClick }:
                     onClick={() => onTripClick?.(trip)}
                     className="w-full text-left pl-5 pr-2 py-1.5 rounded-md hover:bg-blue-500/5 transition-colors relative group"
                   >
-                    <div className="absolute left-[-3px] top-[11px] w-[7px] h-[7px] rounded-full bg-blue-400 border-2 border-background ring-1 ring-blue-400/30" />
+                    <div className="absolute left-[-3.5px] top-[11px] w-2 h-2 rounded-full bg-blue-400 border-2 border-background ring-1 ring-blue-400/40" />
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-medium text-foreground truncate">
                         {trip.city}
