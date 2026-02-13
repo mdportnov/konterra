@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
-import { createContactsBulk, updateContact, getOrCreateSelfContact, createConnectionsBulk } from '@/lib/db/queries'
+import { createContactsBulk, updateContact, getOrCreateSelfContact, createConnectionsBulk, deleteContactsBulk, addTagToContactsBulk, removeTagFromContactsBulk } from '@/lib/db/queries'
 import { validateContact, safeParseBody } from '@/lib/validation'
-import { toStringOrNull, toDateOrNull, toArrayOrNull, toNumberOrNull, unauthorized, badRequest } from '@/lib/api-utils'
+import { toStringOrNull, toDateOrNull, toArrayOrNull, toNumberOrNull, unauthorized, badRequest, success } from '@/lib/api-utils'
 import { getCountryCoords } from '@/lib/country-coords'
 import type { NewContact, NewContactConnection } from '@/lib/db/schema'
 
@@ -196,4 +196,41 @@ export async function POST(req: Request) {
     contacts: allContacts,
     connectionsCreated,
   })
+}
+
+export async function DELETE(req: Request) {
+  const session = await auth()
+  if (!session?.user?.id) return unauthorized()
+
+  const body = await safeParseBody(req)
+  if (!body || !Array.isArray(body.ids)) return badRequest('Expected { ids: string[] }')
+  if (body.ids.length > 500) return badRequest('Maximum 500 items per request')
+
+  const deleted = await deleteContactsBulk(body.ids as string[], session.user.id)
+  return success({ deleted })
+}
+
+export async function PATCH(req: Request) {
+  const session = await auth()
+  if (!session?.user?.id) return unauthorized()
+
+  const body = await safeParseBody(req)
+  if (!body || !Array.isArray(body.ids)) return badRequest('Expected { ids: string[], action, tag }')
+  if (body.ids.length > 500) return badRequest('Maximum 500 items per request')
+
+  const ids = body.ids as string[]
+  const action = body.action as string
+  const tag = body.tag as string
+
+  if (action === 'addTag' && tag) {
+    const count = await addTagToContactsBulk(ids, session.user.id, tag)
+    return success({ updated: count })
+  }
+
+  if (action === 'removeTag' && tag) {
+    const count = await removeTagFromContactsBulk(ids, session.user.id, tag)
+    return success({ updated: count })
+  }
+
+  return badRequest('Invalid action. Supported: addTag, removeTag')
 }

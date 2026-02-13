@@ -37,6 +37,8 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
   const [countryPopupOpen, setCountryPopupOpen] = useState(false)
   const countryClosingTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  const [highlightedContactIds, setHighlightedContactIds] = useState<Set<string>>(new Set())
+
   const data = useGlobeData()
   const filters = useContactFilters(data.contacts, data.userTags)
   const nav = usePanelNavigation(slug, data.contacts, data.connections, isMobile, setMobileView)
@@ -50,6 +52,21 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
       if (countryClosingTimer.current) clearTimeout(countryClosingTimer.current)
     }
   }, [])
+
+  const handleSelectionChange = useCallback((ids: Set<string>) => {
+    setHighlightedContactIds(ids)
+  }, [])
+
+  const handleBulkDelete = useCallback((ids: string[]) => {
+    if (ids.length > 0) {
+      data.setContacts((prev) => prev.filter((c) => !ids.includes(c.id)))
+      data.setConnections((prev) => prev.filter((c) => !ids.includes(c.sourceContactId) && !ids.includes(c.targetContactId)))
+      data.setCountryConnections((prev) => prev.filter((c) => !ids.includes(c.contactId)))
+    } else {
+      data.reloadContacts()
+    }
+    setHighlightedContactIds(new Set())
+  }, [data.setContacts, data.setConnections, data.setCountryConnections, data.reloadContacts])
 
   const handleContactSaved = useCallback((saved: Contact) => {
     nav.handleContactSaved(saved, data.setContacts)
@@ -122,6 +139,8 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
     onOpenSettings: nav.handleOpenSettings,
     isMobile,
     contactsLoading: data.loading,
+    onSelectionChange: handleSelectionChange,
+    onBulkDelete: handleBulkDelete,
   } as const
 
   const globeSection = (
@@ -136,6 +155,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
         visitedCountries={data.visitedCountries}
         connections={data.connections}
         countryConnections={data.countryConnections}
+        highlightedContactIds={highlightedContactIds}
       />
 
       {!data.loading && data.contacts.length === 0 && (

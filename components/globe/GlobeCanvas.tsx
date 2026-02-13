@@ -53,6 +53,7 @@ interface GlobeCanvasProps {
   visitedCountries?: Set<string>
   connections?: ContactConnection[]
   countryConnections?: ContactCountryConnection[]
+  highlightedContactIds?: Set<string>
 }
 
 const EMPTY_ARCS: GlobeArc[] = []
@@ -122,6 +123,7 @@ export default memo(function GlobeCanvas({
   visitedCountries,
   connections = [],
   countryConnections = [],
+  highlightedContactIds,
 }: GlobeCanvasProps) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const globeRef = useRef<any>(null)
@@ -272,6 +274,8 @@ export default memo(function GlobeCanvas({
     closingTimer.current = setTimeout(() => setClusterData(null), EXIT_MS)
   }, [])
 
+  const hasHighlights = highlightedContactIds && highlightedContactIds.size > 0
+
   const points: GlobePoint[] = useMemo(() => {
     const grouped = new Map<string, Contact[]>()
     contacts.filter((c) => c.lat && c.lng).forEach((c) => {
@@ -287,24 +291,30 @@ export default memo(function GlobeCanvas({
     grouped.forEach((group, key) => {
       if (group.length === 1) {
         const c = group[0]
+        const isHighlighted = hasHighlights && highlightedContactIds!.has(c.id)
         pts.push({
           id: c.id,
           lat: c.lat!,
           lng: c.lng!,
           name: c.name,
           city: c.city,
-          color: '#f97316',
-          size: 0.45,
+          color: isHighlighted ? '#38bdf8' : '#f97316',
+          size: isHighlighted ? 0.65 : 0.45,
         })
       } else {
+        const highlightedInCluster = hasHighlights
+          ? group.filter((c) => highlightedContactIds!.has(c.id)).length
+          : 0
+        const allHighlighted = hasHighlights && highlightedInCluster === group.length
+        const someHighlighted = highlightedInCluster > 0
         pts.push({
           id: `cluster:${key}`,
           lat: group[0].lat!,
           lng: group[0].lng!,
           name: `${group.length} contacts`,
           city: group[0].city,
-          color: '#fb923c',
-          size: 0.45 + Math.min(group.length * 0.12, 0.6),
+          color: allHighlighted ? '#38bdf8' : someHighlighted ? '#7dd3fc' : '#fb923c',
+          size: (someHighlighted ? 0.55 : 0.45) + Math.min(group.length * 0.12, 0.6),
           isCluster: true,
           count: group.length,
         })
@@ -324,7 +334,7 @@ export default memo(function GlobeCanvas({
       })
     }
     return pts
-  }, [contacts, userLocation])
+  }, [contacts, userLocation, hasHighlights, highlightedContactIds])
 
   const arcs: GlobeArc[] = useMemo(() => {
     const noMainArcs = display.arcMode === 'off'

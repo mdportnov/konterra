@@ -82,6 +82,47 @@ export async function deleteContact(id: string, userId: string) {
   await db.delete(contacts).where(and(eq(contacts.id, id), eq(contacts.userId, userId)))
 }
 
+export async function deleteContactsBulk(ids: string[], userId: string) {
+  if (ids.length === 0) return 0
+  const result = await db.delete(contacts).where(and(inArray(contacts.id, ids), eq(contacts.userId, userId)))
+  return result.rowCount ?? ids.length
+}
+
+export async function addTagToContactsBulk(ids: string[], userId: string, tag: string) {
+  if (ids.length === 0) return 0
+  let count = 0
+  for (const id of ids) {
+    const contact = await db.query.contacts.findFirst({
+      where: and(eq(contacts.id, id), eq(contacts.userId, userId)),
+      columns: { id: true, tags: true },
+    })
+    if (!contact) continue
+    const currentTags = contact.tags || []
+    if (currentTags.includes(tag)) continue
+    await db.update(contacts).set({ tags: [...currentTags, tag], updatedAt: new Date() }).where(eq(contacts.id, id))
+    count++
+  }
+  return count
+}
+
+export async function removeTagFromContactsBulk(ids: string[], userId: string, tag: string) {
+  if (ids.length === 0) return 0
+  let count = 0
+  for (const id of ids) {
+    const contact = await db.query.contacts.findFirst({
+      where: and(eq(contacts.id, id), eq(contacts.userId, userId)),
+      columns: { id: true, tags: true },
+    })
+    if (!contact) continue
+    const currentTags = contact.tags || []
+    if (!currentTags.includes(tag)) continue
+    const updated = currentTags.filter((t) => t !== tag)
+    await db.update(contacts).set({ tags: updated.length > 0 ? updated : null, updatedAt: new Date() }).where(eq(contacts.id, id))
+    count++
+  }
+  return count
+}
+
 export async function getInteractionsByContactId(contactId: string) {
   return db.query.interactions.findMany({
     where: eq(interactions.contactId, contactId),
