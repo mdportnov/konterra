@@ -70,6 +70,8 @@ interface DashboardPanelProps {
   tripsLoading?: boolean
   onImportTrips?: () => void
   onTripClick?: (trip: Trip) => void
+  dashboardTab?: 'connections' | 'travel'
+  onDashboardTabChange?: (tab: 'connections' | 'travel') => void
 }
 
 export default function DashboardPanel({
@@ -99,6 +101,8 @@ export default function DashboardPanel({
   tripsLoading = false,
   onImportTrips,
   onTripClick,
+  dashboardTab: dashboardTabProp,
+  onDashboardTabChange,
 }: DashboardPanelProps) {
   const { data: session } = useSession()
   const [search, setSearch] = useState('')
@@ -126,7 +130,9 @@ export default function DashboardPanel({
   const [showBulkTagInput, setShowBulkTagInput] = useState(false)
   const [bulkActionLoading, setBulkActionLoading] = useState(false)
 
-  const [dashboardTab, setDashboardTab] = useState<'connections' | 'travel'>('connections')
+  const [dashboardTabInternal, setDashboardTabInternal] = useState<'connections' | 'travel'>('connections')
+  const dashboardTab = dashboardTabProp ?? dashboardTabInternal
+  const setDashboardTab = onDashboardTabChange ?? setDashboardTabInternal
 
   const { views: savedViews, saveView, deleteView, loadView } = useSavedViews()
 
@@ -501,23 +507,23 @@ export default function DashboardPanel({
       </div>
 
       <div className="px-4 md:px-5 pt-3 pb-1">
-        <div className="flex gap-1 bg-muted/50 rounded-lg p-0.5">
+        <div className="flex gap-1 bg-muted/40 rounded-lg p-0.5">
           <button
             onClick={() => setDashboardTab('connections')}
-            className={`flex-1 text-xs font-medium px-3 py-1.5 rounded-md transition-colors ${
+            className={`flex-1 text-xs font-semibold px-3 py-1.5 rounded-md transition-colors ${
               dashboardTab === 'connections'
                 ? 'bg-background text-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'
+                : 'text-muted-foreground/50 hover:text-muted-foreground'
             }`}
           >
             Connections
           </button>
           <button
             onClick={() => setDashboardTab('travel')}
-            className={`flex-1 text-xs font-medium px-3 py-1.5 rounded-md transition-colors ${
+            className={`flex-1 text-xs font-semibold px-3 py-1.5 rounded-md transition-colors ${
               dashboardTab === 'travel'
                 ? 'bg-background text-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'
+                : 'text-muted-foreground/50 hover:text-muted-foreground'
             }`}
           >
             Travel Journey

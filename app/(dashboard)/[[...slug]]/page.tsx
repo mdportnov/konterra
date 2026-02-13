@@ -53,6 +53,42 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
   const [tripCountryPopupOpen, setTripCountryPopupOpen] = useState(false)
   const tripCountryClosingTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  const initialTab = slug?.[0] === 'travel' ? 'travel' as const : 'connections' as const
+  const [dashboardTab, setDashboardTabRaw] = useState<'connections' | 'travel'>(initialTab)
+
+  const setDashboardTab = useCallback((tab: 'connections' | 'travel') => {
+    setDashboardTabRaw(tab)
+    setDisplayOptions((prev) => ({
+      ...prev,
+      globeViewMode: tab === 'travel' ? 'travel' : 'network',
+    }))
+    const url = tab === 'travel' ? '/travel' : '/'
+    if (window.location.pathname !== url) {
+      window.history.pushState(null, '', url)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (initialTab === 'travel') {
+      setDisplayOptions((prev) => ({ ...prev, globeViewMode: 'travel' }))
+    }
+  }, [])
+
+  useEffect(() => {
+    const onPop = () => {
+      const path = window.location.pathname
+      if (path === '/travel') {
+        setDashboardTabRaw('travel')
+        setDisplayOptions((prev) => ({ ...prev, globeViewMode: 'travel' }))
+      } else if (path === '/' || path === '') {
+        setDashboardTabRaw('connections')
+        setDisplayOptions((prev) => ({ ...prev, globeViewMode: 'network' }))
+      }
+    }
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [])
+
   const data = useGlobeData()
   const filters = useContactFilters(data.contacts, data.userTags)
   const nav = usePanelNavigation(slug, data.contacts, data.connections, isMobile, setMobileView)
@@ -232,6 +268,8 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
     tripsLoading: data.tripsLoading,
     onImportTrips: () => setTripImportDialogOpen(true),
     onTripClick: handleTripClick,
+    dashboardTab,
+    onDashboardTabChange: setDashboardTab,
   } as const
 
   const globeSection = (

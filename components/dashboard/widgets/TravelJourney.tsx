@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo } from 'react'
-import { Plane, Upload, Calendar, Clock, ArrowDown } from 'lucide-react'
+import { Plane, Upload, Calendar, Clock, MoveDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { GLASS } from '@/lib/constants/ui'
@@ -81,6 +81,8 @@ export default function TravelJourney({ trips, loading, onImport, onTripClick }:
     )
   }
 
+  let globalIdx = 0
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
@@ -114,61 +116,58 @@ export default function TravelJourney({ trips, loading, onImport, onTripClick }:
         </div>
       </div>
 
-      <div>
+      <div className="relative ml-2.5">
+        <div className="absolute left-0 top-2 bottom-2 w-px bg-blue-400/20" />
         {groupedByYear.map(([year, yearTrips], gi) => (
           <div key={year}>
-            {gi > 0 && <div className="h-3" />}
-            <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-sm py-1 mb-1">
-              <span className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-wider">{year}</span>
+            <div className="sticky top-0 z-10 bg-background/90 backdrop-blur-sm py-1.5 pl-5 -ml-0.5">
+              <span className="text-[10px] font-bold text-blue-400/70 uppercase tracking-wider">{year}</span>
             </div>
-            <div className="relative ml-2.5">
-              <div className="absolute left-0 top-2 bottom-2 w-px bg-border" />
-              {yearTrips.map((trip, ti) => {
-                const nextTrip = yearTrips[ti + 1]
-                const isLast = ti === yearTrips.length - 1
-                const isDiffCity = nextTrip && nextTrip.city !== trip.city
+            {yearTrips.map((trip, ti) => {
+              const idx = globalIdx++
+              const nextInSorted = sorted[idx + 1]
+              const isLastOverall = idx === sorted.length - 1
 
-                return (
-                  <div key={trip.id}>
-                    <button
-                      onClick={() => onTripClick?.(trip)}
-                      className="w-full text-left pl-5 pr-2 py-1.5 rounded-md hover:bg-muted/50 transition-colors relative group"
-                    >
-                      <div className="absolute left-[-3px] top-[11px] w-[7px] h-[7px] rounded-full bg-blue-400 border-2 border-background ring-1 ring-blue-400/30" />
-                      <div className="flex items-start gap-2">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-medium text-foreground truncate">
-                            {trip.city}
-                            <span className="text-muted-foreground/50 font-normal ml-1">{trip.country}</span>
-                          </p>
-                          <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-                            <span className="flex items-center gap-0.5">
-                              <Calendar className="h-2.5 w-2.5" />
-                              {formatDate(trip.arrivalDate)}
-                              {trip.departureDate && ` \u2013 ${formatDate(trip.departureDate)}`}
-                            </span>
-                            {trip.durationDays != null && (
-                              <span className="flex items-center gap-0.5">
-                                <Clock className="h-2.5 w-2.5" />
-                                {trip.durationDays}d
-                              </span>
-                            )}
-                          </div>
-                        </div>
+              return (
+                <div key={trip.id}>
+                  <button
+                    onClick={() => onTripClick?.(trip)}
+                    className="w-full text-left pl-5 pr-2 py-1.5 rounded-md hover:bg-blue-500/5 transition-colors relative group"
+                  >
+                    <div className="absolute left-[-3px] top-[11px] w-[7px] h-[7px] rounded-full bg-blue-400 border-2 border-background ring-1 ring-blue-400/30" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-foreground truncate">
+                        {trip.city}
+                        <span className="text-muted-foreground/50 font-normal ml-1">{trip.country}</span>
+                      </p>
+                      <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                        <span className="flex items-center gap-0.5">
+                          <Calendar className="h-2.5 w-2.5" />
+                          {formatDate(trip.arrivalDate)}
+                          {trip.departureDate && ` \u2013 ${formatDate(trip.departureDate)}`}
+                        </span>
+                        {trip.durationDays != null && (
+                          <span className="flex items-center gap-0.5">
+                            <Clock className="h-2.5 w-2.5" />
+                            {trip.durationDays}d
+                          </span>
+                        )}
                       </div>
-                    </button>
-                    {!isLast && isDiffCity && (
-                      <div className="relative pl-5 py-0.5">
-                        <div className="flex items-center gap-1 text-[9px] text-muted-foreground/40">
-                          <ArrowDown className="h-2.5 w-2.5" />
-                          <span>{trip.city} → {nextTrip.city}</span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
+                    </div>
+                  </button>
+                  {!isLastOverall && nextInSorted && (
+                    <div className="relative pl-5 py-0.5 flex items-center gap-1.5">
+                      <MoveDown className="h-2.5 w-2.5 text-blue-400/40" />
+                      <span className="text-[9px] text-blue-400/50 font-medium">
+                        {nextInSorted.city === trip.city && nextInSorted.country === trip.country
+                          ? 'stayed'
+                          : `${nextInSorted.city}, ${nextInSorted.country}`}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
           </div>
         ))}
       </div>
