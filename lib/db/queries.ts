@@ -541,6 +541,47 @@ export async function mergeContacts(
   })
 }
 
+export async function getAllContactsByUserId(userId: string) {
+  return db.query.contacts.findMany({
+    where: eq(contacts.userId, userId),
+    orderBy: (contacts, { asc }) => [asc(contacts.name)],
+  })
+}
+
+export async function getAllConnectionsByUserId(userId: string) {
+  return db.query.contactConnections.findMany({
+    where: eq(contactConnections.userId, userId),
+  })
+}
+
+export async function getAllInteractionsByUserId(userId: string) {
+  return db
+    .select({
+      id: interactions.id,
+      contactId: interactions.contactId,
+      type: interactions.type,
+      date: interactions.date,
+      location: interactions.location,
+      notes: interactions.notes,
+    })
+    .from(interactions)
+    .innerJoin(contacts, eq(interactions.contactId, contacts.id))
+    .where(eq(contacts.userId, userId))
+    .orderBy(desc(interactions.date))
+}
+
+export async function getAllFavorsByUserId(userId: string) {
+  return db.query.favors.findMany({
+    where: eq(favors.userId, userId),
+  })
+}
+
+export async function getAllIntroductionsByUserId(userId: string) {
+  return db.query.introductions.findMany({
+    where: eq(introductions.userId, userId),
+  })
+}
+
 export async function renameTag(id: string, userId: string, newName: string) {
   const tag = await db.query.tags.findFirst({
     where: and(eq(tags.id, id), eq(tags.userId, userId)),

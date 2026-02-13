@@ -10,6 +10,7 @@ import ContactEditPanel from '@/components/globe/ContactEditPanel'
 import SettingsPanel from '@/components/globe/SettingsPanel'
 import ImportDialog from '@/components/import/ImportDialog'
 import DuplicatesDialog from '@/components/dedup/DuplicatesDialog'
+import ExportDialog from '@/components/export/ExportDialog'
 import ConnectionInsightsPanel from '@/components/insights/ConnectionInsightsPanel'
 import CountryPopup from '@/components/globe/CountryPopup'
 import { PANEL_WIDTH, GLASS, Z } from '@/lib/constants/ui'
@@ -29,6 +30,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
   const [mobileView, setMobileView] = useState<'globe' | 'dashboard'>('dashboard')
   const [importDialogOpen, setImportDialogOpen] = useState(false)
   const [dupDialogOpen, setDupDialogOpen] = useState(false)
+  const [exportDialogOpen, setExportDialogOpen] = useState(false)
   const [dashboardExpanded, setDashboardExpanded] = useState(false)
   const [displayOptions, setDisplayOptions] = useState<DisplayOptions>(displayDefaults)
   const [countryPopup, setCountryPopup] = useState<{ country: string; contacts: Contact[]; x: number; y: number } | null>(null)
@@ -167,6 +169,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
         visitedCountries={data.visitedCountries}
         onToggleVisitedCountry={data.handleCountryVisitToggle}
         onOpenImport={() => setImportDialogOpen(true)}
+        onOpenExport={() => setExportDialogOpen(true)}
         onOpenDuplicates={() => setDupDialogOpen(true)}
         onDeleteAllContacts={data.reloadContacts}
       />
@@ -186,6 +189,11 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
         onOpenChange={setDupDialogOpen}
         contacts={data.contacts}
         onResolved={data.reloadContacts}
+      />
+
+      <ExportDialog
+        open={exportDialogOpen}
+        onOpenChange={setExportDialogOpen}
       />
 
       <GlobePanel
