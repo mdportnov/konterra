@@ -126,6 +126,8 @@ export default function DashboardPanel({
   const [showBulkTagInput, setShowBulkTagInput] = useState(false)
   const [bulkActionLoading, setBulkActionLoading] = useState(false)
 
+  const [dashboardTab, setDashboardTab] = useState<'connections' | 'travel'>('connections')
+
   const { views: savedViews, saveView, deleteView, loadView } = useSavedViews()
 
   const handleSaveView = useCallback(() => {
@@ -498,7 +500,42 @@ export default function DashboardPanel({
         </div>
       </div>
 
+      <div className="px-4 md:px-5 pt-3 pb-1">
+        <div className="flex gap-1 bg-muted/50 rounded-lg p-0.5">
+          <button
+            onClick={() => setDashboardTab('connections')}
+            className={`flex-1 text-xs font-medium px-3 py-1.5 rounded-md transition-colors ${
+              dashboardTab === 'connections'
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            Connections
+          </button>
+          <button
+            onClick={() => setDashboardTab('travel')}
+            className={`flex-1 text-xs font-medium px-3 py-1.5 rounded-md transition-colors ${
+              dashboardTab === 'travel'
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            Travel Journey
+          </button>
+        </div>
+      </div>
+
       <ScrollArea className="flex-1 overflow-hidden">
+        {dashboardTab === 'travel' ? (
+          <div className="p-4 md:p-5">
+            <TravelJourney
+              trips={trips}
+              loading={tripsLoading}
+              onImport={onImportTrips || (() => {})}
+              onTripClick={onTripClick}
+            />
+          </div>
+        ) : (
         <div className="p-4 md:p-5 space-y-5 md:space-y-6">
           {(() => {
             const selfContact = contacts.find((c) => c.isSelf)
@@ -524,12 +561,6 @@ export default function DashboardPanel({
             favors={favors}
             onOpenInsights={onOpenInsights || (() => {})}
             loading={contactsLoading || interactionsLoading || favorsLoading}
-          />
-          <TravelJourney
-            trips={trips}
-            loading={tripsLoading}
-            onImport={onImportTrips || (() => {})}
-            onTripClick={onTripClick}
           />
           <TopCountriesChart contacts={contacts} loading={contactsLoading} />
           <ActivityTimeline
@@ -825,6 +856,7 @@ export default function DashboardPanel({
             )}
           </div>
         </div>
+        )}
       </ScrollArea>
     </div>
   )

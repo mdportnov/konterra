@@ -15,6 +15,7 @@ import DuplicatesDialog from '@/components/dedup/DuplicatesDialog'
 import ExportDialog from '@/components/export/ExportDialog'
 import ConnectionInsightsPanel from '@/components/insights/ConnectionInsightsPanel'
 import CountryPopup from '@/components/globe/CountryPopup'
+import TripPopup from '@/components/globe/TripPopup'
 import { PANEL_WIDTH, GLASS, Z, TRANSITION } from '@/lib/constants/ui'
 import { displayDefaults } from '@/types/display'
 import GlobeViewToggle from '@/components/globe/GlobeViewToggle'
@@ -46,6 +47,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
   const countryClosingTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const [highlightedContactIds, setHighlightedContactIds] = useState<Set<string>>(new Set())
+  const [selectedTripId, setSelectedTripId] = useState<string | null>(null)
 
   const data = useGlobeData()
   const filters = useContactFilters(data.contacts, data.userTags)
@@ -135,6 +137,33 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
     }
   }, [nav.setFlyTarget])
 
+  const handleTripPointClick = useCallback((tripId: string) => {
+    setSelectedTripId(tripId)
+    const trip = data.trips.find((t) => t.id === tripId)
+    if (trip?.lat != null && trip?.lng != null) {
+      nav.setFlyTarget({ lat: trip.lat, lng: trip.lng, ts: Date.now() })
+    }
+  }, [data.trips, nav.setFlyTarget])
+
+  const selectedTrip = useMemo(() => data.trips.find((t) => t.id === selectedTripId) ?? null, [data.trips, selectedTripId])
+
+  const sortedTrips = useMemo(() =>
+    [...data.trips].sort((a, b) => new Date(a.arrivalDate).getTime() - new Date(b.arrivalDate).getTime()),
+    [data.trips]
+  )
+
+  const selectedTripIndex = useMemo(() => {
+    if (!selectedTripId) return -1
+    return sortedTrips.findIndex((t) => t.id === selectedTripId)
+  }, [sortedTrips, selectedTripId])
+
+  const handleTripNavigate = useCallback((trip: Trip) => {
+    setSelectedTripId(trip.id)
+    if (trip.lat != null && trip.lng != null) {
+      nav.setFlyTarget({ lat: trip.lat, lng: trip.lng, ts: Date.now() })
+    }
+  }, [nav.setFlyTarget])
+
   const handleViewModeChange = useCallback((mode: GlobeViewMode) => {
     setDisplayOptions((prev) => ({ ...prev, globeViewMode: mode }))
   }, [])
@@ -182,6 +211,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
         flyTarget={nav.flyTarget}
         onContactClick={nav.handleContactClick}
         onCountryClick={handleCountryClick}
+        onTripPointClick={handleTripPointClick}
         display={displayOptions}
         visitedCountries={data.visitedCountries}
         connections={data.connections}
@@ -312,6 +342,16 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
         onTagCreated={data.handleTagCreated}
         onTagDeleted={data.handleTagDeleted}
       />
+
+      {selectedTrip && (
+        <TripPopup
+          trip={selectedTrip}
+          prevTrip={selectedTripIndex > 0 ? sortedTrips[selectedTripIndex - 1] : null}
+          nextTrip={selectedTripIndex < sortedTrips.length - 1 ? sortedTrips[selectedTripIndex + 1] : null}
+          onNavigate={handleTripNavigate}
+          onClose={() => setSelectedTripId(null)}
+        />
+      )}
 
       {countryPopup && (
         <CountryPopup

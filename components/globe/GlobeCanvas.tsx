@@ -31,8 +31,9 @@ interface GlobeArc {
   startLng: number
   endLat: number
   endLng: number
-  color: string
+  color: string | [string, string]
   type?: 'contact' | 'country'
+  isTravel?: boolean
 }
 
 interface ClusterData {
@@ -49,6 +50,7 @@ interface GlobeCanvasProps {
   flyTarget: { lat: number; lng: number; ts: number } | null
   onContactClick: (contact: Contact) => void
   onCountryClick?: (country: string, event: { x: number; y: number }) => void
+  onTripPointClick?: (tripId: string) => void
   display: DisplayOptions
   visitedCountries?: Set<string>
   connections?: ContactConnection[]
@@ -120,6 +122,7 @@ export default memo(function GlobeCanvas({
   flyTarget,
   onContactClick,
   onCountryClick,
+  onTripPointClick,
   display,
   visitedCountries,
   connections = [],
@@ -466,7 +469,8 @@ export default memo(function GlobeCanvas({
         startLng: sorted[i].lng!,
         endLat: sorted[i + 1].lat!,
         endLng: sorted[i + 1].lng!,
-        color: 'rgba(59, 130, 246, 0.5)',
+        color: ['rgba(147, 197, 253, 0.3)', 'rgba(59, 130, 246, 0.7)'] as [string, string],
+        isTravel: true,
       })
     }
     return result
@@ -484,15 +488,18 @@ export default memo(function GlobeCanvas({
   }, [isTravelMode, travelArcs, arcs, countryArcs])
 
   const getArcStroke = useCallback((arc: object) => {
+    if ((arc as GlobeArc).isTravel) return 0.5
     return (arc as GlobeArc).type === 'country' ? 0.25 : 0.4
   }, [])
 
   const getArcDashLength = useCallback((arc: object) => {
+    if ((arc as GlobeArc).isTravel) return 0.4
     if ((arc as GlobeArc).type === 'country') return 0.3
     return display.arcMode === 'static' ? 1 : 0.5
   }, [display.arcMode])
 
   const getArcDashGap = useCallback((arc: object) => {
+    if ((arc as GlobeArc).isTravel) return 0.2
     if ((arc as GlobeArc).type === 'country') return 0.2
     return display.arcMode === 'static' ? 0 : 0.3
   }, [display.arcMode])
@@ -501,6 +508,12 @@ export default memo(function GlobeCanvas({
     (point: object, event: MouseEvent) => {
       const p = point as GlobePoint
       if (p.isUser) return
+
+      if (p.id.startsWith('trip:')) {
+        const tripId = p.id.replace('trip:', '')
+        onTripPointClick?.(tripId)
+        return
+      }
 
       if (p.isCluster) {
         const key = p.id.replace('cluster:', '')
@@ -525,7 +538,7 @@ export default memo(function GlobeCanvas({
       const contact = contacts.find((c) => c.id === p.id)
       if (contact) onContactClick(contact)
     },
-    [contacts, onContactClick, clusterData, clusterOpen, openCluster, closeCluster]
+    [contacts, onContactClick, onTripPointClick, clusterData, clusterOpen, openCluster, closeCluster]
   )
 
   const handleClusterSelect = useCallback(
@@ -638,6 +651,12 @@ export default memo(function GlobeCanvas({
   const getPointColor = useCallback((point: object) => (point as GlobePoint).color, [])
   const getPointRadius = useCallback((point: object) => (point as GlobePoint).size, [])
 
+  const getArcColor = useCallback((arc: object) => (arc as GlobeArc).color, [])
+  const getArcAnimateTime = useCallback((arc: object) => {
+    if ((arc as GlobeArc).isTravel) return 2500
+    return display.arcMode === 'animated' ? 1800 : 0
+  }, [display.arcMode])
+
   return (
     <div ref={containerRef} className="absolute inset-0 bg-[#e8edf2] dark:bg-[#050816]">
       <GlobeGL
@@ -669,10 +688,10 @@ export default memo(function GlobeCanvas({
         arcStartLng="startLng"
         arcEndLat="endLat"
         arcEndLng="endLng"
-        arcColor="color"
+        arcColor={getArcColor}
         arcDashLength={getArcDashLength}
         arcDashGap={getArcDashGap}
-        arcDashAnimateTime={display.arcMode === 'animated' ? 1800 : 0}
+        arcDashAnimateTime={getArcAnimateTime}
         arcStroke={getArcStroke}
       />
       {isTravelMode ? (
