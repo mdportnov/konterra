@@ -1,10 +1,9 @@
 'use client'
 
 import { useMemo } from 'react'
-import { Plane, Upload, MapPin, Calendar, Clock } from 'lucide-react'
+import { Plane, Upload, Calendar, Clock, ArrowDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Separator } from '@/components/ui/separator'
 import { GLASS } from '@/lib/constants/ui'
 import type { Trip } from '@/lib/db/schema'
 
@@ -33,16 +32,21 @@ export default function TravelJourney({ trips, loading, onImport, onTripClick }:
     return { total: trips.length, countries: countries.size, totalDays }
   }, [trips])
 
+  const sorted = useMemo(() =>
+    [...trips].sort((a, b) => new Date(b.arrivalDate).getTime() - new Date(a.arrivalDate).getTime()),
+    [trips]
+  )
+
   const groupedByYear = useMemo(() => {
     const groups = new Map<number, Trip[]>()
-    for (const trip of trips) {
+    for (const trip of sorted) {
       const year = formatYear(trip.arrivalDate)
       const arr = groups.get(year) || []
       arr.push(trip)
       groups.set(year, arr)
     }
     return Array.from(groups.entries()).sort((a, b) => b[0] - a[0])
-  }, [trips])
+  }, [sorted])
 
   if (loading) {
     return (
@@ -110,41 +114,61 @@ export default function TravelJourney({ trips, loading, onImport, onTripClick }:
         </div>
       </div>
 
-      <div className="space-y-1">
+      <div>
         {groupedByYear.map(([year, yearTrips], gi) => (
           <div key={year}>
-            {gi > 0 && <Separator className="my-2 bg-border/50" />}
-            <p className="text-[10px] font-medium text-muted-foreground/60 uppercase tracking-wider mb-1">{year}</p>
-            {yearTrips.map((trip) => (
-              <button
-                key={trip.id}
-                onClick={() => onTripClick?.(trip)}
-                className="w-full text-left px-2 py-1.5 rounded-md hover:bg-muted/50 transition-colors flex items-center gap-2 group"
-              >
-                <div className="shrink-0 w-5 h-5 rounded bg-blue-500/10 flex items-center justify-center">
-                  <MapPin className="h-3 w-3 text-blue-400" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium text-foreground truncate">
-                    {trip.city}
-                    <span className="text-muted-foreground/60 font-normal ml-1">{trip.country}</span>
-                  </p>
-                  <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-                    <span className="flex items-center gap-0.5">
-                      <Calendar className="h-2.5 w-2.5" />
-                      {formatDate(trip.arrivalDate)}
-                      {trip.departureDate && ` — ${formatDate(trip.departureDate)}`}
-                    </span>
-                    {trip.durationDays && (
-                      <span className="flex items-center gap-0.5">
-                        <Clock className="h-2.5 w-2.5" />
-                        {trip.durationDays}d
-                      </span>
+            {gi > 0 && <div className="h-3" />}
+            <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-sm py-1 mb-1">
+              <span className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-wider">{year}</span>
+            </div>
+            <div className="relative ml-2.5">
+              <div className="absolute left-0 top-2 bottom-2 w-px bg-border" />
+              {yearTrips.map((trip, ti) => {
+                const nextTrip = yearTrips[ti + 1]
+                const isLast = ti === yearTrips.length - 1
+                const isDiffCity = nextTrip && nextTrip.city !== trip.city
+
+                return (
+                  <div key={trip.id}>
+                    <button
+                      onClick={() => onTripClick?.(trip)}
+                      className="w-full text-left pl-5 pr-2 py-1.5 rounded-md hover:bg-muted/50 transition-colors relative group"
+                    >
+                      <div className="absolute left-[-3px] top-[11px] w-[7px] h-[7px] rounded-full bg-blue-400 border-2 border-background ring-1 ring-blue-400/30" />
+                      <div className="flex items-start gap-2">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium text-foreground truncate">
+                            {trip.city}
+                            <span className="text-muted-foreground/50 font-normal ml-1">{trip.country}</span>
+                          </p>
+                          <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                            <span className="flex items-center gap-0.5">
+                              <Calendar className="h-2.5 w-2.5" />
+                              {formatDate(trip.arrivalDate)}
+                              {trip.departureDate && ` \u2013 ${formatDate(trip.departureDate)}`}
+                            </span>
+                            {trip.durationDays != null && (
+                              <span className="flex items-center gap-0.5">
+                                <Clock className="h-2.5 w-2.5" />
+                                {trip.durationDays}d
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+                    {!isLast && isDiffCity && (
+                      <div className="relative pl-5 py-0.5">
+                        <div className="flex items-center gap-1 text-[9px] text-muted-foreground/40">
+                          <ArrowDown className="h-2.5 w-2.5" />
+                          <span>{trip.city} → {nextTrip.city}</span>
+                        </div>
+                      </div>
                     )}
                   </div>
-                </div>
-              </button>
-            ))}
+                )
+              })}
+            </div>
           </div>
         ))}
       </div>
