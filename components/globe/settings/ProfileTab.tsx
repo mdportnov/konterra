@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
-import { LogOut, Loader2, Pencil, Check, X, Users, Globe, Link2, CalendarDays } from 'lucide-react'
+import { LogOut, Loader2, Pencil, Check, X, Users, Globe, Link2, CalendarDays, Shield } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
 import type { ProfileTabProps } from './types'
@@ -17,6 +17,7 @@ interface SessionUser {
   name?: string | null
   email?: string | null
   image?: string | null
+  role?: string | null
   createdAt?: string | null
 }
 
@@ -141,6 +142,12 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
                   </div>
                 )}
                 <p className="text-sm text-muted-foreground">{user.email}</p>
+                {user.role && user.role !== 'user' && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-orange-500/10 border border-orange-500/20 px-2.5 py-0.5 text-xs font-medium text-orange-600 dark:text-orange-300">
+                    <Shield className="h-3 w-3" />
+                    {user.role === 'admin' ? 'Administrator' : 'Moderator'}
+                  </span>
+                )}
               </>
             )}
           </div>
@@ -158,7 +165,17 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
           </div>
         </div>
       </ScrollArea>
-      <div className="p-6 pt-0">
+      <div className="p-6 pt-0 space-y-2">
+        {user && (user.role === 'admin' || user.role === 'moderator') && (
+          <Button
+            variant="outline"
+            className="w-full justify-start border-orange-500/30 text-orange-600 dark:text-orange-300 hover:bg-orange-500/10"
+            onClick={() => window.location.href = '/admin'}
+          >
+            <Shield className="mr-2 h-4 w-4" />
+            Admin Dashboard
+          </Button>
+        )}
         <Button
           variant="outline"
           className="w-full text-muted-foreground"

@@ -22,12 +22,14 @@ export default {
       if (user) {
         token.id = user.id
         token.name = user.name
+        token.role = (user as { role?: string }).role ?? 'user'
       }
       return token
     },
     session({ session, token }) {
       if (session.user && token.id) {
         session.user.id = token.id as string
+        session.user.role = (token.role as string) ?? 'user'
       }
       return session
     },
