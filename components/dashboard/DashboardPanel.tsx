@@ -97,8 +97,6 @@ export default function DashboardPanel({
         isMobile={isMobile}
         onSwitchToGlobe={onSwitchToGlobe}
         onAddContact={onAddContact}
-        onOpenInsights={onOpenInsights}
-        onOpenSettings={onOpenSettings}
         onCollapse={onCollapse}
         dashboardTab={dashboardTab}
         onDashboardTabChange={setDashboardTab}

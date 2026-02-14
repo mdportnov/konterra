@@ -32,11 +32,13 @@ import { useDashboardRouting } from '@/hooks/use-dashboard-routing'
 import { ChevronRight } from 'lucide-react'
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
 import { useHotkey } from '@/hooks/use-hotkey'
+import { useSession } from 'next-auth/react'
 
 const GlobeCanvas = dynamic(() => import('@/components/globe/GlobeCanvas'), { ssr: false })
 
 export default function GlobePage({ params }: { params: Promise<{ slug?: string[] }> }) {
   const { slug } = use(params)
+  const { data: session } = useSession()
   const isMobile = useIsMobile()
   const [mobileView, setMobileView] = useState<'globe' | 'dashboard'>('dashboard')
   const [sidebarOpen, setSidebarOpen] = useState(true)
@@ -248,6 +250,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
         onInsights={nav.handleOpenInsights}
         isMobile={isMobile}
         onSwitchToDashboard={() => setMobileView('dashboard')}
+        user={session?.user}
       />
 
       <div className="absolute top-4 right-4 flex items-center gap-2" style={{ zIndex: Z.controls }}>

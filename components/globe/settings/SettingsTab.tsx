@@ -6,6 +6,7 @@ import { Separator } from '@/components/ui/separator'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Switch } from '@/components/ui/switch'
 import { Loader2, Upload, Download, Trash2, Copy } from 'lucide-react'
 import { toast } from 'sonner'
 import type { ArcMode } from '@/types/display'
@@ -75,6 +76,20 @@ export function SettingsTab({
                 ))}
               </SelectContent>
             </Select>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-muted-foreground">Globe auto-rotate</span>
+            <Switch
+              checked={displayOptions.autoRotate}
+              onCheckedChange={(v) => onDisplayChange({ ...displayOptions, autoRotate: v })}
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-muted-foreground">Point labels</span>
+            <Switch
+              checked={displayOptions.showLabels}
+              onCheckedChange={(v) => onDisplayChange({ ...displayOptions, showLabels: v })}
+            />
           </div>
         </div>
 

@@ -1,18 +1,13 @@
 'use client'
 
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { ChevronLeft, Plus, Globe as GlobeIcon, Settings, Sparkles, LogOut } from 'lucide-react'
-import { useSession, signOut } from 'next-auth/react'
+import { ChevronLeft, Plus, Globe as GlobeIcon } from 'lucide-react'
 
 interface DashboardHeaderProps {
   isMobile?: boolean
   onSwitchToGlobe?: () => void
   onAddContact: () => void
-  onOpenInsights?: () => void
-  onOpenSettings?: () => void
   onCollapse?: () => void
   dashboardTab: 'connections' | 'travel'
   onDashboardTabChange: (tab: 'connections' | 'travel') => void
@@ -22,62 +17,18 @@ export default function DashboardHeader({
   isMobile,
   onSwitchToGlobe,
   onAddContact,
-  onOpenInsights,
-  onOpenSettings,
   onCollapse,
   dashboardTab,
   onDashboardTabChange,
 }: DashboardHeaderProps) {
-  const { data: session } = useSession()
-
   return (
     <>
       <div className="px-4 pt-4 md:px-5 md:pt-5">
         <div className="flex items-center justify-between gap-2">
           <div className="min-w-0">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="text-lg font-semibold text-foreground truncate hover:text-foreground/80 transition-colors cursor-pointer">
-                  Konterra
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-56">
-                {session?.user && (
-                  <>
-                    <div className="flex items-center gap-2 px-2 py-1.5">
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={session.user.image || undefined} />
-                        <AvatarFallback className="text-xs bg-muted text-muted-foreground">
-                          {session.user.name?.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2) || '?'}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium truncate">{session.user.name}</p>
-                        <p className="text-xs text-muted-foreground truncate">{session.user.email}</p>
-                      </div>
-                    </div>
-                    <DropdownMenuSeparator />
-                  </>
-                )}
-                <DropdownMenuItem onClick={onAddContact}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Contact
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={onOpenInsights}>
-                  <Sparkles className="h-4 w-4 mr-2" />
-                  Insights
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={onOpenSettings}>
-                  <Settings className="h-4 w-4 mr-2" />
-                  Settings
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => signOut({ callbackUrl: '/login' })}>
-                  <LogOut className="h-4 w-4 mr-2" />
-                  Sign Out
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <p className="text-lg font-semibold text-foreground truncate">
+              Konterra
+            </p>
             <p className="text-xs text-muted-foreground">Your network command center</p>
           </div>
           <div className="flex items-center gap-1 shrink-0">

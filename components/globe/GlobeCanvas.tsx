@@ -230,6 +230,8 @@ export default memo(function GlobeCanvas({
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
       const controls = globeRef.current.controls()
       controls.enableDamping = true
+      controls.autoRotate = display.autoRotate
+      controls.autoRotateSpeed = 0.5
       globeReady.current = true
       const target = userLocation || { lat: 20, lng: 0 }
       globeRef.current.pointOfView({ ...target, altitude: 2.2 }, 1000)
@@ -241,6 +243,12 @@ export default memo(function GlobeCanvas({
     }, 100)
     return () => clearInterval(interval)
   }, [userLocation])
+
+  useEffect(() => {
+    if (!globeRef.current || !globeReady.current) return
+    const controls = globeRef.current.controls()
+    if (controls) controls.autoRotate = display.autoRotate
+  }, [display.autoRotate])
 
   useEffect(() => {
     if (selectedContact?.lat != null && selectedContact?.lng != null && globeRef.current) {
@@ -689,7 +697,7 @@ export default memo(function GlobeCanvas({
         pointColor={getPointColor}
         pointRadius={getPointRadius}
         pointAltitude={0.015}
-        pointLabel={getPointLabel}
+        pointLabel={display.showLabels ? getPointLabel : undefined}
         onPointClick={handlePointClick}
         arcsData={allArcs}
         arcStartLat="startLat"
