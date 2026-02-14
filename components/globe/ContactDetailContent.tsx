@@ -26,6 +26,7 @@ import { toast } from 'sonner'
 import { StarRating } from '@/components/ui/star-rating'
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
 import { RATING_LABELS } from '@/lib/constants/rating'
+import { countryFlag } from '@/lib/country-flags'
 import { trajectoryIcon, trajectoryColor, computeTrajectory, computeRelationshipStrength, computeProfileCompleteness } from '@/lib/metrics'
 import { fetchContactInteractions, fetchContactConnections, fetchContactFavors, fetchContactCountryConnections } from '@/lib/api'
 import type { Contact, Interaction, ContactConnection, ContactCountryConnection, Favor } from '@/lib/db/schema'
@@ -773,7 +774,7 @@ export default function ContactDetailContent({
             {(contact.city || contact.country) && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <MapPin className="h-4 w-4 text-muted-foreground/60 shrink-0" />
-                <span>{[contact.city, contact.country].filter(Boolean).join(', ')}</span>
+                <span>{[contact.city, contact.country].filter(Boolean).join(', ')} {countryFlag(contact.country)}</span>
               </div>
             )}
             {contact.address && (
@@ -1255,7 +1256,7 @@ export default function ContactDetailContent({
             {countryTies.map((tie) => (
               <div key={tie.id} className="flex items-center gap-2 py-1 group">
                 <Globe className="h-3 w-3 text-purple-500/60 shrink-0" />
-                <span className="text-[11px] text-foreground font-medium">{tie.country}</span>
+                <span className="text-[11px] text-foreground font-medium">{tie.country} {countryFlag(tie.country)}</span>
                 {editingCountryTie === tie.id ? (
                   <div className="flex-1 flex gap-1">
                     <Input

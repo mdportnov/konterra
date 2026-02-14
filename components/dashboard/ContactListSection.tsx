@@ -13,6 +13,7 @@ import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/comp
 import { useHotkey } from '@/hooks/use-hotkey'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuLabel } from '@/components/ui/dropdown-menu'
 import { useSavedViews } from '@/hooks/use-saved-views'
+import { countryFlag } from '@/lib/country-flags'
 import GettingStartedCard from './GettingStartedCard'
 import StatsRow from './widgets/StatsRow'
 import TopCountriesChart from './widgets/TopCountriesChart'
@@ -570,7 +571,7 @@ export default function ContactListSection({
                             }`}
                             onClick={() => toggleCountry(country)}
                           >
-                            {country}
+                            {countryFlag(country)} {country}
                           </Badge>
                         ))}
                       </div>
@@ -685,7 +686,9 @@ function SelfProfileCard({ contact, onOpenSettings }: { contact: Contact; onOpen
       <div className="flex-1 min-w-0">
         <p className="text-xs font-medium text-foreground truncate">{contact.name}</p>
         <p className="text-[10px] text-muted-foreground truncate">
-          {[contact.city, contact.country].filter(Boolean).join(', ') || (
+          {[contact.city, contact.country].filter(Boolean).join(', ')
+            ? <>{[contact.city, contact.country].filter(Boolean).join(', ')} {countryFlag(contact.country)}</>
+            : (
             <button onClick={onOpenSettings} className="text-orange-500 hover:text-orange-600 transition-colors cursor-pointer">
               Set your location
             </button>
@@ -1141,7 +1144,7 @@ function ContactCard({ contact, selectMode, isChecked, isSelected, onClick, onTo
           {contact.country && (
             <p className="text-[10px] text-muted-foreground/60 truncate flex items-center justify-center gap-0.5 mt-0.5">
               <MapPin className="h-2.5 w-2.5" />
-              {[contact.city, contact.country].filter(Boolean).join(', ')}
+              {[contact.city, contact.country].filter(Boolean).join(', ')} {countryFlag(contact.country)}
             </p>
           )}
         </div>
@@ -1206,7 +1209,7 @@ function ContactCompactRow({ contact, selectMode, isChecked, isSelected, onClick
         )}
       </span>
       <span className="text-[10px] text-muted-foreground/60 truncate text-right">
-        {[contact.city, contact.country].filter(Boolean).join(', ') || '\u2014'}
+        {[contact.city, contact.country].filter(Boolean).join(', ') ? `${[contact.city, contact.country].filter(Boolean).join(', ')} ${countryFlag(contact.country)}` : '\u2014'}
       </span>
       <span className="text-[10px] text-right w-6 flex items-center gap-0.5 justify-end">
         <FollowUpBadge contact={contact} />

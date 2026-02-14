@@ -6,6 +6,7 @@ import { useClickOutside } from '@/hooks/use-click-outside'
 import { useHotkey } from '@/hooks/use-hotkey'
 import { GLASS, Z } from '@/lib/constants/ui'
 import { TENSE_COLORS } from '@/lib/constants/globe-colors'
+import { countryFlag } from '@/lib/country-flags'
 import type { Trip } from '@/lib/db/schema'
 
 interface TripCountryPopupProps {
@@ -138,7 +139,7 @@ export default function TripCountryPopup({ country, trips, allTrips, x, y, open,
       <div className="flex items-center justify-between px-4 py-3 border-b border-blue-500/20 bg-blue-500/5 shrink-0">
         <div className="flex items-center gap-2 min-w-0">
           <Plane className="h-4 w-4 text-blue-400 shrink-0" />
-          <span className="text-sm font-medium text-foreground truncate">{country}</span>
+          <span className="text-sm font-medium text-foreground truncate">{country} {countryFlag(country)}</span>
           <span className="text-xs text-blue-400/80 shrink-0">
             {stats.visits} visit{stats.visits !== 1 ? 's' : ''}
           </span>

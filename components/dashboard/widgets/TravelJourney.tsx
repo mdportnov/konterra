@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { GLASS } from '@/lib/constants/ui'
+import { countryFlag } from '@/lib/country-flags'
 import type { Trip } from '@/lib/db/schema'
 
 interface TravelJourneyProps {
@@ -201,7 +202,7 @@ export default function TravelJourney({ trips, loading, onImport, onTripClick, o
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-medium text-foreground truncate">
                         {trip.city}
-                        <span className="text-muted-foreground/50 font-normal ml-1">{trip.country}</span>
+                        <span className="text-muted-foreground/50 font-normal ml-1">{trip.country} {countryFlag(trip.country)}</span>
                       </p>
                       <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
                         <span className="flex items-center gap-0.5">
@@ -256,7 +257,7 @@ export default function TravelJourney({ trips, loading, onImport, onTripClick, o
                         <span className={`text-[9px] ${connTextColor} font-medium`}>
                           {nextInSorted.city === trip.city && nextInSorted.country === trip.country
                             ? 'stayed'
-                            : `${nextInSorted.city}, ${nextInSorted.country}`}
+                            : `${nextInSorted.city}, ${nextInSorted.country} ${countryFlag(nextInSorted.country)}`}
                         </span>
                       </div>
                     )

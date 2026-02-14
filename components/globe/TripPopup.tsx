@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import type { Trip } from '@/lib/db/schema'
 import { GLASS } from '@/lib/constants/ui'
 import { TENSE_COLORS } from '@/lib/constants/globe-colors'
+import { countryFlag } from '@/lib/country-flags'
 import { ChevronLeft, ChevronRight, X, Calendar, Clock, MapPin, Plus } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
@@ -88,7 +89,7 @@ export default function TripPopup({ trip, prevTrip, nextTrip, onNavigate, onClos
           </div>
           <div className="min-w-0">
             <div className="text-sm font-semibold truncate">{trip.city}</div>
-            <div className="text-xs text-muted-foreground truncate">{trip.country}</div>
+            <div className="text-xs text-muted-foreground truncate">{trip.country} {countryFlag(trip.country)}</div>
           </div>
         </div>
         <TooltipProvider>

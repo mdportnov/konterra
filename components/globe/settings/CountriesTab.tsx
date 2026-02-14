@@ -8,6 +8,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Search, ChevronDown } from 'lucide-react'
 import { countryNames } from '@/components/globe/data/country-centroids'
 import { COUNTRY_REGIONS } from '@/lib/constants/country-regions'
+import { countryFlag } from '@/lib/country-flags'
 import type { CountriesTabProps } from './types'
 
 const allCountryNames = Array.from(new Set(Object.values(countryNames))).sort()
@@ -129,7 +130,7 @@ export function CountriesTab({ visitedCountries, onToggleVisitedCountry, contact
                             checked={visitedCountries?.has(name) || false}
                             onCheckedChange={() => onToggleVisitedCountry(name)}
                           />
-                          <span className="text-sm text-foreground flex-1">{name}</span>
+                          <span className="text-sm text-foreground flex-1">{countryFlag(name)} {name}</span>
                           {count > 0 && (
                             <span className="text-[10px] text-muted-foreground/60 bg-muted rounded-full px-1.5 py-0.5 min-w-[20px] text-center">
                               {count}

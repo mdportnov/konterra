@@ -7,6 +7,7 @@ import { X, UserPlus } from 'lucide-react'
 import { useClickOutside } from '@/hooks/use-click-outside'
 import { useHotkey } from '@/hooks/use-hotkey'
 import { GLASS, Z } from '@/lib/constants/ui'
+import { countryFlag } from '@/lib/country-flags'
 import type { Contact } from '@/lib/db/schema'
 
 interface CountryPopupProps {
@@ -157,7 +158,7 @@ export default function CountryPopup({ country, contacts, x, y, open, onSelect, 
     >
       <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
         <div className="flex items-center gap-2 min-w-0">
-          <span className="text-sm font-medium text-foreground truncate">{country}</span>
+          <span className="text-sm font-medium text-foreground truncate">{country} {countryFlag(country)}</span>
           {hasContacts && (
             <span className="text-xs text-muted-foreground/60 shrink-0">
               {contacts.length + indirectContacts.length}
