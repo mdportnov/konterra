@@ -18,17 +18,11 @@ export default {
     signIn: '/login',
   },
   callbacks: {
-    async jwt({ token, user }) {
+    jwt({ token, user }) {
       if (user) {
         token.id = user.id
         token.name = user.name
         token.role = (user as { role?: string }).role ?? 'user'
-      } else if (token.id) {
-        const { getUserById } = await import('@/lib/db/queries')
-        const dbUser = await getUserById(token.id as string)
-        if (dbUser) {
-          token.role = dbUser.role
-        }
       }
       return token
     },
