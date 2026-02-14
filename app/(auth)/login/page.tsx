@@ -43,9 +43,16 @@ export default function LoginPage() {
   }, [mode, animating])
 
   useEffect(() => {
-    if (formRef.current) {
-      formRef.current.style.height = formRef.current.scrollHeight + 'px'
-    }
+    const el = formRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    const h = el.scrollHeight
+    el.style.height = h + 'px'
+    const id = setTimeout(() => {
+      el.style.height = 'auto'
+      el.style.height = el.scrollHeight + 'px'
+    }, 220)
+    return () => clearTimeout(id)
   }, [mode, submitted, signInStep, passwordVisible])
 
   useEffect(() => {
