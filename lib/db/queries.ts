@@ -820,10 +820,21 @@ export async function deleteAllTrips(userId: string) {
 }
 
 export async function getAllUsers() {
-  return db.query.users.findMany({
-    columns: { id: true, email: true, name: true, image: true, role: true, createdAt: true },
-    orderBy: (users, { desc }) => [desc(users.createdAt)],
-  })
+  const rows = await db
+    .select({
+      id: users.id,
+      email: users.email,
+      name: users.name,
+      image: users.image,
+      role: users.role,
+      createdAt: users.createdAt,
+      contactCount: sql<number>`cast(count(distinct ${contacts.id}) as int)`,
+    })
+    .from(users)
+    .leftJoin(contacts, eq(users.id, contacts.userId))
+    .groupBy(users.id)
+    .orderBy(desc(users.createdAt))
+  return rows
 }
 
 export async function createUser(data: { email: string; name: string; password: string; role?: string }) {
@@ -838,6 +849,11 @@ export async function createUser(data: { email: string; name: string; password: 
 export async function updateUserRole(id: string, role: 'user' | 'moderator' | 'admin') {
   const [updated] = await db.update(users).set({ role }).where(eq(users.id, id)).returning({ id: users.id, role: users.role })
   return updated
+}
+
+export async function deleteUser(id: string) {
+  const [deleted] = await db.delete(users).where(eq(users.id, id)).returning({ id: users.id })
+  return deleted
 }
 
 export async function getAdminStats() {

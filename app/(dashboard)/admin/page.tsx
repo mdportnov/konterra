@@ -15,7 +15,8 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import {
   ArrowLeft, Users, Globe, Link2, MessageSquare, Heart, Plane, Tag,
-  Plus, Loader2, Shield, ShieldCheck, User, Eye, EyeOff, Search, X, ChevronDown, ChevronUp,
+  Plus, Loader2, Shield, ShieldCheck, User, Eye, EyeOff, Search, X,
+  ChevronDown, ChevronUp, Trash2, RefreshCw,
 } from 'lucide-react'
 import { GLASS, TRANSITION } from '@/lib/constants/ui'
 import { toast } from 'sonner'
@@ -38,6 +39,7 @@ interface AdminUser {
   image: string | null
   role: string
   createdAt: string | null
+  contactCount: number
 }
 
 const ROLE_CONFIG = {
@@ -52,18 +54,22 @@ export default function AdminPage() {
   const [stats, setStats] = useState<AdminStats | null>(null)
   const [users, setUsers] = useState<AdminUser[]>([])
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [showCreateUser, setShowCreateUser] = useState(false)
   const [creating, setCreating] = useState(false)
   const [search, setSearch] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [expandedUser, setExpandedUser] = useState<string | null>(null)
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
   const [newUser, setNewUser] = useState({ email: '', name: '', password: '', role: 'user' })
 
   const isAdmin = session?.user?.role === 'admin'
-  const isModerator = session?.user?.role === 'moderator'
-  const hasAccess = isAdmin || isModerator
+  const hasAccess = isAdmin || session?.user?.role === 'moderator'
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true)
+    else setRefreshing(true)
     try {
       const [statsRes, usersRes] = await Promise.all([
         fetch('/api/admin/stats'),
@@ -75,22 +81,17 @@ export default function AdminPage() {
       setUsers(usersData)
     } catch {
       toast.error('Failed to load admin data')
-      router.push('/')
+      if (!silent) router.push('/')
     } finally {
       setLoading(false)
+      setRefreshing(false)
     }
   }, [router])
 
   useEffect(() => {
     if (status === 'loading') return
-    if (!session?.user) {
-      router.push('/login')
-      return
-    }
-    if (!hasAccess) {
-      router.push('/')
-      return
-    }
+    if (!session?.user) { router.push('/login'); return }
+    if (!hasAccess) { router.push('/'); return }
     fetchData()
   }, [status, session, hasAccess, router, fetchData])
 
@@ -118,7 +119,7 @@ export default function AdminPage() {
       setNewUser({ email: '', name: '', password: '', role: 'user' })
       setShowCreateUser(false)
       setShowPassword(false)
-      fetchData()
+      fetchData(true)
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to create user')
     } finally {
@@ -126,21 +127,45 @@ export default function AdminPage() {
     }
   }
 
-  const handleRoleChange = async (userId: string, role: string) => {
+  const handleRoleChange = async (userId: string, newRole: string) => {
+    const prev = users.find((u) => u.id === userId)?.role
+    setUsers((u) => u.map((x) => x.id === userId ? { ...x, role: newRole } : x))
     try {
       const res = await fetch('/api/admin/users', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, role }),
+        body: JSON.stringify({ userId, role: newRole }),
       })
       if (!res.ok) {
         const data = await res.json()
         throw new Error(data.error || 'Failed to update role')
       }
       toast.success('Role updated')
-      setUsers((prev) => prev.map((u) => u.id === userId ? { ...u, role } : u))
     } catch (e) {
+      setUsers((u) => u.map((x) => x.id === userId ? { ...x, role: prev ?? 'user' } : x))
       toast.error(e instanceof Error ? e.message : 'Failed to update role')
+    }
+  }
+
+  const handleDeleteUser = async (userId: string) => {
+    setDeleting(true)
+    const prev = users
+    setUsers((u) => u.filter((x) => x.id !== userId))
+    setDeleteConfirmId(null)
+    setExpandedUser(null)
+    try {
+      const res = await fetch(`/api/admin/users?id=${userId}`, { method: 'DELETE' })
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Failed to delete user')
+      }
+      toast.success('User deleted')
+      fetchData(true)
+    } catch (e) {
+      setUsers(prev)
+      toast.error(e instanceof Error ? e.message : 'Failed to delete user')
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -159,7 +184,10 @@ export default function AdminPage() {
               <Skeleton key={i} className="h-24 rounded-xl" />
             ))}
           </div>
-          <Skeleton className="h-96 rounded-xl" />
+          <Skeleton className="h-8 w-full rounded-lg" />
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-16 rounded-xl" />
+          ))}
         </div>
       </div>
     )
@@ -194,9 +222,19 @@ export default function AdminPage() {
             <Shield className="h-5 w-5 text-orange-500" />
             <h1 className="text-lg font-semibold text-foreground">Admin Dashboard</h1>
           </div>
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-2">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" onClick={() => fetchData(true)} disabled={refreshing}>
+                    <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Refresh data</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
             <Badge variant="outline" className={ROLE_CONFIG[session?.user?.role as keyof typeof ROLE_CONFIG]?.bg || ''}>
-              {session?.user?.role === 'admin' ? 'Administrator' : 'Moderator'}
+              {isAdmin ? 'Administrator' : 'Moderator'}
             </Badge>
           </div>
         </div>
@@ -334,11 +372,12 @@ export default function AdminPage() {
                   .slice(0, 2) || '?'
                 const isExpanded = expandedUser === u.id
                 const isSelf = u.id === session?.user?.id
+                const isDeleteTarget = deleteConfirmId === u.id
 
                 return (
                   <div
                     key={u.id}
-                    className={`rounded-xl border border-border bg-card/50 ${TRANSITION.color} hover:bg-card/80`}
+                    className={`rounded-xl border bg-card/50 ${TRANSITION.color} hover:bg-card/80 ${isDeleteTarget ? 'border-destructive/50' : 'border-border'}`}
                   >
                     <button
                       className="w-full px-4 py-3 flex items-center gap-3 text-left"
@@ -358,6 +397,7 @@ export default function AdminPage() {
                         </div>
                         <span className="text-xs text-muted-foreground truncate block">{u.email}</span>
                       </div>
+                      <span className="text-xs text-muted-foreground shrink-0 hidden sm:block">{u.contactCount} contacts</span>
                       <Badge variant="outline" className={`shrink-0 gap-1 text-[10px] ${config.bg}`}>
                         <RoleIcon className={`h-3 w-3 ${config.color}`} />
                         {config.label}
@@ -366,10 +406,14 @@ export default function AdminPage() {
                     </button>
                     {isExpanded && (
                       <div className="px-4 pb-3 pt-0 space-y-3 border-t border-border">
-                        <div className="grid grid-cols-2 gap-3 pt-3 text-xs">
+                        <div className="grid grid-cols-3 gap-3 pt-3 text-xs">
                           <div>
                             <span className="text-muted-foreground">ID</span>
                             <p className="text-foreground font-mono text-[10px] truncate">{u.id}</p>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Contacts</span>
+                            <p className="text-foreground">{u.contactCount}</p>
                           </div>
                           <div>
                             <span className="text-muted-foreground">Joined</span>
@@ -379,18 +423,61 @@ export default function AdminPage() {
                           </div>
                         </div>
                         {isAdmin && !isSelf && (
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs text-muted-foreground">Role:</span>
-                            <Select value={u.role} onValueChange={(v) => handleRoleChange(u.id, v)}>
-                              <SelectTrigger className="h-7 w-[130px] text-xs">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="user" className="text-xs">User</SelectItem>
-                                <SelectItem value="moderator" className="text-xs">Moderator</SelectItem>
-                                <SelectItem value="admin" className="text-xs">Admin</SelectItem>
-                              </SelectContent>
-                            </Select>
+                          <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-muted-foreground">Role:</span>
+                              <Select value={u.role} onValueChange={(v) => handleRoleChange(u.id, v)}>
+                                <SelectTrigger className="h-7 w-[130px] text-xs">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="user" className="text-xs">User</SelectItem>
+                                  <SelectItem value="moderator" className="text-xs">Moderator</SelectItem>
+                                  <SelectItem value="admin" className="text-xs">Admin</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="ml-auto">
+                              {isDeleteTarget ? (
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-xs text-destructive">Delete?</span>
+                                  <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    className="h-7 text-xs px-2"
+                                    onClick={() => handleDeleteUser(u.id)}
+                                    disabled={deleting}
+                                  >
+                                    {deleting ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Confirm'}
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-7 text-xs px-2"
+                                    onClick={() => setDeleteConfirmId(null)}
+                                    disabled={deleting}
+                                  >
+                                    Cancel
+                                  </Button>
+                                </div>
+                              ) : (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                                        onClick={() => setDeleteConfirmId(u.id)}
+                                      >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Delete user</TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              )}
+                            </div>
                           </div>
                         )}
                       </div>

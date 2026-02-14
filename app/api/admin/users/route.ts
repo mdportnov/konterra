@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
-import { getUserById, getAllUsers, createUser, updateUserRole } from '@/lib/db/queries'
+import { getUserById, getAllUsers, createUser, updateUserRole, deleteUser } from '@/lib/db/queries'
 import { hash } from 'bcryptjs'
 
 export async function GET() {
@@ -90,4 +90,34 @@ export async function PATCH(req: Request) {
   }
 
   return NextResponse.json(updated)
+}
+
+export async function DELETE(req: Request) {
+  const session = await auth()
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const currentUser = await getUserById(session.user.id)
+  if (!currentUser || currentUser.role !== 'admin') {
+    return NextResponse.json({ error: 'Only admins can delete users' }, { status: 403 })
+  }
+
+  const { searchParams } = new URL(req.url)
+  const userId = searchParams.get('id')
+
+  if (!userId) {
+    return NextResponse.json({ error: 'User ID is required' }, { status: 400 })
+  }
+
+  if (userId === session.user.id) {
+    return NextResponse.json({ error: 'Cannot delete your own account' }, { status: 400 })
+  }
+
+  const deleted = await deleteUser(userId)
+  if (!deleted) {
+    return NextResponse.json({ error: 'User not found' }, { status: 404 })
+  }
+
+  return NextResponse.json({ success: true })
 }
