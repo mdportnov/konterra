@@ -13,6 +13,7 @@ export async function GET() {
     name: user?.name ?? session.user.name ?? '',
     email: user?.email ?? session.user.email ?? '',
     image: user?.image ?? null,
+    role: user?.role ?? 'user',
     createdAt: user?.createdAt ?? null,
   })
 }

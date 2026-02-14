@@ -29,6 +29,8 @@ export const relationshipTypeEnum = pgEnum('relationship_type', [
   'friend', 'business', 'investor', 'conference', 'mentor', 'colleague', 'family', 'dating', 'professional', 'acquaintance',
 ])
 
+export const userRoleEnum = pgEnum('user_role', ['user', 'moderator', 'admin'])
+
 export const genderEnum = pgEnum('gender', ['male', 'female'])
 
 export const communicationStyleEnum = pgEnum('communication_style', [
@@ -57,6 +59,7 @@ export const users = pgTable('users', {
   password: text('password').notNull(),
   name: text('name'),
   image: text('image'),
+  role: userRoleEnum('role').notNull().default('user'),
   emailVerified: timestamp('email_verified', { mode: 'date' }),
   createdAt: timestamp('created_at').defaultNow(),
 })

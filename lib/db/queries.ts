@@ -10,7 +10,7 @@ export async function deleteAllContactsByUserId(userId: string) {
 export async function getUserByEmail(email: string) {
   return db.query.users.findFirst({
     where: eq(users.email, email),
-    columns: { id: true, email: true, name: true, password: true },
+    columns: { id: true, email: true, name: true, password: true, role: true },
   })
 }
 
@@ -24,7 +24,7 @@ export async function createWaitlistEntry(data: { email: string; name: string; m
 export async function getUserById(id: string) {
   return db.query.users.findFirst({
     where: eq(users.id, id),
-    columns: { id: true, email: true, name: true, image: true, createdAt: true },
+    columns: { id: true, email: true, name: true, image: true, role: true, createdAt: true },
   })
 }
 
@@ -817,4 +817,71 @@ export async function deleteTrip(id: string, userId: string) {
 
 export async function deleteAllTrips(userId: string) {
   return db.delete(trips).where(eq(trips.userId, userId))
+}
+
+export async function getAllUsers() {
+  const rows = await db
+    .select({
+      id: users.id,
+      email: users.email,
+      name: users.name,
+      image: users.image,
+      role: users.role,
+      createdAt: users.createdAt,
+      contactCount: sql<number>`cast(count(distinct ${contacts.id}) as int)`,
+    })
+    .from(users)
+    .leftJoin(contacts, eq(users.id, contacts.userId))
+    .groupBy(users.id)
+    .orderBy(desc(users.createdAt))
+  return rows
+}
+
+export async function createUser(data: { email: string; name: string; password: string; role?: string }) {
+  const id = crypto.randomUUID()
+  const [user] = await db
+    .insert(users)
+    .values({ id, email: data.email, name: data.name, password: data.password, role: (data.role as 'user' | 'moderator' | 'admin') ?? 'user' })
+    .returning({ id: users.id, email: users.email, name: users.name, role: users.role, createdAt: users.createdAt })
+  return user
+}
+
+export async function updateUserRole(id: string, role: 'user' | 'moderator' | 'admin') {
+  const [updated] = await db.update(users).set({ role }).where(eq(users.id, id)).returning({ id: users.id, role: users.role })
+  return updated
+}
+
+export async function deleteUser(id: string) {
+  const [deleted] = await db.delete(users).where(eq(users.id, id)).returning({ id: users.id })
+  return deleted
+}
+
+export async function getAdminStats() {
+  const [userCount] = await db.select({ count: sql<number>`cast(count(*) as int)` }).from(users)
+  const [contactCount] = await db.select({ count: sql<number>`cast(count(*) as int)` }).from(contacts)
+  const [connectionCount] = await db.select({ count: sql<number>`cast(count(*) as int)` }).from(contactConnections)
+  const [interactionCount] = await db.select({ count: sql<number>`cast(count(*) as int)` }).from(interactions)
+  const [favorCount] = await db.select({ count: sql<number>`cast(count(*) as int)` }).from(favors)
+  const [tripCount] = await db.select({ count: sql<number>`cast(count(*) as int)` }).from(trips)
+  const [tagCount] = await db.select({ count: sql<number>`cast(count(*) as int)` }).from(tags)
+
+  const usersWithStats = await db
+    .select({
+      userId: users.id,
+      contactCount: sql<number>`cast(count(distinct ${contacts.id}) as int)`,
+    })
+    .from(users)
+    .leftJoin(contacts, eq(users.id, contacts.userId))
+    .groupBy(users.id)
+
+  return {
+    totalUsers: userCount.count,
+    totalContacts: contactCount.count,
+    totalConnections: connectionCount.count,
+    totalInteractions: interactionCount.count,
+    totalFavors: favorCount.count,
+    totalTrips: tripCount.count,
+    totalTags: tagCount.count,
+    avgContactsPerUser: userCount.count > 0 ? Math.round(contactCount.count / userCount.count) : 0,
+  }
 }
