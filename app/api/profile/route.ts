@@ -1,16 +1,14 @@
-import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
+import { unauthorized, badRequest, notFound, success, serverError } from '@/lib/api-utils'
 import { getUserById, updateUserProfile } from '@/lib/db/queries'
 
 export async function GET() {
   const session = await auth()
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  if (!session?.user?.id) return unauthorized()
 
   try {
     const user = await getUserById(session.user.id)
-    return NextResponse.json({
+    return success({
       name: user?.name ?? session.user.name ?? '',
       email: user?.email ?? session.user.email ?? '',
       image: user?.image ?? null,
@@ -19,7 +17,7 @@ export async function GET() {
     })
   } catch (err) {
     console.error('[GET /api/profile]', err instanceof Error ? err.message : err)
-    return NextResponse.json({
+    return success({
       name: session.user.name ?? '',
       email: session.user.email ?? '',
       image: null,
@@ -31,9 +29,7 @@ export async function GET() {
 
 export async function PATCH(req: Request) {
   const session = await auth()
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  if (!session?.user?.id) return unauthorized()
 
   try {
     const body = await req.json()
@@ -47,17 +43,15 @@ export async function PATCH(req: Request) {
     }
 
     if (Object.keys(data).length === 0) {
-      return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 })
+      return badRequest('No valid fields to update')
     }
 
     const updated = await updateUserProfile(session.user.id, data)
-    if (!updated) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
+    if (!updated) return notFound('User')
 
-    return NextResponse.json({ name: updated.name, image: updated.image })
+    return success({ name: updated.name, image: updated.image })
   } catch (err) {
     console.error('[PATCH /api/profile]', err)
-    return NextResponse.json({ error: 'Failed to update profile' }, { status: 500 })
+    return serverError('Failed to update profile')
   }
 }

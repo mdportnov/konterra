@@ -10,6 +10,7 @@ import type { DisplayOptions } from '@/types/display'
 import ClusterPopup from './ClusterPopup'
 import { useTheme } from '@/components/providers'
 import { GLASS } from '@/lib/constants/ui'
+import { TRAVEL_COLORS, NETWORK_COLORS, CONNECTION_COLORS, POLYGON_COLORS } from '@/lib/constants/globe-colors'
 
 const GlobeGL = dynamic(() => import('react-globe.gl'), { ssr: false })
 
@@ -68,52 +69,43 @@ function ContactDensityLegend({ isDark, visitedCountries, hasIndirect, showUserC
   return (
     <div className={`absolute top-14 right-4 ${GLASS.control} rounded-lg px-2.5 py-2 flex flex-col gap-1`}>
       <div className="flex items-center gap-1.5">
-        <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? 'rgba(234, 88, 12, 0.35)' : 'rgba(234, 88, 12, 0.25)' }} />
+        <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.contactLow.dark : POLYGON_COLORS.contactLow.light }} />
         <span className="text-[10px] text-muted-foreground">1-2 contacts</span>
       </div>
       <div className="flex items-center gap-1.5">
-        <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? 'rgba(234, 88, 12, 0.55)' : 'rgba(234, 88, 12, 0.4)' }} />
+        <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.contactMed.dark : POLYGON_COLORS.contactMed.light }} />
         <span className="text-[10px] text-muted-foreground">3-5 contacts</span>
       </div>
       <div className="flex items-center gap-1.5">
-        <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? 'rgba(234, 88, 12, 0.75)' : 'rgba(234, 88, 12, 0.55)' }} />
+        <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.contactHigh.dark : POLYGON_COLORS.contactHigh.light }} />
         <span className="text-[10px] text-muted-foreground">5+ contacts</span>
       </div>
       {hasVisited && (
         <>
           <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? 'rgba(20, 184, 166, 0.25)' : 'rgba(20, 184, 166, 0.15)', border: `1.5px solid ${isDark ? 'rgba(20, 184, 166, 0.6)' : 'rgba(20, 184, 166, 0.45)'}` }} />
+            <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.visitedOnly.dark : POLYGON_COLORS.visitedOnly.light, border: `1.5px solid ${isDark ? POLYGON_COLORS.visitedStroke.dark : POLYGON_COLORS.visitedStroke.light}` }} />
             <span className="text-[10px] text-muted-foreground">Visited only</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? 'rgba(180, 120, 40, 0.4)' : 'rgba(180, 120, 40, 0.3)', border: `1.5px solid ${isDark ? 'rgba(20, 184, 166, 0.8)' : 'rgba(20, 184, 166, 0.6)'}` }} />
+            <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.visitedContactLow.dark : POLYGON_COLORS.visitedContactLow.light, border: `1.5px solid ${isDark ? POLYGON_COLORS.visitedContactsStroke.dark : POLYGON_COLORS.visitedContactsStroke.light}` }} />
             <span className="text-[10px] text-muted-foreground">Visited + contacts</span>
           </div>
         </>
       )}
       {hasIndirect && (
         <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? 'rgba(168, 85, 247, 0.2)' : 'rgba(168, 85, 247, 0.12)', border: `1.5px solid ${isDark ? 'rgba(168, 85, 247, 0.5)' : 'rgba(168, 85, 247, 0.35)'}` }} />
+          <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.indirect.dark : POLYGON_COLORS.indirect.light, border: `1.5px solid ${isDark ? POLYGON_COLORS.indirectStroke.dark : POLYGON_COLORS.indirectStroke.light}` }} />
           <span className="text-[10px] text-muted-foreground">Indirect ties</span>
         </div>
       )}
       {showUserCountry && (
         <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? 'rgba(34, 197, 94, 0.25)' : 'rgba(34, 197, 94, 0.15)', border: `1.5px solid ${isDark ? 'rgba(34, 197, 94, 0.6)' : 'rgba(34, 197, 94, 0.45)'}` }} />
+          <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.userCountry.dark : POLYGON_COLORS.userCountry.light, border: `1.5px solid ${isDark ? POLYGON_COLORS.userCountryStroke.dark : POLYGON_COLORS.userCountryStroke.light}` }} />
           <span className="text-[10px] text-muted-foreground">Your location</span>
         </div>
       )}
     </div>
   )
-}
-
-const CONNECTION_COLORS: Record<string, string> = {
-  knows: 'rgba(251, 146, 60, 0.5)',
-  introduced_by: 'rgba(168, 85, 247, 0.5)',
-  works_with: 'rgba(59, 130, 246, 0.5)',
-  reports_to: 'rgba(239, 68, 68, 0.5)',
-  invested_in: 'rgba(34, 197, 94, 0.5)',
-  referred_by: 'rgba(236, 72, 153, 0.5)',
 }
 
 export default memo(function GlobeCanvas({
@@ -303,7 +295,7 @@ export default memo(function GlobeCanvas({
           lng: c.lng!,
           name: c.name,
           city: c.city,
-          color: isHighlighted ? '#38bdf8' : '#f97316',
+          color: isHighlighted ? NETWORK_COLORS.pointHighlighted : NETWORK_COLORS.point,
           size: isHighlighted ? 0.65 : 0.45,
         })
       } else {
@@ -318,7 +310,7 @@ export default memo(function GlobeCanvas({
           lng: group[0].lng!,
           name: `${group.length} contacts`,
           city: group[0].city,
-          color: allHighlighted ? '#38bdf8' : someHighlighted ? '#7dd3fc' : '#fb923c',
+          color: allHighlighted ? NETWORK_COLORS.pointHighlighted : someHighlighted ? NETWORK_COLORS.pointClusterPartial : NETWORK_COLORS.pointCluster,
           size: (someHighlighted ? 0.55 : 0.45) + Math.min(group.length * 0.12, 0.6),
           isCluster: true,
           count: group.length,
@@ -333,7 +325,7 @@ export default memo(function GlobeCanvas({
         lng: userLocation.lng,
         name: 'You',
         city: null,
-        color: '#22c55e',
+        color: NETWORK_COLORS.userPoint,
         size: 0.55,
         isUser: true,
       })
@@ -374,8 +366,8 @@ export default memo(function GlobeCanvas({
         endLat: target.lat!,
         endLng: target.lng!,
         color: involvesSelected
-          ? 'rgba(56, 189, 248, 0.6)'
-          : CONNECTION_COLORS[conn.connectionType] || 'rgba(251, 146, 60, 0.4)',
+          ? NETWORK_COLORS.selectedArc
+          : CONNECTION_COLORS[conn.connectionType] || NETWORK_COLORS.defaultArc,
       })
     }
     return result
@@ -431,8 +423,8 @@ export default memo(function GlobeCanvas({
         endLat: centroid.lat,
         endLng: centroid.lng,
         color: involvesSelected
-          ? 'rgba(56, 189, 248, 0.35)'
-          : 'rgba(168, 85, 247, 0.25)',
+          ? NETWORK_COLORS.countryArcSelected
+          : NETWORK_COLORS.countryArcDefault,
         type: 'country',
       })
     }
@@ -456,7 +448,7 @@ export default memo(function GlobeCanvas({
           lng: t.lng!,
           name: t.city,
           city: t.country,
-          color: isFuture ? '#22c55e' : '#3b82f6',
+          color: isFuture ? TRAVEL_COLORS.futurePoint : TRAVEL_COLORS.pastPoint,
           size: 0.5,
         }
       })
@@ -475,7 +467,7 @@ export default memo(function GlobeCanvas({
         startLng: sorted[i].lng!,
         endLat: sorted[i + 1].lat!,
         endLng: sorted[i + 1].lng!,
-        color: nextIsFuture ? 'rgba(74, 222, 128, 0.6)' : 'rgba(96, 165, 250, 0.6)',
+        color: nextIsFuture ? TRAVEL_COLORS.futureArc : TRAVEL_COLORS.pastArc,
         isTravel: true,
       })
     }
@@ -613,30 +605,30 @@ export default memo(function GlobeCanvas({
     const name = countryNames[String(f.id)]
     if (name) {
       if (isTravelMode) {
-        if (futureTravelCountries.has(name)) return isDark ? 'rgba(74, 222, 128, 0.25)' : 'rgba(74, 222, 128, 0.15)'
-        if (pastTravelCountries.has(name)) return isDark ? 'rgba(59, 130, 246, 0.35)' : 'rgba(59, 130, 246, 0.2)'
-        return isDark ? 'rgba(15, 25, 55, 0.85)' : 'rgba(180, 195, 220, 0.7)'
+        if (futureTravelCountries.has(name)) return isDark ? TRAVEL_COLORS.futureCountry.dark : TRAVEL_COLORS.futureCountry.light
+        if (pastTravelCountries.has(name)) return isDark ? TRAVEL_COLORS.pastCountry.dark : TRAVEL_COLORS.pastCountry.light
+        return isDark ? POLYGON_COLORS.defaultCap.dark : POLYGON_COLORS.defaultCap.light
       }
       const count = countryContactCount.get(name) || 0
       const isVisited = visitedCountries?.has(name)
       const isIndirectOnly = indirectOnlyCountries.has(name)
       if (count > 0 && isVisited) {
-        if (count > 5) return isDark ? 'rgba(200, 100, 20, 0.75)' : 'rgba(200, 100, 20, 0.55)'
-        if (count >= 3) return isDark ? 'rgba(200, 100, 20, 0.55)' : 'rgba(200, 100, 20, 0.4)'
-        return isDark ? 'rgba(180, 120, 40, 0.4)' : 'rgba(180, 120, 40, 0.3)'
+        if (count > 5) return isDark ? POLYGON_COLORS.visitedContactHigh.dark : POLYGON_COLORS.visitedContactHigh.light
+        if (count >= 3) return isDark ? POLYGON_COLORS.visitedContactMed.dark : POLYGON_COLORS.visitedContactMed.light
+        return isDark ? POLYGON_COLORS.visitedContactLow.dark : POLYGON_COLORS.visitedContactLow.light
       }
-      if (count > 5) return isDark ? 'rgba(234, 88, 12, 0.75)' : 'rgba(234, 88, 12, 0.55)'
-      if (count >= 3) return isDark ? 'rgba(234, 88, 12, 0.55)' : 'rgba(234, 88, 12, 0.4)'
-      if (count >= 1) return isDark ? 'rgba(234, 88, 12, 0.35)' : 'rgba(234, 88, 12, 0.25)'
-      if (isIndirectOnly) return isDark ? 'rgba(168, 85, 247, 0.2)' : 'rgba(168, 85, 247, 0.12)'
-      if (isVisited) return isDark ? 'rgba(20, 184, 166, 0.25)' : 'rgba(20, 184, 166, 0.15)'
-      if (userCountry && name === userCountry) return isDark ? 'rgba(34, 197, 94, 0.25)' : 'rgba(34, 197, 94, 0.15)'
+      if (count > 5) return isDark ? POLYGON_COLORS.contactHigh.dark : POLYGON_COLORS.contactHigh.light
+      if (count >= 3) return isDark ? POLYGON_COLORS.contactMed.dark : POLYGON_COLORS.contactMed.light
+      if (count >= 1) return isDark ? POLYGON_COLORS.contactLow.dark : POLYGON_COLORS.contactLow.light
+      if (isIndirectOnly) return isDark ? POLYGON_COLORS.indirect.dark : POLYGON_COLORS.indirect.light
+      if (isVisited) return isDark ? POLYGON_COLORS.visitedOnly.dark : POLYGON_COLORS.visitedOnly.light
+      if (userCountry && name === userCountry) return isDark ? POLYGON_COLORS.userCountry.dark : POLYGON_COLORS.userCountry.light
     }
-    return isDark ? 'rgba(15, 25, 55, 0.85)' : 'rgba(180, 195, 220, 0.7)'
+    return isDark ? POLYGON_COLORS.defaultCap.dark : POLYGON_COLORS.defaultCap.light
   }, [isDark, countryContactCount, visitedCountries, indirectOnlyCountries, userCountry, isTravelMode, pastTravelCountries, futureTravelCountries])
 
   const getPolygonSideColor = useCallback(
-    () => isDark ? 'rgba(10, 18, 40, 0.6)' : 'rgba(160, 180, 210, 0.5)',
+    () => isDark ? POLYGON_COLORS.defaultSide.dark : POLYGON_COLORS.defaultSide.light,
     [isDark]
   )
 
@@ -646,20 +638,20 @@ export default memo(function GlobeCanvas({
       const name = countryNames[String(f.id)]
       if (name) {
         if (isTravelMode) {
-          if (futureTravelCountries.has(name)) return isDark ? 'rgba(74, 222, 128, 0.5)' : 'rgba(74, 222, 128, 0.35)'
-          if (pastTravelCountries.has(name)) return isDark ? 'rgba(59, 130, 246, 0.6)' : 'rgba(59, 130, 246, 0.4)'
-          return isDark ? 'rgba(40, 70, 130, 0.35)' : 'rgba(100, 130, 180, 0.3)'
+          if (futureTravelCountries.has(name)) return isDark ? TRAVEL_COLORS.futureStroke.dark : TRAVEL_COLORS.futureStroke.light
+          if (pastTravelCountries.has(name)) return isDark ? TRAVEL_COLORS.pastStroke.dark : TRAVEL_COLORS.pastStroke.light
+          return isDark ? POLYGON_COLORS.defaultStroke.dark : POLYGON_COLORS.defaultStroke.light
         }
         const isVisited = visitedCountries?.has(name)
         const hasContacts = (countryContactCount.get(name) || 0) > 0
         const isIndirectOnly = indirectOnlyCountries.has(name)
-        if (isVisited && hasContacts) return isDark ? 'rgba(20, 184, 166, 0.8)' : 'rgba(20, 184, 166, 0.6)'
-        if (isVisited) return isDark ? 'rgba(20, 184, 166, 0.6)' : 'rgba(20, 184, 166, 0.45)'
-        if (hasContacts) return isDark ? 'rgba(234, 88, 12, 0.5)' : 'rgba(234, 88, 12, 0.35)'
-        if (isIndirectOnly) return isDark ? 'rgba(168, 85, 247, 0.5)' : 'rgba(168, 85, 247, 0.35)'
-        if (userCountry && name === userCountry) return isDark ? 'rgba(34, 197, 94, 0.6)' : 'rgba(34, 197, 94, 0.45)'
+        if (isVisited && hasContacts) return isDark ? POLYGON_COLORS.visitedContactsStroke.dark : POLYGON_COLORS.visitedContactsStroke.light
+        if (isVisited) return isDark ? POLYGON_COLORS.visitedStroke.dark : POLYGON_COLORS.visitedStroke.light
+        if (hasContacts) return isDark ? POLYGON_COLORS.contactStroke.dark : POLYGON_COLORS.contactStroke.light
+        if (isIndirectOnly) return isDark ? POLYGON_COLORS.indirectStroke.dark : POLYGON_COLORS.indirectStroke.light
+        if (userCountry && name === userCountry) return isDark ? POLYGON_COLORS.userCountryStroke.dark : POLYGON_COLORS.userCountryStroke.light
       }
-      return isDark ? 'rgba(40, 70, 130, 0.35)' : 'rgba(100, 130, 180, 0.3)'
+      return isDark ? POLYGON_COLORS.defaultStroke.dark : POLYGON_COLORS.defaultStroke.light
     },
     [isDark, visitedCountries, countryContactCount, indirectOnlyCountries, userCountry, isTravelMode, pastTravelCountries, futureTravelCountries]
   )
@@ -722,21 +714,21 @@ export default memo(function GlobeCanvas({
           }}
         >
           <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#3b82f6' }} />
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: TRAVEL_COLORS.pastPoint }} />
             <span className="text-[10px] text-muted-foreground">Past trip</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? 'rgba(59, 130, 246, 0.35)' : 'rgba(59, 130, 246, 0.2)' }} />
+            <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? TRAVEL_COLORS.pastCountry.dark : TRAVEL_COLORS.pastCountry.light }} />
             <span className="text-[10px] text-muted-foreground">Visited country</span>
           </div>
           {futureTravelCountries.size > 0 && (
             <>
               <div className="flex items-center gap-1.5">
-                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#22c55e' }} />
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: TRAVEL_COLORS.futurePoint }} />
                 <span className="text-[10px] text-muted-foreground">Upcoming trip</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? 'rgba(74, 222, 128, 0.25)' : 'rgba(74, 222, 128, 0.15)' }} />
+                <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? TRAVEL_COLORS.futureCountry.dark : TRAVEL_COLORS.futureCountry.light }} />
                 <span className="text-[10px] text-muted-foreground">Upcoming country</span>
               </div>
             </>

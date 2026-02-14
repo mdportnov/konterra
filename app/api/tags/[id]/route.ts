@@ -1,5 +1,5 @@
-import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
+import { unauthorized, badRequest, notFound, success } from '@/lib/api-utils'
 import { deleteTag, renameTag } from '@/lib/db/queries'
 
 export async function DELETE(
@@ -7,17 +7,13 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth()
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  if (!session?.user?.id) return unauthorized()
 
   const { id } = await params
   const tag = await deleteTag(id, session.user.id)
-  if (!tag) {
-    return NextResponse.json({ error: 'Tag not found' }, { status: 404 })
-  }
+  if (!tag) return notFound('Tag')
 
-  return NextResponse.json({ success: true, deletedTag: tag.name })
+  return success({ success: true, deletedTag: tag.name })
 }
 
 export async function PATCH(
@@ -25,27 +21,21 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth()
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  if (!session?.user?.id) return unauthorized()
 
   let body: { name?: string }
   try {
     body = await req.json()
   } catch {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
+    return badRequest('Invalid JSON body')
   }
 
   const name = typeof body.name === 'string' ? body.name.trim() : ''
-  if (!name) {
-    return NextResponse.json({ error: 'Tag name is required' }, { status: 400 })
-  }
+  if (!name) return badRequest('Tag name is required')
 
   const { id } = await params
   const tag = await renameTag(id, session.user.id, name)
-  if (!tag) {
-    return NextResponse.json({ error: 'Tag not found' }, { status: 404 })
-  }
+  if (!tag) return notFound('Tag')
 
-  return NextResponse.json(tag)
+  return success(tag)
 }

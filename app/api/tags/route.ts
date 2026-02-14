@@ -1,39 +1,31 @@
-import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
+import { unauthorized, badRequest, success } from '@/lib/api-utils'
 import { getTagsByUserId, createTag } from '@/lib/db/queries'
 
 export async function GET() {
   const session = await auth()
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  if (!session?.user?.id) return unauthorized()
 
   const tags = await getTagsByUserId(session.user.id)
-  return NextResponse.json(tags)
+  return success(tags)
 }
 
 export async function POST(req: Request) {
   const session = await auth()
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  if (!session?.user?.id) return unauthorized()
 
   let body: { name?: string; color?: string }
   try {
     body = await req.json()
   } catch {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
+    return badRequest('Invalid JSON body')
   }
 
   const name = typeof body.name === 'string' ? body.name.trim() : ''
-  if (!name) {
-    return NextResponse.json({ error: 'Tag name is required' }, { status: 400 })
-  }
+  if (!name) return badRequest('Tag name is required')
 
-  if (name.length > 50) {
-    return NextResponse.json({ error: 'Tag name must be 50 characters or less' }, { status: 400 })
-  }
+  if (name.length > 50) return badRequest('Tag name must be 50 characters or less')
 
   const tag = await createTag(session.user.id, name, body.color)
-  return NextResponse.json(tag, { status: 201 })
+  return success(tag, 201)
 }

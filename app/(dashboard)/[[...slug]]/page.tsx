@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo, useRef, use } from 'react'
+import { useState, useEffect, useCallback, use } from 'react'
 import dynamic from 'next/dynamic'
 import DashboardPanel from '@/components/dashboard/DashboardPanel'
 import GlobePanel from '@/components/globe/GlobePanel'
@@ -21,12 +21,14 @@ import { PANEL_WIDTH, GLASS, Z, TRANSITION } from '@/lib/constants/ui'
 import { displayDefaults } from '@/types/display'
 import GlobeViewToggle from '@/components/globe/GlobeViewToggle'
 import type { DisplayOptions } from '@/types/display'
-import type { GlobeViewMode } from '@/types/display'
-import type { Contact, ContactCountryConnection, Trip } from '@/lib/db/schema'
+import type { Contact } from '@/lib/db/schema'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { useGlobeData } from '@/hooks/use-globe-data'
 import { useContactFilters } from '@/hooks/use-contact-filters'
 import { usePanelNavigation } from '@/hooks/use-panel-navigation'
+import { useTripSelection } from '@/hooks/use-trip-selection'
+import { usePopupState } from '@/hooks/use-popup-state'
+import { useDashboardRouting } from '@/hooks/use-dashboard-routing'
 import { ChevronRight } from 'lucide-react'
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
 import { useHotkey } from '@/hooks/use-hotkey'
@@ -43,66 +45,33 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
   const [exportDialogOpen, setExportDialogOpen] = useState(false)
   const [tripImportDialogOpen, setTripImportDialogOpen] = useState(false)
   const [displayOptions, setDisplayOptions] = useState<DisplayOptions>(displayDefaults)
-  const [countryPopup, setCountryPopup] = useState<{ country: string; contacts: Contact[]; x: number; y: number } | null>(null)
-  const [countryPopupOpen, setCountryPopupOpen] = useState(false)
-  const countryClosingTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-
   const [highlightedContactIds, setHighlightedContactIds] = useState<Set<string>>(new Set())
-  const [selectedTripId, setSelectedTripId] = useState<string | null>(null)
-  const [tripCountryPopup, setTripCountryPopup] = useState<{ country: string; x: number; y: number } | null>(null)
-  const [tripCountryPopupOpen, setTripCountryPopupOpen] = useState(false)
-  const tripCountryClosingTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  const initialTab = slug?.[0] === 'travel' ? 'travel' as const : 'connections' as const
-  const [dashboardTab, setDashboardTabRaw] = useState<'connections' | 'travel'>(initialTab)
-
-  const setDashboardTab = useCallback((tab: 'connections' | 'travel') => {
-    setDashboardTabRaw(tab)
-    setDisplayOptions((prev) => ({
-      ...prev,
-      globeViewMode: tab === 'travel' ? 'travel' : 'network',
-    }))
-    const url = tab === 'travel' ? '/travel' : '/'
-    if (window.location.pathname !== url) {
-      window.history.pushState(null, '', url)
-    }
-  }, [])
-
-  useEffect(() => {
-    if (initialTab === 'travel') {
-      setDisplayOptions((prev) => ({ ...prev, globeViewMode: 'travel' }))
-    }
-  }, [])
-
-  useEffect(() => {
-    const onPop = () => {
-      const path = window.location.pathname
-      if (path === '/travel') {
-        setDashboardTabRaw('travel')
-        setDisplayOptions((prev) => ({ ...prev, globeViewMode: 'travel' }))
-      } else if (path === '/' || path === '') {
-        setDashboardTabRaw('connections')
-        setDisplayOptions((prev) => ({ ...prev, globeViewMode: 'network' }))
-      }
-    }
-    window.addEventListener('popstate', onPop)
-    return () => window.removeEventListener('popstate', onPop)
-  }, [])
 
   const data = useGlobeData()
   const filters = useContactFilters(data.contacts, data.userTags)
   const nav = usePanelNavigation(slug, data.contacts, data.connections, isMobile, setMobileView)
 
-  useEffect(() => {
-    if (!data.loading) nav.resolveInitialContact(data.contacts)
-  }, [data.loading, data.contacts, nav.resolveInitialContact])
+  const { dashboardTab, setDashboardTab, handleViewModeChange } = useDashboardRouting({
+    initialSlug: slug,
+    setDisplayOptions,
+  })
 
-  useEffect(() => {
-    return () => {
-      if (countryClosingTimer.current) clearTimeout(countryClosingTimer.current)
-      if (tripCountryClosingTimer.current) clearTimeout(tripCountryClosingTimer.current)
-    }
-  }, [])
+  const tripSelection = useTripSelection({
+    trips: data.trips,
+    setFlyTarget: nav.setFlyTarget,
+  })
+
+  const popups = usePopupState({
+    contacts: data.contacts,
+    filteredContacts: filters.filteredContacts,
+    countryConnections: data.countryConnections,
+    trips: data.trips,
+    displayOptions,
+    onContactClick: nav.handleContactClick,
+    onAddContact: nav.handleAddContact,
+    setFlyTarget: nav.setFlyTarget,
+    onTripSelected: (tripId: string) => tripSelection.handleTripPointClick(tripId),
+  })
 
   const handleSelectionChange = useCallback((ids: Set<string>) => {
     setHighlightedContactIds(ids)
@@ -127,118 +96,14 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
     nav.handleDeleteContact(contactId, data.setContacts, data.setConnections, data.setCountryConnections)
   }, [nav.handleDeleteContact, data.setContacts, data.setConnections, data.setCountryConnections])
 
-  const handleCountryClick = useCallback((country: string, event: { x: number; y: number }) => {
-    if (displayOptions.globeViewMode === 'travel') {
-      if (tripCountryClosingTimer.current) clearTimeout(tripCountryClosingTimer.current)
-      const hasTrips = data.trips.some((t) => t.country === country)
-      if (!hasTrips) return
-      setTripCountryPopup({ country, x: event.x, y: event.y })
-      requestAnimationFrame(() => setTripCountryPopupOpen(true))
-      return
-    }
-    if (countryClosingTimer.current) clearTimeout(countryClosingTimer.current)
-    const matched = filters.filteredContacts.filter((c) => c.country === country)
-    setCountryPopup({ country, contacts: matched, x: event.x, y: event.y })
-    requestAnimationFrame(() => setCountryPopupOpen(true))
-  }, [filters.filteredContacts, displayOptions.globeViewMode, data.trips])
-
-  const indirectPopupContacts = useMemo(() => {
-    if (!countryPopup) return []
-    const directIds = new Set(countryPopup.contacts.map((c) => c.id))
-    const indirectContactIds = data.countryConnections
-      .filter((cc) => cc.country === countryPopup.country)
-      .map((cc) => cc.contactId)
-      .filter((id) => !directIds.has(id))
-    const contactMap = new Map(data.contacts.map((c) => [c.id, c]))
-    return [...new Set(indirectContactIds)].map((id) => contactMap.get(id)).filter(Boolean) as Contact[]
-  }, [countryPopup, data.countryConnections, data.contacts])
-
-  const tripCountryTrips = useMemo(() => {
-    if (!tripCountryPopup) return []
-    return data.trips.filter((t) => t.country === tripCountryPopup.country)
-  }, [tripCountryPopup, data.trips])
-
-  const closeTripCountryPopup = useCallback(() => {
-    setTripCountryPopupOpen(false)
-    tripCountryClosingTimer.current = setTimeout(() => setTripCountryPopup(null), 150)
-  }, [])
-
-  const handleTripCountryTripClick = useCallback((trip: Trip) => {
-    closeTripCountryPopup()
-    if (trip.lat != null && trip.lng != null) {
-      setSelectedTripId(trip.id)
-      nav.setFlyTarget({ lat: trip.lat, lng: trip.lng, ts: Date.now() })
-    }
-  }, [closeTripCountryPopup, nav.setFlyTarget])
-
-  const closeCountryPopup = useCallback(() => {
-    setCountryPopupOpen(false)
-    countryClosingTimer.current = setTimeout(() => setCountryPopup(null), 150)
-  }, [])
-
-  const handleCountryPopupSelect = useCallback((contact: Contact) => {
-    closeCountryPopup()
-    nav.handleContactClick(contact)
-  }, [closeCountryPopup, nav.handleContactClick])
-
-  const handleAddContactToCountry = useCallback(() => {
-    const country = countryPopup?.country
-    closeCountryPopup()
-    nav.handleAddContact(country ? { country } : undefined)
-  }, [closeCountryPopup, nav.handleAddContact, countryPopup?.country])
-
-  const contactCountsByCountry = useMemo(() => {
-    const map = new Map<string, number>()
-    for (const c of data.contacts) {
-      if (c.country) map.set(c.country, (map.get(c.country) || 0) + 1)
-    }
-    for (const cc of data.countryConnections) {
-      map.set(cc.country, (map.get(cc.country) || 0) + 1)
-    }
-    return map
-  }, [data.contacts, data.countryConnections])
-
-  const handleTripClick = useCallback((trip: Trip) => {
-    if (trip.lat != null && trip.lng != null) {
-      nav.setFlyTarget({ lat: trip.lat, lng: trip.lng, ts: Date.now() })
-    }
-  }, [nav.setFlyTarget])
-
-  const handleTripPointClick = useCallback((tripId: string) => {
-    setSelectedTripId(tripId)
-    const trip = data.trips.find((t) => t.id === tripId)
-    if (trip?.lat != null && trip?.lng != null) {
-      nav.setFlyTarget({ lat: trip.lat, lng: trip.lng, ts: Date.now() })
-    }
-  }, [data.trips, nav.setFlyTarget])
-
-  const selectedTrip = useMemo(() => data.trips.find((t) => t.id === selectedTripId) ?? null, [data.trips, selectedTripId])
-
-  const sortedTrips = useMemo(() =>
-    [...data.trips].sort((a, b) => new Date(a.arrivalDate).getTime() - new Date(b.arrivalDate).getTime()),
-    [data.trips]
-  )
-
-  const selectedTripIndex = useMemo(() => {
-    if (!selectedTripId) return -1
-    return sortedTrips.findIndex((t) => t.id === selectedTripId)
-  }, [sortedTrips, selectedTripId])
-
-  const handleTripNavigate = useCallback((trip: Trip) => {
-    setSelectedTripId(trip.id)
-    if (trip.lat != null && trip.lng != null) {
-      nav.setFlyTarget({ lat: trip.lat, lng: trip.lng, ts: Date.now() })
-    }
-  }, [nav.setFlyTarget])
-
-  const handleViewModeChange = useCallback((mode: GlobeViewMode) => {
-    setDisplayOptions((prev) => ({ ...prev, globeViewMode: mode }))
-  }, [])
-
   const addContactCb = useCallback(() => nav.handleAddContact(), [nav.handleAddContact])
   const openInsightsCb = useCallback(() => nav.handleOpenInsights(), [nav.handleOpenInsights])
   useHotkey('n', addContactCb, { meta: true })
   useHotkey('i', openInsightsCb, { meta: true })
+
+  useEffect(() => {
+    if (!data.loading) nav.resolveInitialContact(data.contacts)
+  }, [data.loading, data.contacts, nav.resolveInitialContact])
 
   const showDashboard = !isMobile || mobileView === 'dashboard'
   const showGlobe = !isMobile || mobileView === 'globe'
@@ -267,7 +132,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
     trips: data.trips,
     tripsLoading: data.tripsLoading,
     onImportTrips: () => setTripImportDialogOpen(true),
-    onTripClick: handleTripClick,
+    onTripClick: tripSelection.handleTripClick,
     dashboardTab,
     onDashboardTabChange: setDashboardTab,
   } as const
@@ -279,8 +144,8 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
         selectedContact={nav.selectedContact}
         flyTarget={nav.flyTarget}
         onContactClick={nav.handleContactClick}
-        onCountryClick={handleCountryClick}
-        onTripPointClick={handleTripPointClick}
+        onCountryClick={popups.handleCountryClick}
+        onTripPointClick={tripSelection.handleTripPointClick}
         display={displayOptions}
         visitedCountries={data.visitedCountries}
         connections={data.connections}
@@ -334,7 +199,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
         contactCount={data.contacts.length}
         connectionCount={data.connections.length}
         visitedCountryCount={data.visitedCountries.size}
-        contactCountsByCountry={contactCountsByCountry}
+        contactCountsByCountry={popups.contactCountsByCountry}
       />
 
       <ImportDialog
@@ -413,39 +278,39 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
       />
 
       <TripPopup
-        trip={selectedTrip}
-        prevTrip={selectedTripIndex > 0 ? sortedTrips[selectedTripIndex - 1] : null}
-        nextTrip={selectedTripIndex < sortedTrips.length - 1 ? sortedTrips[selectedTripIndex + 1] : null}
-        onNavigate={handleTripNavigate}
-        onClose={() => setSelectedTripId(null)}
+        trip={tripSelection.selectedTrip}
+        prevTrip={tripSelection.selectedTripIndex > 0 ? tripSelection.sortedTrips[tripSelection.selectedTripIndex - 1] : null}
+        nextTrip={tripSelection.selectedTripIndex < tripSelection.sortedTrips.length - 1 ? tripSelection.sortedTrips[tripSelection.selectedTripIndex + 1] : null}
+        onNavigate={tripSelection.handleTripNavigate}
+        onClose={tripSelection.clearSelectedTrip}
       />
 
-      {countryPopup && (
+      {popups.countryPopup && (
         <CountryPopup
-          country={countryPopup.country}
-          contacts={countryPopup.contacts}
-          x={countryPopup.x}
-          y={countryPopup.y}
-          open={countryPopupOpen}
-          onSelect={handleCountryPopupSelect}
-          onClose={closeCountryPopup}
-          visited={data.visitedCountries.has(countryPopup.country)}
-          onToggleVisited={() => data.handleCountryVisitToggle(countryPopup.country)}
-          onAddContact={handleAddContactToCountry}
-          indirectContacts={indirectPopupContacts}
+          country={popups.countryPopup.country}
+          contacts={popups.countryPopup.contacts}
+          x={popups.countryPopup.x}
+          y={popups.countryPopup.y}
+          open={popups.countryPopupOpen}
+          onSelect={popups.handleCountryPopupSelect}
+          onClose={popups.closeCountryPopup}
+          visited={data.visitedCountries.has(popups.countryPopup.country)}
+          onToggleVisited={() => data.handleCountryVisitToggle(popups.countryPopup!.country)}
+          onAddContact={popups.handleAddContactToCountry}
+          indirectContacts={popups.indirectPopupContacts}
         />
       )}
 
-      {tripCountryPopup && (
+      {popups.tripCountryPopup && (
         <TripCountryPopup
-          country={tripCountryPopup.country}
-          trips={tripCountryTrips}
+          country={popups.tripCountryPopup.country}
+          trips={popups.tripCountryTrips}
           allTrips={data.trips}
-          x={tripCountryPopup.x}
-          y={tripCountryPopup.y}
-          open={tripCountryPopupOpen}
-          onTripClick={handleTripCountryTripClick}
-          onClose={closeTripCountryPopup}
+          x={popups.tripCountryPopup.x}
+          y={popups.tripCountryPopup.y}
+          open={popups.tripCountryPopupOpen}
+          onTripClick={popups.handleTripCountryTripClick}
+          onClose={popups.closeTripCountryPopup}
         />
       )}
     </>

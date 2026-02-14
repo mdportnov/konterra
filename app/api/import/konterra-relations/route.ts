@@ -1,5 +1,5 @@
-import { NextResponse } from 'next/server'
-import { withAuth, badRequest } from '@/lib/api-utils'
+import { auth } from '@/auth'
+import { unauthorized, badRequest, success } from '@/lib/api-utils'
 import { safeParseBody } from '@/lib/validation'
 import {
   getAllContactsByUserId,
@@ -55,7 +55,11 @@ function buildRefToIdMap(
   return refMap
 }
 
-export const POST = withAuth(async (req, userId) => {
+export async function POST(req: Request) {
+  const session = await auth()
+  if (!session?.user?.id) return unauthorized()
+
+  const userId = session.user.id
   const body = await safeParseBody(req)
   if (!body) return badRequest('Invalid request body')
 
@@ -218,7 +222,7 @@ export const POST = withAuth(async (req, userId) => {
     }
   }
 
-  return NextResponse.json({
+  return success({
     connectionsCreated,
     interactionsCreated,
     favorsCreated,
@@ -228,4 +232,4 @@ export const POST = withAuth(async (req, userId) => {
     visitedCountriesAdded,
     errors,
   })
-})
+}

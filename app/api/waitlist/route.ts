@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { badRequest, success, serverError } from '@/lib/api-utils'
 import { createWaitlistEntry } from '@/lib/db/queries'
 
 export async function POST(req: Request) {
@@ -7,15 +7,15 @@ export async function POST(req: Request) {
     const { email, name, message } = body
 
     if (!email || typeof email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return NextResponse.json({ error: 'Valid email is required' }, { status: 400 })
+      return badRequest('Valid email is required')
     }
 
     if (!name || typeof name !== 'string' || name.trim().length < 2) {
-      return NextResponse.json({ error: 'Name must be at least 2 characters' }, { status: 400 })
+      return badRequest('Name must be at least 2 characters')
     }
 
     if (message && (typeof message !== 'string' || message.length > 500)) {
-      return NextResponse.json({ error: 'Message must be under 500 characters' }, { status: 400 })
+      return badRequest('Message must be under 500 characters')
     }
 
     await createWaitlistEntry({
@@ -24,8 +24,8 @@ export async function POST(req: Request) {
       message: message?.trim() || undefined,
     })
 
-    return NextResponse.json({ ok: true }, { status: 201 })
+    return success({ ok: true }, 201)
   } catch {
-    return NextResponse.json({ error: 'Something went wrong' }, { status: 500 })
+    return serverError('Something went wrong')
   }
 }

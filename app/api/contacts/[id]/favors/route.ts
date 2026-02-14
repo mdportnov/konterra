@@ -1,5 +1,5 @@
-import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
+import { unauthorized, badRequest, notFound, success } from '@/lib/api-utils'
 import { getFavorsByContactId, createFavor, updateFavor, deleteFavor, getContactById } from '@/lib/db/queries'
 import { validateFavor, safeParseBody } from '@/lib/validation'
 
@@ -8,18 +8,14 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth()
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  if (!session?.user?.id) return unauthorized()
   const { id } = await params
 
   const contact = await getContactById(id, session.user.id)
-  if (!contact) {
-    return NextResponse.json({ error: 'Contact not found' }, { status: 404 })
-  }
+  if (!contact) return notFound('Contact')
 
   const items = await getFavorsByContactId(id, session.user.id)
-  return NextResponse.json(items)
+  return success(items)
 }
 
 export async function POST(
@@ -27,29 +23,19 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth()
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  if (!session?.user?.id) return unauthorized()
   const { id } = await params
   const body = await safeParseBody(req)
-  if (!body) {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
-  }
+  if (!body) return badRequest('Invalid JSON body')
   const { direction, type, description, value, date } = body as Record<string, unknown>
 
-  if (!direction || !type) {
-    return NextResponse.json({ error: 'direction and type are required' }, { status: 400 })
-  }
+  if (!direction || !type) return badRequest('direction and type are required')
 
   const validationError = validateFavor(body)
-  if (validationError) {
-    return NextResponse.json({ error: validationError }, { status: 400 })
-  }
+  if (validationError) return badRequest(validationError)
 
   const contact = await getContactById(id, session.user.id)
-  if (!contact) {
-    return NextResponse.json({ error: 'Contact not found' }, { status: 404 })
-  }
+  if (!contact) return notFound('Contact')
 
   const favor = await createFavor({
     userId: session.user.id,
@@ -61,7 +47,7 @@ export async function POST(
     date: date ? new Date(date as string) : new Date(),
   })
 
-  return NextResponse.json(favor, { status: 201 })
+  return success(favor, 201)
 }
 
 export async function PATCH(
@@ -69,23 +55,15 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth()
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  if (!session?.user?.id) return unauthorized()
   await params
   const body = await safeParseBody(req)
-  if (!body) {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
-  }
+  if (!body) return badRequest('Invalid JSON body')
   const { favorId, ...updates } = body as Record<string, unknown>
-  if (!favorId) {
-    return NextResponse.json({ error: 'favorId required' }, { status: 400 })
-  }
+  if (!favorId) return badRequest('favorId required')
   const favor = await updateFavor(favorId as string, session.user.id, updates)
-  if (!favor) {
-    return NextResponse.json({ error: 'Not found' }, { status: 404 })
-  }
-  return NextResponse.json(favor)
+  if (!favor) return notFound('Favor')
+  return success(favor)
 }
 
 export async function DELETE(
@@ -93,17 +71,11 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth()
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  if (!session?.user?.id) return unauthorized()
   await params
   const body = await safeParseBody(req)
-  if (!body) {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
-  }
-  if (!body.favorId) {
-    return NextResponse.json({ error: 'favorId required' }, { status: 400 })
-  }
+  if (!body) return badRequest('Invalid JSON body')
+  if (!body.favorId) return badRequest('favorId required')
   await deleteFavor(body.favorId as string, session.user.id)
-  return NextResponse.json({ success: true })
+  return success({ success: true })
 }

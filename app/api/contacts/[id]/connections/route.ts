@@ -1,5 +1,5 @@
-import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
+import { unauthorized, badRequest, notFound, success } from '@/lib/api-utils'
 import { getConnectionsByContactId, createConnection, deleteConnection, getContactById } from '@/lib/db/queries'
 import { validateConnection, safeParseBody } from '@/lib/validation'
 
@@ -8,18 +8,14 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth()
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  if (!session?.user?.id) return unauthorized()
   const { id } = await params
 
   const contact = await getContactById(id, session.user.id)
-  if (!contact) {
-    return NextResponse.json({ error: 'Contact not found' }, { status: 404 })
-  }
+  if (!contact) return notFound('Contact')
 
   const items = await getConnectionsByContactId(id, session.user.id)
-  return NextResponse.json(items)
+  return success(items)
 }
 
 export async function POST(
@@ -27,30 +23,22 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth()
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  if (!session?.user?.id) return unauthorized()
   const { id } = await params
   const body = await safeParseBody(req)
-  if (!body) {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
-  }
+  if (!body) return badRequest('Invalid JSON body')
   const { targetContactId, connectionType, strength, bidirectional, notes } = body as Record<string, unknown>
 
   if (!targetContactId || !connectionType) {
-    return NextResponse.json({ error: 'targetContactId and connectionType are required' }, { status: 400 })
+    return badRequest('targetContactId and connectionType are required')
   }
 
   const validationError = validateConnection(body)
-  if (validationError) {
-    return NextResponse.json({ error: validationError }, { status: 400 })
-  }
+  if (validationError) return badRequest(validationError)
 
   const source = await getContactById(id, session.user.id)
   const target = await getContactById(targetContactId as string, session.user.id)
-  if (!source || !target) {
-    return NextResponse.json({ error: 'Contact not found' }, { status: 404 })
-  }
+  if (!source || !target) return notFound('Contact')
 
   const conn = await createConnection({
     userId: session.user.id,
@@ -62,7 +50,7 @@ export async function POST(
     notes: (notes as string) || null,
   })
 
-  return NextResponse.json(conn, { status: 201 })
+  return success(conn, 201)
 }
 
 export async function DELETE(
@@ -70,17 +58,11 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth()
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  if (!session?.user?.id) return unauthorized()
   await params
   const body = await safeParseBody(req)
-  if (!body) {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
-  }
-  if (!body.connectionId) {
-    return NextResponse.json({ error: 'connectionId required' }, { status: 400 })
-  }
+  if (!body) return badRequest('Invalid JSON body')
+  if (!body.connectionId) return badRequest('connectionId required')
   await deleteConnection(body.connectionId as string, session.user.id)
-  return NextResponse.json({ success: true })
+  return success({ success: true })
 }

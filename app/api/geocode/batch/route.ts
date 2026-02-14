@@ -46,7 +46,9 @@ export async function POST() {
           .where(and(eq(contacts.id, row.id), eq(contacts.userId, userId)))
         geocoded++
       }
-    } catch {}
+    } catch (err) {
+      console.error(err)
+    }
 
     if (rows.indexOf(row) < rows.length - 1) await delay(DELAY_MS)
   }

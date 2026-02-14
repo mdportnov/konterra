@@ -1,5 +1,5 @@
-import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
+import { unauthorized, badRequest, notFound, success } from '@/lib/api-utils'
 import { getInteractionsByContactId, createInteraction, updateInteraction, deleteInteraction, getContactById } from '@/lib/db/queries'
 import { validateInteraction, safeParseBody } from '@/lib/validation'
 
@@ -8,18 +8,14 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth()
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  if (!session?.user?.id) return unauthorized()
   const { id } = await params
 
   const contact = await getContactById(id, session.user.id)
-  if (!contact) {
-    return NextResponse.json({ error: 'Contact not found' }, { status: 404 })
-  }
+  if (!contact) return notFound('Contact')
 
   const items = await getInteractionsByContactId(id)
-  return NextResponse.json(items)
+  return success(items)
 }
 
 export async function POST(
@@ -27,31 +23,21 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth()
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  if (!session?.user?.id) return unauthorized()
   const { id } = await params
 
   const contact = await getContactById(id, session.user.id)
-  if (!contact) {
-    return NextResponse.json({ error: 'Contact not found' }, { status: 404 })
-  }
+  if (!contact) return notFound('Contact')
 
   const body = await safeParseBody(req)
-  if (!body) {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
-  }
+  if (!body) return badRequest('Invalid JSON body')
 
   const { type, date, location, notes } = body as Record<string, unknown>
 
-  if (!type || !date) {
-    return NextResponse.json({ error: 'type and date are required' }, { status: 400 })
-  }
+  if (!type || !date) return badRequest('type and date are required')
 
   const validationError = validateInteraction(body)
-  if (validationError) {
-    return NextResponse.json({ error: validationError }, { status: 400 })
-  }
+  if (validationError) return badRequest(validationError)
 
   const interaction = await createInteraction({
     contactId: id,
@@ -61,7 +47,7 @@ export async function POST(
     notes: (notes as string) || null,
   })
 
-  return NextResponse.json(interaction, { status: 201 })
+  return success(interaction, 201)
 }
 
 export async function PATCH(
@@ -69,25 +55,17 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth()
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  if (!session?.user?.id) return unauthorized()
   const { id } = await params
 
   const contact = await getContactById(id, session.user.id)
-  if (!contact) {
-    return NextResponse.json({ error: 'Contact not found' }, { status: 404 })
-  }
+  if (!contact) return notFound('Contact')
 
   const body = await safeParseBody(req)
-  if (!body) {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
-  }
+  if (!body) return badRequest('Invalid JSON body')
 
   const { interactionId, type, date, location, notes } = body as Record<string, unknown>
-  if (!interactionId) {
-    return NextResponse.json({ error: 'interactionId required' }, { status: 400 })
-  }
+  if (!interactionId) return badRequest('interactionId required')
 
   const updates: Record<string, unknown> = {}
   if (type !== undefined) updates.type = type
@@ -97,16 +75,12 @@ export async function PATCH(
 
   if (updates.type || updates.date) {
     const validationError = validateInteraction({ ...updates, date: date || new Date().toISOString() })
-    if (validationError) {
-      return NextResponse.json({ error: validationError }, { status: 400 })
-    }
+    if (validationError) return badRequest(validationError)
   }
 
   const interaction = await updateInteraction(interactionId as string, id, updates)
-  if (!interaction) {
-    return NextResponse.json({ error: 'Not found' }, { status: 404 })
-  }
-  return NextResponse.json(interaction)
+  if (!interaction) return notFound('Interaction')
+  return success(interaction)
 }
 
 export async function DELETE(
@@ -114,24 +88,16 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth()
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  if (!session?.user?.id) return unauthorized()
   const { id } = await params
 
   const contact = await getContactById(id, session.user.id)
-  if (!contact) {
-    return NextResponse.json({ error: 'Contact not found' }, { status: 404 })
-  }
+  if (!contact) return notFound('Contact')
 
   const body = await safeParseBody(req)
-  if (!body) {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
-  }
-  if (!body.interactionId) {
-    return NextResponse.json({ error: 'interactionId required' }, { status: 400 })
-  }
+  if (!body) return badRequest('Invalid JSON body')
+  if (!body.interactionId) return badRequest('interactionId required')
 
   await deleteInteraction(body.interactionId as string, id)
-  return NextResponse.json({ success: true })
+  return success({ success: true })
 }

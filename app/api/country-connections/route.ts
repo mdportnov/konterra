@@ -1,13 +1,11 @@
-import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
+import { unauthorized, success } from '@/lib/api-utils'
 import { getAllCountryConnections } from '@/lib/db/queries'
 
 export async function GET() {
   const session = await auth()
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  if (!session?.user?.id) return unauthorized()
 
   const items = await getAllCountryConnections(session.user.id)
-  return NextResponse.json(items)
+  return success(items)
 }

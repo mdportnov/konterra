@@ -5,6 +5,7 @@ import { X, MapPin, Calendar, Clock, Plane, ArrowRight, ArrowLeft } from 'lucide
 import { useClickOutside } from '@/hooks/use-click-outside'
 import { useHotkey } from '@/hooks/use-hotkey'
 import { GLASS, Z } from '@/lib/constants/ui'
+import { TENSE_COLORS } from '@/lib/constants/globe-colors'
 import type { Trip } from '@/lib/db/schema'
 
 interface TripCountryPopupProps {
@@ -44,12 +45,6 @@ function getTripTense(trip: Trip, now: Date): TripTense {
   if (endDate >= now) return 'current'
   return 'past'
 }
-
-const TENSE_COLORS = {
-  past:    { icon: 'bg-blue-500/10',   iconText: 'text-blue-400',  hover: 'hover:bg-blue-500/5',  arrow: 'text-blue-400/50' },
-  current: { icon: 'bg-red-500/10',    iconText: 'text-red-400',   hover: 'hover:bg-red-500/5',   arrow: 'text-red-400/50' },
-  future:  { icon: 'bg-green-500/10',  iconText: 'text-green-400', hover: 'hover:bg-green-500/5', arrow: 'text-green-400/50' },
-} as const
 
 export default function TripCountryPopup({ country, trips, allTrips, x, y, open, onTripClick, onClose }: TripCountryPopupProps) {
   const ref = useRef<HTMLDivElement>(null)

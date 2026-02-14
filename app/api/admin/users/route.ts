@@ -1,13 +1,12 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
+import { unauthorized, badRequest, notFound, success, serverError } from '@/lib/api-utils'
 import { getUserById, getAllUsers, createUser, updateUserRole, deleteUser } from '@/lib/db/queries'
 import { hash } from 'bcryptjs'
 
 export async function GET() {
   const session = await auth()
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  if (!session?.user?.id) return unauthorized()
 
   const user = await getUserById(session.user.id)
   if (!user || (user.role !== 'admin' && user.role !== 'moderator')) {
@@ -15,14 +14,12 @@ export async function GET() {
   }
 
   const users = await getAllUsers()
-  return NextResponse.json(users)
+  return success(users)
 }
 
 export async function POST(req: Request) {
   const session = await auth()
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  if (!session?.user?.id) return unauthorized()
 
   const currentUser = await getUserById(session.user.id)
   if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'moderator')) {
@@ -33,11 +30,11 @@ export async function POST(req: Request) {
   const { email, name, password, role } = body
 
   if (!email || !name || !password) {
-    return NextResponse.json({ error: 'Email, name, and password are required' }, { status: 400 })
+    return badRequest('Email, name, and password are required')
   }
 
   if (password.length < 6) {
-    return NextResponse.json({ error: 'Password must be at least 6 characters' }, { status: 400 })
+    return badRequest('Password must be at least 6 characters')
   }
 
   const validRoles = ['user', 'moderator', 'admin']
@@ -55,21 +52,19 @@ export async function POST(req: Request) {
       password: hashedPassword,
       role: userRole,
     })
-    return NextResponse.json(newUser, { status: 201 })
+    return success(newUser, 201)
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : 'Unknown error'
     if (message.includes('unique') || message.includes('duplicate')) {
       return NextResponse.json({ error: 'A user with this email already exists' }, { status: 409 })
     }
-    return NextResponse.json({ error: 'Failed to create user' }, { status: 500 })
+    return serverError('Failed to create user')
   }
 }
 
 export async function PATCH(req: Request) {
   const session = await auth()
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  if (!session?.user?.id) return unauthorized()
 
   const currentUser = await getUserById(session.user.id)
   if (!currentUser || currentUser.role !== 'admin') {
@@ -81,22 +76,18 @@ export async function PATCH(req: Request) {
 
   const validRoles = ['user', 'moderator', 'admin'] as const
   if (!userId || !validRoles.includes(role)) {
-    return NextResponse.json({ error: 'Valid userId and role are required' }, { status: 400 })
+    return badRequest('Valid userId and role are required')
   }
 
   const updated = await updateUserRole(userId, role)
-  if (!updated) {
-    return NextResponse.json({ error: 'User not found' }, { status: 404 })
-  }
+  if (!updated) return notFound('User')
 
-  return NextResponse.json(updated)
+  return success(updated)
 }
 
 export async function DELETE(req: Request) {
   const session = await auth()
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  if (!session?.user?.id) return unauthorized()
 
   const currentUser = await getUserById(session.user.id)
   if (!currentUser || currentUser.role !== 'admin') {
@@ -106,18 +97,14 @@ export async function DELETE(req: Request) {
   const { searchParams } = new URL(req.url)
   const userId = searchParams.get('id')
 
-  if (!userId) {
-    return NextResponse.json({ error: 'User ID is required' }, { status: 400 })
-  }
+  if (!userId) return badRequest('User ID is required')
 
   if (userId === session.user.id) {
-    return NextResponse.json({ error: 'Cannot delete your own account' }, { status: 400 })
+    return badRequest('Cannot delete your own account')
   }
 
   const deleted = await deleteUser(userId)
-  if (!deleted) {
-    return NextResponse.json({ error: 'User not found' }, { status: 404 })
-  }
+  if (!deleted) return notFound('User')
 
-  return NextResponse.json({ success: true })
+  return success({ success: true })
 }

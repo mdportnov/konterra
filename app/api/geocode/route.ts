@@ -1,25 +1,24 @@
-import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
+import { unauthorized, badRequest, notFound, success, serverError } from '@/lib/api-utils'
 import { geocode } from '@/lib/geocoding'
 
 export async function GET(req: Request) {
   const session = await auth()
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!session?.user?.id) return unauthorized()
+
+  try {
+    const { searchParams } = new URL(req.url)
+    const query = searchParams.get('q')
+
+    if (!query) return badRequest('Query required')
+
+    const result = await geocode(query)
+
+    if (!result) return notFound('Location')
+
+    return success(result)
+  } catch (err) {
+    console.error(err)
+    return serverError()
   }
-
-  const { searchParams } = new URL(req.url)
-  const query = searchParams.get('q')
-
-  if (!query) {
-    return NextResponse.json({ error: 'Query required' }, { status: 400 })
-  }
-
-  const result = await geocode(query)
-
-  if (!result) {
-    return NextResponse.json({ error: 'Location not found' }, { status: 404 })
-  }
-
-  return NextResponse.json(result)
 }
