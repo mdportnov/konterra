@@ -34,10 +34,29 @@ function formatShortDate(d: Date | string | null): string {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
+type TripTense = 'past' | 'current' | 'future'
+
+function getTripTense(trip: Trip, now: Date): TripTense {
+  const arrival = new Date(trip.arrivalDate)
+  const departure = trip.departureDate ? new Date(trip.departureDate) : null
+  const endDate = departure ?? arrival
+  if (arrival > now) return 'future'
+  if (endDate >= now) return 'current'
+  return 'past'
+}
+
+const TENSE_COLORS = {
+  past:    { icon: 'bg-blue-500/10',   iconText: 'text-blue-400',  hover: 'hover:bg-blue-500/5',  arrow: 'text-blue-400/50' },
+  current: { icon: 'bg-red-500/10',    iconText: 'text-red-400',   hover: 'hover:bg-red-500/5',   arrow: 'text-red-400/50' },
+  future:  { icon: 'bg-green-500/10',  iconText: 'text-green-400', hover: 'hover:bg-green-500/5', arrow: 'text-green-400/50' },
+} as const
+
 export default function TripCountryPopup({ country, trips, allTrips, x, y, open, onTripClick, onClose }: TripCountryPopupProps) {
   const ref = useRef<HTMLDivElement>(null)
   useClickOutside(ref, onClose, open)
   useHotkey('Escape', onClose, { enabled: open })
+
+  const now = useMemo(() => new Date(), [])
 
   const sorted = useMemo(() =>
     [...trips].sort((a, b) => new Date(b.arrivalDate).getTime() - new Date(a.arrivalDate).getTime()),
@@ -162,22 +181,31 @@ export default function TripCountryPopup({ country, trips, allTrips, x, y, open,
         {groupedByCity.map(([city, cityTrips], gi) => (
           <div key={city}>
             {gi > 0 && <div className="mx-4 border-t border-border/40" />}
-            <div className="px-4 pt-3 pb-1 flex items-center gap-1.5">
-              <MapPin className="h-3 w-3 text-blue-400" />
-              <span className="text-[10px] font-semibold text-foreground/80 uppercase tracking-wider">{city}</span>
-              <span className="text-[9px] text-muted-foreground/50">{cityTrips.length}x</span>
-            </div>
+            {(() => {
+              const tenses = cityTrips.map((t) => getTripTense(t, now))
+              const headerTense = tenses.includes('current') ? 'current' : tenses.includes('future') ? 'future' : 'past'
+              const hc = TENSE_COLORS[headerTense]
+              return (
+                <div className="px-4 pt-3 pb-1 flex items-center gap-1.5">
+                  <MapPin className={`h-3 w-3 ${hc.iconText}`} />
+                  <span className="text-[10px] font-semibold text-foreground/80 uppercase tracking-wider">{city}</span>
+                  <span className="text-[9px] text-muted-foreground/50">{cityTrips.length}x</span>
+                </div>
+              )
+            })()}
             {cityTrips.map((trip) => {
               const route = routeMap.get(trip.id)
+              const tense = getTripTense(trip, now)
+              const c = TENSE_COLORS[tense]
               return (
                 <button
                   key={trip.id}
                   onClick={() => onTripClick?.(trip)}
-                  className="w-full text-left px-4 py-2 hover:bg-blue-500/5 transition-colors cursor-pointer"
+                  className={`w-full text-left px-4 py-2 ${c.hover} transition-colors cursor-pointer`}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="shrink-0 w-6 h-6 rounded-md bg-blue-500/10 flex items-center justify-center">
-                      <MapPin className="h-3 w-3 text-blue-400" />
+                    <div className={`shrink-0 w-6 h-6 rounded-md ${c.icon} flex items-center justify-center`}>
+                      <MapPin className={`h-3 w-3 ${c.iconText}`} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 text-[11px] text-foreground">
@@ -192,12 +220,15 @@ export default function TripCountryPopup({ country, trips, allTrips, x, y, open,
                             {trip.durationDays}d
                           </span>
                         )}
+                        {tense === 'current' && (
+                          <span className="text-[9px] font-medium text-red-400">Now</span>
+                        )}
                       </div>
                       {route && (route.prev || route.next) && (
                         <div className="flex items-center gap-1.5 mt-1 text-[9px] text-muted-foreground/70">
                           {route.prev && (
                             <span className="flex items-center gap-0.5">
-                              <ArrowLeft className="h-2.5 w-2.5 text-blue-400/50" />
+                              <ArrowLeft className={`h-2.5 w-2.5 ${c.arrow}`} />
                               {route.prev.city}
                             </span>
                           )}
@@ -205,7 +236,7 @@ export default function TripCountryPopup({ country, trips, allTrips, x, y, open,
                           {route.next && (
                             <span className="flex items-center gap-0.5">
                               {route.next.city}
-                              <ArrowRight className="h-2.5 w-2.5 text-blue-400/50" />
+                              <ArrowRight className={`h-2.5 w-2.5 ${c.arrow}`} />
                             </span>
                           )}
                         </div>
