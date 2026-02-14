@@ -43,7 +43,7 @@ export function usePopupState({
   }, [])
 
   const handleCountryClick = useCallback((country: string, event: { x: number; y: number }) => {
-    if (displayOptions.globeViewMode === 'travel') {
+    if (displayOptions.showTravel && !displayOptions.showNetwork) {
       if (tripCountryClosingTimer.current) clearTimeout(tripCountryClosingTimer.current)
       const hasTrips = trips.some((t) => t.country === country)
       if (!hasTrips) return
@@ -55,7 +55,7 @@ export function usePopupState({
     const matched = filteredContacts.filter((c) => c.country === country)
     setCountryPopup({ country, contacts: matched, x: event.x, y: event.y })
     requestAnimationFrame(() => setCountryPopupOpen(true))
-  }, [filteredContacts, displayOptions.globeViewMode, trips])
+  }, [filteredContacts, displayOptions.showTravel, displayOptions.showNetwork, trips])
 
   const closeCountryPopup = useCallback(() => {
     setCountryPopupOpen(false)

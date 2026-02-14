@@ -77,3 +77,7 @@ Always import `GLASS`, `Z`, `TRANSITION`, `PANEL_WIDTH` from `lib/constants/ui.t
 - No emojis in code
 - Prefer ES modules and TypeScript types
 - Keep import lists minimal
+
+### Commit & Push Policy
+- Big features: after implementation, run `npm run build` (catches type errors) and `npm run lint`, then commit and push
+- Small fixes: commit and push directly after build passes

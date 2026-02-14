@@ -811,6 +811,15 @@ export async function createTripsBulk(data: NewTrip[]) {
   })
 }
 
+export async function updateTrip(id: string, userId: string, data: Partial<Omit<NewTrip, 'id' | 'userId'>>) {
+  const [trip] = await db
+    .update(trips)
+    .set({ ...data, updatedAt: new Date() })
+    .where(and(eq(trips.id, id), eq(trips.userId, userId)))
+    .returning()
+  return trip
+}
+
 export async function deleteTrip(id: string, userId: string) {
   await db.delete(trips).where(and(eq(trips.id, id), eq(trips.userId, userId)))
 }

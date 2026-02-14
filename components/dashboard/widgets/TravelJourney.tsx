@@ -1,9 +1,10 @@
 'use client'
 
 import { useMemo } from 'react'
-import { Plane, Upload, Calendar, Clock, MoveUp } from 'lucide-react'
+import { Plane, Upload, Calendar, Clock, MoveUp, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { GLASS } from '@/lib/constants/ui'
 import type { Trip } from '@/lib/db/schema'
 
@@ -12,6 +13,7 @@ interface TravelJourneyProps {
   loading?: boolean
   onImport: () => void
   onTripClick?: (trip: Trip) => void
+  onAddTrip?: (prefill?: { arrivalDate?: string; departureDate?: string }) => void
 }
 
 function formatDate(d: Date | string | null): string {
@@ -25,7 +27,20 @@ function formatYear(d: Date | string): number {
   return date.getFullYear()
 }
 
-export default function TravelJourney({ trips, loading, onImport, onTripClick }: TravelJourneyProps) {
+function toDateStr(d: Date | string | null | undefined): string {
+  if (!d) return ''
+  const date = typeof d === 'string' ? new Date(d) : d
+  if (isNaN(date.getTime())) return ''
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+}
+
+function computeGap(laterTrip: Trip, earlierTrip: Trip): number {
+  const endDate = earlierTrip.departureDate ? new Date(earlierTrip.departureDate) : new Date(earlierTrip.arrivalDate)
+  const startDate = new Date(laterTrip.arrivalDate)
+  return Math.round((startDate.getTime() - endDate.getTime()) / 86400000)
+}
+
+export default function TravelJourney({ trips, loading, onImport, onTripClick, onAddTrip }: TravelJourneyProps) {
   const now = useMemo(() => new Date(), [])
 
   const stats = useMemo(() => {
@@ -76,16 +91,29 @@ export default function TravelJourney({ trips, loading, onImport, onTripClick }:
       <div className={`${GLASS.control} rounded-xl p-4 text-center space-y-2`}>
         <Plane className="h-6 w-6 text-blue-400 mx-auto" />
         <p className="text-xs font-medium text-foreground">Travel Journey</p>
-        <p className="text-[10px] text-muted-foreground">Import your travel history from NomadList</p>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={onImport}
-          className="text-xs mt-1"
-        >
-          <Upload className="h-3 w-3 mr-1" />
-          Import CSV
-        </Button>
+        <p className="text-[10px] text-muted-foreground">Import your travel history or add trips manually</p>
+        <div className="flex gap-2 justify-center">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={onImport}
+            className="text-xs"
+          >
+            <Upload className="h-3 w-3 mr-1" />
+            Import CSV
+          </Button>
+          {onAddTrip && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => onAddTrip()}
+              className="text-xs"
+            >
+              <Plus className="h-3 w-3 mr-1" />
+              Add manually
+            </Button>
+          )}
+        </div>
       </div>
     )
   }
@@ -99,15 +127,32 @@ export default function TravelJourney({ trips, loading, onImport, onTripClick }:
           <Plane className="h-3 w-3" />
           Travel Journey
         </span>
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={onImport}
-          className="h-6 text-[10px] text-muted-foreground hover:text-foreground px-2"
-        >
-          <Upload className="h-3 w-3 mr-1" />
-          Re-import
-        </Button>
+        <div className="flex items-center gap-1">
+          {onAddTrip && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => onAddTrip()}
+                    className="h-6 w-6 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                  >
+                    <Plus className="h-3 w-3" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent className="text-xs">Add trip</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={onImport}
+            className="h-6 text-[10px] text-muted-foreground hover:text-foreground px-2"
+          >
+            <Upload className="h-3 w-3 mr-1" />
+            Re-import
+          </Button>
+        </div>
       </div>
 
       <div className={`grid ${stats.upcomingCountries > 0 ? 'grid-cols-4' : 'grid-cols-3'} gap-2`}>
@@ -133,16 +178,18 @@ export default function TravelJourney({ trips, loading, onImport, onTripClick }:
 
       <div className="relative ml-2.5">
         <div className="absolute left-0 top-2 bottom-2 w-0.5 bg-blue-400/30 rounded-full" />
-        {groupedByYear.map(([year, yearTrips], gi) => (
+        {groupedByYear.map(([year, yearTrips]) => (
           <div key={year}>
             <div className="sticky top-0 z-10 bg-background/90 backdrop-blur-sm py-1.5 pl-5 -ml-0.5">
               <span className="text-[10px] font-bold text-blue-400/70 uppercase tracking-wider">{year}</span>
             </div>
-            {yearTrips.map((trip, ti) => {
+            {yearTrips.map((trip) => {
               const idx = globalIdx++
               const nextInSorted = sorted[idx + 1]
               const isLastOverall = idx === sorted.length - 1
               const isFuture = new Date(trip.arrivalDate) > now
+
+              const gapDays = nextInSorted ? computeGap(trip, nextInSorted) : 0
 
               return (
                 <div key={trip.id}>
@@ -172,6 +219,34 @@ export default function TravelJourney({ trips, loading, onImport, onTripClick }:
                     </div>
                   </button>
                   {!isLastOverall && nextInSorted && (() => {
+                    if (gapDays > 1) {
+                      return (
+                        <button
+                          onClick={() => {
+                            if (!onAddTrip) return
+                            const gapStart = nextInSorted.departureDate || nextInSorted.arrivalDate
+                            const startDate = new Date(gapStart)
+                            startDate.setDate(startDate.getDate() + 1)
+                            const endDate = new Date(trip.arrivalDate)
+                            endDate.setDate(endDate.getDate() - 1)
+                            onAddTrip({
+                              arrivalDate: toDateStr(startDate),
+                              departureDate: toDateStr(endDate),
+                            })
+                          }}
+                          className="relative pl-5 py-1 flex items-center gap-1.5 w-full text-left group/gap hover:bg-blue-500/5 rounded-md transition-colors"
+                        >
+                          <div className="absolute left-[-1px] top-0 bottom-0 w-0.5 border-l border-dashed border-blue-400/20" />
+                          <span className="text-[9px] text-muted-foreground/40 group-hover/gap:text-muted-foreground/60 transition-colors">
+                            {gapDays}d gap
+                          </span>
+                          {onAddTrip && (
+                            <Plus className="h-2.5 w-2.5 text-muted-foreground/30 group-hover/gap:text-blue-400/60 transition-colors" />
+                          )}
+                        </button>
+                      )
+                    }
+
                     const nextFuture = new Date(nextInSorted.arrivalDate) > now
                     const connColor = nextFuture ? 'text-green-400/40' : 'text-blue-400/40'
                     const connTextColor = nextFuture ? 'text-green-400/50' : 'text-blue-400/50'

@@ -16,12 +16,13 @@ import ExportDialog from '@/components/export/ExportDialog'
 import ConnectionInsightsPanel from '@/components/insights/ConnectionInsightsPanel'
 import CountryPopup from '@/components/globe/CountryPopup'
 import TripPopup from '@/components/globe/TripPopup'
+import TripEditDialog from '@/components/globe/TripEditDialog'
 import TripCountryPopup from '@/components/globe/TripCountryPopup'
 import { PANEL_WIDTH, GLASS, Z, TRANSITION } from '@/lib/constants/ui'
 import { displayDefaults } from '@/types/display'
 import GlobeViewToggle from '@/components/globe/GlobeViewToggle'
 import type { DisplayOptions } from '@/types/display'
-import type { Contact } from '@/lib/db/schema'
+import type { Contact, Trip } from '@/lib/db/schema'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { useGlobeData } from '@/hooks/use-globe-data'
 import { useContactFilters } from '@/hooks/use-contact-filters'
@@ -48,12 +49,15 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
   const [tripImportDialogOpen, setTripImportDialogOpen] = useState(false)
   const [displayOptions, setDisplayOptions] = useState<DisplayOptions>(displayDefaults)
   const [highlightedContactIds, setHighlightedContactIds] = useState<Set<string>>(new Set())
+  const [tripEditDialogOpen, setTripEditDialogOpen] = useState(false)
+  const [editingTrip, setEditingTrip] = useState<Trip | null>(null)
+  const [tripEditPrefill, setTripEditPrefill] = useState<{ arrivalDate?: string; departureDate?: string; city?: string; country?: string } | undefined>()
 
   const data = useGlobeData()
   const filters = useContactFilters(data.contacts, data.userTags)
   const nav = usePanelNavigation(slug, data.contacts, data.connections, isMobile, setMobileView)
 
-  const { dashboardTab, setDashboardTab, handleViewModeChange } = useDashboardRouting({
+  const { dashboardTab, setDashboardTab, handleLayerToggle } = useDashboardRouting({
     initialSlug: slug,
     setDisplayOptions,
   })
@@ -103,6 +107,23 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
   useHotkey('n', addContactCb, { meta: true })
   useHotkey('i', openInsightsCb, { meta: true })
 
+  const handleAddTrip = useCallback((prefill?: { arrivalDate?: string; departureDate?: string; city?: string; country?: string }) => {
+    setEditingTrip(null)
+    setTripEditPrefill(prefill)
+    setTripEditDialogOpen(true)
+  }, [])
+
+  const handleEditTrip = useCallback((trip: Trip) => {
+    setEditingTrip(trip)
+    setTripEditPrefill(undefined)
+    setTripEditDialogOpen(true)
+  }, [])
+
+  const handleTripSaved = useCallback(() => {
+    data.reloadTrips()
+    data.reloadVisitedCountries()
+  }, [data.reloadTrips, data.reloadVisitedCountries])
+
   useEffect(() => {
     if (!data.loading) nav.resolveInitialContact(data.contacts)
   }, [data.loading, data.contacts, nav.resolveInitialContact])
@@ -135,6 +156,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
     tripsLoading: data.tripsLoading,
     onImportTrips: () => setTripImportDialogOpen(true),
     onTripClick: tripSelection.handleTripClick,
+    onAddTrip: handleAddTrip,
     dashboardTab,
     onDashboardTabChange: setDashboardTab,
   } as const
@@ -255,7 +277,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
       />
 
       <div className="absolute top-4 right-4 flex items-center gap-2" style={{ zIndex: Z.controls }}>
-        <GlobeViewToggle value={displayOptions.globeViewMode} onChange={handleViewModeChange} />
+        <GlobeViewToggle showNetwork={displayOptions.showNetwork} showTravel={displayOptions.showTravel} onToggle={handleLayerToggle} />
       </div>
 
       <TripImportDialog
@@ -287,6 +309,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
         nextTrip={tripSelection.selectedTripIndex < tripSelection.sortedTrips.length - 1 ? tripSelection.sortedTrips[tripSelection.selectedTripIndex + 1] : null}
         onNavigate={tripSelection.handleTripNavigate}
         onClose={tripSelection.clearSelectedTrip}
+        onAddTrip={handleAddTrip}
       />
 
       {popups.countryPopup && (
@@ -317,6 +340,15 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
           onClose={popups.closeTripCountryPopup}
         />
       )}
+
+      <TripEditDialog
+        open={tripEditDialogOpen}
+        onOpenChange={setTripEditDialogOpen}
+        trip={editingTrip}
+        prefill={tripEditPrefill}
+        trips={data.trips}
+        onSaved={handleTripSaved}
+      />
     </>
   )
 

@@ -6,9 +6,10 @@ interface TravelSectionProps {
   tripsLoading: boolean
   onImportTrips: () => void
   onTripClick?: (trip: Trip) => void
+  onAddTrip?: (prefill?: { arrivalDate?: string; departureDate?: string }) => void
 }
 
-export default function TravelSection({ trips, tripsLoading, onImportTrips, onTripClick }: TravelSectionProps) {
+export default function TravelSection({ trips, tripsLoading, onImportTrips, onTripClick, onAddTrip }: TravelSectionProps) {
   return (
     <div className="p-4 md:p-5">
       <TravelJourney
@@ -16,6 +17,7 @@ export default function TravelSection({ trips, tripsLoading, onImportTrips, onTr
         loading={tripsLoading}
         onImport={onImportTrips}
         onTripClick={onTripClick}
+        onAddTrip={onAddTrip}
       />
     </div>
   )

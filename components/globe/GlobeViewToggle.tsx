@@ -3,23 +3,24 @@
 import { Network, Plane } from 'lucide-react'
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
 import { GLASS } from '@/lib/constants/ui'
-import type { GlobeViewMode } from '@/types/display'
+import type { GlobeLayer } from '@/types/display'
 
 interface GlobeViewToggleProps {
-  value: GlobeViewMode
-  onChange: (mode: GlobeViewMode) => void
+  showNetwork: boolean
+  showTravel: boolean
+  onToggle: (layer: GlobeLayer) => void
 }
 
-export default function GlobeViewToggle({ value, onChange }: GlobeViewToggleProps) {
+export default function GlobeViewToggle({ showNetwork, showTravel, onToggle }: GlobeViewToggleProps) {
   return (
     <TooltipProvider>
       <div className={`${GLASS.control} rounded-lg p-1 flex gap-0.5`}>
         <Tooltip>
           <TooltipTrigger asChild>
             <button
-              onClick={() => onChange('network')}
+              onClick={() => onToggle('network')}
               className={`h-7 w-7 flex items-center justify-center rounded-md transition-colors ${
-                value === 'network'
+                showNetwork
                   ? 'bg-orange-500/20 text-orange-400'
                   : 'text-muted-foreground/40 hover:text-muted-foreground/70'
               }`}
@@ -27,14 +28,14 @@ export default function GlobeViewToggle({ value, onChange }: GlobeViewToggleProp
               <Network className="h-3.5 w-3.5" />
             </button>
           </TooltipTrigger>
-          <TooltipContent side="bottom" className="text-xs">Network view</TooltipContent>
+          <TooltipContent side="bottom" className="text-xs">Network layer</TooltipContent>
         </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
             <button
-              onClick={() => onChange('travel')}
+              onClick={() => onToggle('travel')}
               className={`h-7 w-7 flex items-center justify-center rounded-md transition-colors ${
-                value === 'travel'
+                showTravel
                   ? 'bg-blue-500/20 text-blue-400'
                   : 'text-muted-foreground/40 hover:text-muted-foreground/70'
               }`}
@@ -42,7 +43,7 @@ export default function GlobeViewToggle({ value, onChange }: GlobeViewToggleProp
               <Plane className="h-3.5 w-3.5" />
             </button>
           </TooltipTrigger>
-          <TooltipContent side="bottom" className="text-xs">Travel view</TooltipContent>
+          <TooltipContent side="bottom" className="text-xs">Travel layer</TooltipContent>
         </Tooltip>
       </div>
     </TooltipProvider>

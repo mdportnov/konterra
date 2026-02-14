@@ -64,51 +64,6 @@ interface GlobeCanvasProps {
 const EMPTY_ARCS: GlobeArc[] = []
 const EXIT_MS = 150
 
-function ContactDensityLegend({ isDark, visitedCountries, hasIndirect, showUserCountry }: { isDark: boolean; visitedCountries?: Set<string>; hasIndirect?: boolean; showUserCountry?: boolean }) {
-  const hasVisited = visitedCountries && visitedCountries.size > 0
-
-  return (
-    <div className={`absolute top-14 right-4 ${GLASS.control} rounded-lg px-2.5 py-2 flex flex-col gap-1`}>
-      <div className="flex items-center gap-1.5">
-        <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.contactLow.dark : POLYGON_COLORS.contactLow.light }} />
-        <span className="text-[10px] text-muted-foreground">1-2 contacts</span>
-      </div>
-      <div className="flex items-center gap-1.5">
-        <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.contactMed.dark : POLYGON_COLORS.contactMed.light }} />
-        <span className="text-[10px] text-muted-foreground">3-5 contacts</span>
-      </div>
-      <div className="flex items-center gap-1.5">
-        <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.contactHigh.dark : POLYGON_COLORS.contactHigh.light }} />
-        <span className="text-[10px] text-muted-foreground">5+ contacts</span>
-      </div>
-      {hasVisited && (
-        <>
-          <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.visitedOnly.dark : POLYGON_COLORS.visitedOnly.light, border: `1.5px solid ${isDark ? POLYGON_COLORS.visitedStroke.dark : POLYGON_COLORS.visitedStroke.light}` }} />
-            <span className="text-[10px] text-muted-foreground">Visited only</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.visitedContactLow.dark : POLYGON_COLORS.visitedContactLow.light, border: `1.5px solid ${isDark ? POLYGON_COLORS.visitedContactsStroke.dark : POLYGON_COLORS.visitedContactsStroke.light}` }} />
-            <span className="text-[10px] text-muted-foreground">Visited + contacts</span>
-          </div>
-        </>
-      )}
-      {hasIndirect && (
-        <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.indirect.dark : POLYGON_COLORS.indirect.light, border: `1.5px solid ${isDark ? POLYGON_COLORS.indirectStroke.dark : POLYGON_COLORS.indirectStroke.light}` }} />
-          <span className="text-[10px] text-muted-foreground">Indirect ties</span>
-        </div>
-      )}
-      {showUserCountry && (
-        <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.userCountry.dark : POLYGON_COLORS.userCountry.light, border: `1.5px solid ${isDark ? POLYGON_COLORS.userCountryStroke.dark : POLYGON_COLORS.userCountryStroke.light}` }} />
-          <span className="text-[10px] text-muted-foreground">Your location</span>
-        </div>
-      )}
-    </div>
-  )
-}
-
 export default memo(function GlobeCanvas({
   contacts,
   selectedContact,
@@ -441,12 +396,12 @@ export default memo(function GlobeCanvas({
     return result
   }, [countryConnections, contacts, countryCentroids, display.arcMode, selectedContact])
 
-  const isTravelMode = display.globeViewMode === 'travel'
+  const { showNetwork, showTravel } = display
 
   const now = useMemo(() => new Date(), [])
 
   const travelPoints: GlobePoint[] = useMemo(() => {
-    if (!isTravelMode || trips.length === 0) return []
+    if (!showTravel || trips.length === 0) return []
     const sorted = [...trips].sort((a, b) => new Date(a.arrivalDate).getTime() - new Date(b.arrivalDate).getTime())
     return sorted
       .filter((t) => t.lat != null && t.lng != null)
@@ -480,10 +435,10 @@ export default memo(function GlobeCanvas({
           size,
         }
       })
-  }, [isTravelMode, trips, now, selectedTripId])
+  }, [showTravel, trips, now, selectedTripId])
 
   const travelArcs: GlobeArc[] = useMemo(() => {
-    if (!isTravelMode || trips.length === 0) return EMPTY_ARCS
+    if (!showTravel || trips.length === 0) return EMPTY_ARCS
     const sorted = [...trips]
       .filter((t) => t.lat != null && t.lng != null)
       .sort((a, b) => new Date(a.arrivalDate).getTime() - new Date(b.arrivalDate).getTime())
@@ -524,25 +479,32 @@ export default memo(function GlobeCanvas({
       })
     }
     return result
-  }, [isTravelMode, trips, now, selectedTripId])
+  }, [showTravel, trips, now, selectedTripId])
 
   const pastTravelCountries = useMemo(() => {
-    if (!isTravelMode) return new Set<string>()
+    if (!showTravel) return new Set<string>()
     return new Set(trips.filter((t) => new Date(t.arrivalDate) <= now).map((t) => t.country))
-  }, [isTravelMode, trips, now])
+  }, [showTravel, trips, now])
 
   const futureTravelCountries = useMemo(() => {
-    if (!isTravelMode) return new Set<string>()
+    if (!showTravel) return new Set<string>()
     const future = new Set(trips.filter((t) => new Date(t.arrivalDate) > now).map((t) => t.country))
     for (const c of pastTravelCountries) future.delete(c)
     return future
-  }, [isTravelMode, trips, now, pastTravelCountries])
+  }, [showTravel, trips, now, pastTravelCountries])
 
-  const activePoints = isTravelMode ? travelPoints : points
+  const activePoints = useMemo(() => {
+    if (showNetwork && showTravel) return [...points, ...travelPoints]
+    if (showTravel) return travelPoints
+    return points
+  }, [showNetwork, showTravel, points, travelPoints])
+
   const allArcs = useMemo(() => {
-    if (isTravelMode) return travelArcs
-    return [...arcs, ...countryArcs]
-  }, [isTravelMode, travelArcs, arcs, countryArcs])
+    const result: GlobeArc[] = []
+    if (showNetwork) result.push(...arcs, ...countryArcs)
+    if (showTravel) result.push(...travelArcs)
+    return result
+  }, [showNetwork, showTravel, travelArcs, arcs, countryArcs])
 
   const getArcStroke = useCallback((arc: object) => {
     if ((arc as GlobeArc).isTravel) return 1.2
@@ -635,11 +597,7 @@ export default memo(function GlobeCanvas({
     const textColor = isDark ? 'rgba(255,255,255,0.95)' : 'rgba(20,30,50,0.9)'
     const border = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'
     const parts: string[] = [`<b>${name}</b>`]
-    if (isTravelMode) {
-      const tripCount = trips.filter((t) => t.country === name).length
-      if (tripCount > 0) parts.push(`${tripCount} trip${tripCount === 1 ? '' : 's'}`)
-      if (futureTravelCountries.has(name)) parts.push('Upcoming')
-    } else {
+    if (showNetwork) {
       const count = countryContactCount.get(name) || 0
       const indirectCount = countryConnectionCountMap.get(name) || 0
       const isVisited = visitedCountries?.has(name)
@@ -648,36 +606,46 @@ export default memo(function GlobeCanvas({
       if (isVisited) parts.push('Visited')
       if (userCountry && name === userCountry) parts.push('Your location')
     }
+    if (showTravel) {
+      const tripCount = trips.filter((t) => t.country === name).length
+      if (tripCount > 0) parts.push(`${tripCount} trip${tripCount === 1 ? '' : 's'}`)
+      if (futureTravelCountries.has(name)) parts.push('Upcoming')
+    }
     const label = parts.join(' <span style="opacity:0.4">&middot;</span> ')
     return `<div style="background:${bg};color:${textColor};padding:5px 10px;border-radius:6px;font-size:11px;backdrop-filter:blur(12px);border:1px solid ${border};font-family:system-ui,sans-serif;line-height:1.4;box-shadow:0 2px 8px rgba(0,0,0,${isDark ? '0.4' : '0.08'})">${label}</div>`
-  }, [isDark, countryContactCount, countryConnectionCountMap, visitedCountries, userCountry, isTravelMode, trips, futureTravelCountries])
+  }, [isDark, countryContactCount, countryConnectionCountMap, visitedCountries, userCountry, showNetwork, showTravel, trips, futureTravelCountries])
 
   const getPolygonCapColor = useCallback((feat: object) => {
     const f = feat as { id?: string }
     const name = countryNames[String(f.id)]
     if (name) {
-      if (isTravelMode) {
+      if (showNetwork) {
+        const count = countryContactCount.get(name) || 0
+        const isVisited = visitedCountries?.has(name)
+        const isIndirectOnly = indirectOnlyCountries.has(name)
+        if (count > 0 && isVisited) {
+          if (count > 5) return isDark ? POLYGON_COLORS.visitedContactHigh.dark : POLYGON_COLORS.visitedContactHigh.light
+          if (count >= 3) return isDark ? POLYGON_COLORS.visitedContactMed.dark : POLYGON_COLORS.visitedContactMed.light
+          return isDark ? POLYGON_COLORS.visitedContactLow.dark : POLYGON_COLORS.visitedContactLow.light
+        }
+        if (count > 5) return isDark ? POLYGON_COLORS.contactHigh.dark : POLYGON_COLORS.contactHigh.light
+        if (count >= 3) return isDark ? POLYGON_COLORS.contactMed.dark : POLYGON_COLORS.contactMed.light
+        if (count >= 1) return isDark ? POLYGON_COLORS.contactLow.dark : POLYGON_COLORS.contactLow.light
+        if (isIndirectOnly) return isDark ? POLYGON_COLORS.indirect.dark : POLYGON_COLORS.indirect.light
+        if (isVisited) return isDark ? POLYGON_COLORS.visitedOnly.dark : POLYGON_COLORS.visitedOnly.light
+        if (userCountry && name === userCountry) return isDark ? POLYGON_COLORS.userCountry.dark : POLYGON_COLORS.userCountry.light
+      }
+      if (showTravel && !showNetwork) {
         if (futureTravelCountries.has(name)) return isDark ? TRAVEL_COLORS.futureCountry.dark : TRAVEL_COLORS.futureCountry.light
         if (pastTravelCountries.has(name)) return isDark ? TRAVEL_COLORS.pastCountry.dark : TRAVEL_COLORS.pastCountry.light
-        return isDark ? POLYGON_COLORS.defaultCap.dark : POLYGON_COLORS.defaultCap.light
       }
-      const count = countryContactCount.get(name) || 0
-      const isVisited = visitedCountries?.has(name)
-      const isIndirectOnly = indirectOnlyCountries.has(name)
-      if (count > 0 && isVisited) {
-        if (count > 5) return isDark ? POLYGON_COLORS.visitedContactHigh.dark : POLYGON_COLORS.visitedContactHigh.light
-        if (count >= 3) return isDark ? POLYGON_COLORS.visitedContactMed.dark : POLYGON_COLORS.visitedContactMed.light
-        return isDark ? POLYGON_COLORS.visitedContactLow.dark : POLYGON_COLORS.visitedContactLow.light
+      if (showTravel && showNetwork) {
+        if (futureTravelCountries.has(name) && !(countryContactCount.get(name) || 0)) return isDark ? TRAVEL_COLORS.futureCountry.dark : TRAVEL_COLORS.futureCountry.light
+        if (pastTravelCountries.has(name) && !(countryContactCount.get(name) || 0)) return isDark ? TRAVEL_COLORS.pastCountry.dark : TRAVEL_COLORS.pastCountry.light
       }
-      if (count > 5) return isDark ? POLYGON_COLORS.contactHigh.dark : POLYGON_COLORS.contactHigh.light
-      if (count >= 3) return isDark ? POLYGON_COLORS.contactMed.dark : POLYGON_COLORS.contactMed.light
-      if (count >= 1) return isDark ? POLYGON_COLORS.contactLow.dark : POLYGON_COLORS.contactLow.light
-      if (isIndirectOnly) return isDark ? POLYGON_COLORS.indirect.dark : POLYGON_COLORS.indirect.light
-      if (isVisited) return isDark ? POLYGON_COLORS.visitedOnly.dark : POLYGON_COLORS.visitedOnly.light
-      if (userCountry && name === userCountry) return isDark ? POLYGON_COLORS.userCountry.dark : POLYGON_COLORS.userCountry.light
     }
     return isDark ? POLYGON_COLORS.defaultCap.dark : POLYGON_COLORS.defaultCap.light
-  }, [isDark, countryContactCount, visitedCountries, indirectOnlyCountries, userCountry, isTravelMode, pastTravelCountries, futureTravelCountries])
+  }, [isDark, countryContactCount, visitedCountries, indirectOnlyCountries, userCountry, showNetwork, showTravel, pastTravelCountries, futureTravelCountries])
 
   const getPolygonSideColor = useCallback(
     () => isDark ? POLYGON_COLORS.defaultSide.dark : POLYGON_COLORS.defaultSide.light,
@@ -689,23 +657,28 @@ export default memo(function GlobeCanvas({
       const f = feat as { id?: string }
       const name = countryNames[String(f.id)]
       if (name) {
-        if (isTravelMode) {
+        if (showNetwork) {
+          const isVisited = visitedCountries?.has(name)
+          const hasContacts = (countryContactCount.get(name) || 0) > 0
+          const isIndirectOnly = indirectOnlyCountries.has(name)
+          if (isVisited && hasContacts) return isDark ? POLYGON_COLORS.visitedContactsStroke.dark : POLYGON_COLORS.visitedContactsStroke.light
+          if (isVisited) return isDark ? POLYGON_COLORS.visitedStroke.dark : POLYGON_COLORS.visitedStroke.light
+          if (hasContacts) return isDark ? POLYGON_COLORS.contactStroke.dark : POLYGON_COLORS.contactStroke.light
+          if (isIndirectOnly) return isDark ? POLYGON_COLORS.indirectStroke.dark : POLYGON_COLORS.indirectStroke.light
+          if (userCountry && name === userCountry) return isDark ? POLYGON_COLORS.userCountryStroke.dark : POLYGON_COLORS.userCountryStroke.light
+        }
+        if (showTravel && !showNetwork) {
           if (futureTravelCountries.has(name)) return isDark ? TRAVEL_COLORS.futureStroke.dark : TRAVEL_COLORS.futureStroke.light
           if (pastTravelCountries.has(name)) return isDark ? TRAVEL_COLORS.pastStroke.dark : TRAVEL_COLORS.pastStroke.light
-          return isDark ? POLYGON_COLORS.defaultStroke.dark : POLYGON_COLORS.defaultStroke.light
         }
-        const isVisited = visitedCountries?.has(name)
-        const hasContacts = (countryContactCount.get(name) || 0) > 0
-        const isIndirectOnly = indirectOnlyCountries.has(name)
-        if (isVisited && hasContacts) return isDark ? POLYGON_COLORS.visitedContactsStroke.dark : POLYGON_COLORS.visitedContactsStroke.light
-        if (isVisited) return isDark ? POLYGON_COLORS.visitedStroke.dark : POLYGON_COLORS.visitedStroke.light
-        if (hasContacts) return isDark ? POLYGON_COLORS.contactStroke.dark : POLYGON_COLORS.contactStroke.light
-        if (isIndirectOnly) return isDark ? POLYGON_COLORS.indirectStroke.dark : POLYGON_COLORS.indirectStroke.light
-        if (userCountry && name === userCountry) return isDark ? POLYGON_COLORS.userCountryStroke.dark : POLYGON_COLORS.userCountryStroke.light
+        if (showTravel && showNetwork) {
+          if (futureTravelCountries.has(name) && !(countryContactCount.get(name) || 0)) return isDark ? TRAVEL_COLORS.futureStroke.dark : TRAVEL_COLORS.futureStroke.light
+          if (pastTravelCountries.has(name) && !(countryContactCount.get(name) || 0)) return isDark ? TRAVEL_COLORS.pastStroke.dark : TRAVEL_COLORS.pastStroke.light
+        }
       }
       return isDark ? POLYGON_COLORS.defaultStroke.dark : POLYGON_COLORS.defaultStroke.light
     },
-    [isDark, visitedCountries, countryContactCount, indirectOnlyCountries, userCountry, isTravelMode, pastTravelCountries, futureTravelCountries]
+    [isDark, visitedCountries, countryContactCount, indirectOnlyCountries, userCountry, showNetwork, showTravel, pastTravelCountries, futureTravelCountries]
   )
 
   const getPointColor = useCallback((point: object) => (point as GlobePoint).color, [])
@@ -755,61 +728,85 @@ export default memo(function GlobeCanvas({
         arcStroke={getArcStroke}
         arcsTransitionDuration={0}
       />
-      {trips.length > 0 && (
-        <div
-          className={`absolute top-14 right-4 ${GLASS.control} rounded-lg px-2.5 py-2 flex flex-col gap-1`}
-          style={{
-            opacity: isTravelMode ? 1 : 0,
-            transform: isTravelMode ? 'translateY(0)' : 'translateY(-4px)',
-            transition: 'opacity 200ms ease-out, transform 200ms ease-out',
-            pointerEvents: isTravelMode ? 'auto' : 'none',
-          }}
-        >
-          <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: TRAVEL_COLORS.currentPoint }} />
-            <span className="text-[10px] text-muted-foreground">Current trip</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: TRAVEL_COLORS.pastPoint }} />
-            <span className="text-[10px] text-muted-foreground">Past trip</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? TRAVEL_COLORS.pastCountry.dark : TRAVEL_COLORS.pastCountry.light }} />
-            <span className="text-[10px] text-muted-foreground">Visited country</span>
-          </div>
-          {futureTravelCountries.size > 0 && (
-            <>
-              <div className="flex items-center gap-1.5">
-                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: TRAVEL_COLORS.futurePoint }} />
-                <span className="text-[10px] text-muted-foreground">Upcoming trip</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? TRAVEL_COLORS.futureCountry.dark : TRAVEL_COLORS.futureCountry.light }} />
-                <span className="text-[10px] text-muted-foreground">Upcoming country</span>
-              </div>
-            </>
-          )}
-          {selectedTripId && (
+      <div className="absolute top-14 right-4 flex flex-col gap-2">
+        {showTravel && trips.length > 0 && (
+          <div className={`${GLASS.control} rounded-lg px-2.5 py-2 flex flex-col gap-1`}>
             <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: TRAVEL_COLORS.selectedPoint }} />
-              <span className="text-[10px] text-muted-foreground">Selected trip</span>
+              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: TRAVEL_COLORS.currentPoint }} />
+              <span className="text-[10px] text-muted-foreground">Current trip</span>
             </div>
-          )}
-          <div className="text-[9px] text-muted-foreground/60 mt-0.5">
-            {trips.length} trips &middot; {pastTravelCountries.size} countries
-            {futureTravelCountries.size > 0 && ` \u00b7 ${futureTravelCountries.size} upcoming`}
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: TRAVEL_COLORS.pastPoint }} />
+              <span className="text-[10px] text-muted-foreground">Past trip</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? TRAVEL_COLORS.pastCountry.dark : TRAVEL_COLORS.pastCountry.light }} />
+              <span className="text-[10px] text-muted-foreground">Visited country</span>
+            </div>
+            {futureTravelCountries.size > 0 && (
+              <>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: TRAVEL_COLORS.futurePoint }} />
+                  <span className="text-[10px] text-muted-foreground">Upcoming trip</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? TRAVEL_COLORS.futureCountry.dark : TRAVEL_COLORS.futureCountry.light }} />
+                  <span className="text-[10px] text-muted-foreground">Upcoming country</span>
+                </div>
+              </>
+            )}
+            {selectedTripId && (
+              <div className="flex items-center gap-1.5">
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: TRAVEL_COLORS.selectedPoint }} />
+                <span className="text-[10px] text-muted-foreground">Selected trip</span>
+              </div>
+            )}
+            <div className="text-[9px] text-muted-foreground/60 mt-0.5">
+              {trips.length} trips &middot; {pastTravelCountries.size} countries
+              {futureTravelCountries.size > 0 && ` \u00b7 ${futureTravelCountries.size} upcoming`}
+            </div>
           </div>
-        </div>
-      )}
-      <div
-        style={{
-          opacity: !isTravelMode ? 1 : 0,
-          transform: !isTravelMode ? 'translateY(0)' : 'translateY(-4px)',
-          transition: 'opacity 200ms ease-out, transform 200ms ease-out',
-          pointerEvents: !isTravelMode ? 'auto' : 'none',
-        }}
-      >
-        {(hasCountryContacts || (visitedCountries && visitedCountries.size > 0) || countryConnections.length > 0 || !!userCountry) && <ContactDensityLegend isDark={isDark} visitedCountries={visitedCountries} hasIndirect={countryConnections.length > 0} showUserCountry={!!userCountry} />}
+        )}
+        {showNetwork && (hasCountryContacts || (visitedCountries && visitedCountries.size > 0) || countryConnections.length > 0 || !!userCountry) && (
+          <div className={`${GLASS.control} rounded-lg px-2.5 py-2 flex flex-col gap-1`}>
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.contactLow.dark : POLYGON_COLORS.contactLow.light }} />
+              <span className="text-[10px] text-muted-foreground">1-2 contacts</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.contactMed.dark : POLYGON_COLORS.contactMed.light }} />
+              <span className="text-[10px] text-muted-foreground">3-5 contacts</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.contactHigh.dark : POLYGON_COLORS.contactHigh.light }} />
+              <span className="text-[10px] text-muted-foreground">5+ contacts</span>
+            </div>
+            {visitedCountries && visitedCountries.size > 0 && (
+              <>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.visitedOnly.dark : POLYGON_COLORS.visitedOnly.light, border: `1.5px solid ${isDark ? POLYGON_COLORS.visitedStroke.dark : POLYGON_COLORS.visitedStroke.light}` }} />
+                  <span className="text-[10px] text-muted-foreground">Visited only</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.visitedContactLow.dark : POLYGON_COLORS.visitedContactLow.light, border: `1.5px solid ${isDark ? POLYGON_COLORS.visitedContactsStroke.dark : POLYGON_COLORS.visitedContactsStroke.light}` }} />
+                  <span className="text-[10px] text-muted-foreground">Visited + contacts</span>
+                </div>
+              </>
+            )}
+            {countryConnections.length > 0 && (
+              <div className="flex items-center gap-1.5">
+                <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.indirect.dark : POLYGON_COLORS.indirect.light, border: `1.5px solid ${isDark ? POLYGON_COLORS.indirectStroke.dark : POLYGON_COLORS.indirectStroke.light}` }} />
+                <span className="text-[10px] text-muted-foreground">Indirect ties</span>
+              </div>
+            )}
+            {!!userCountry && (
+              <div className="flex items-center gap-1.5">
+                <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.userCountry.dark : POLYGON_COLORS.userCountry.light, border: `1.5px solid ${isDark ? POLYGON_COLORS.userCountryStroke.dark : POLYGON_COLORS.userCountryStroke.light}` }} />
+                <span className="text-[10px] text-muted-foreground">Your location</span>
+              </div>
+            )}
+          </div>
+        )}
       </div>
       {clusterData && (
         <ClusterPopup
