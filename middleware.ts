@@ -6,17 +6,19 @@ const { auth } = NextAuth(authConfig)
 
 export default auth((req) => {
   const isLoggedIn = !!req.auth
-  const isAuthPage = req.nextUrl.pathname.startsWith('/login')
-  const isApiAuth = req.nextUrl.pathname.startsWith('/api/auth')
-  const isApiWaitlist = req.nextUrl.pathname.startsWith('/api/waitlist')
+  const { pathname } = req.nextUrl
+  const isLandingPage = pathname === '/'
+  const isAuthPage = pathname.startsWith('/login')
+  const isApiAuth = pathname.startsWith('/api/auth')
+  const isApiWaitlist = pathname.startsWith('/api/waitlist')
 
-  if (isApiAuth || isApiWaitlist) {
+  if (isApiAuth || isApiWaitlist || isLandingPage) {
     return NextResponse.next()
   }
 
   if (isAuthPage) {
     if (isLoggedIn) {
-      return NextResponse.redirect(new URL('/', req.url))
+      return NextResponse.redirect(new URL('/app', req.url))
     }
     return NextResponse.next()
   }

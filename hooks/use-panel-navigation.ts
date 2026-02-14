@@ -21,11 +21,11 @@ function slugToState(slug?: string[]): { panel: ActivePanel; sidebarView: Sideba
 }
 
 function stateToUrl(panel: ActivePanel, sidebarView: SidebarView, contactId?: string | null): string {
-  if (panel === 'edit') return contactId ? `/contact/${contactId}/edit` : '/contact/new'
-  if (panel === 'settings') return '/settings'
-  if (panel === 'insights') return '/insights'
-  if (sidebarView === 'detail' && contactId) return `/contact/${contactId}`
-  return '/'
+  if (panel === 'edit') return contactId ? `/app/contact/${contactId}/edit` : '/app/contact/new'
+  if (panel === 'settings') return '/app/settings'
+  if (panel === 'insights') return '/app/insights'
+  if (sidebarView === 'detail' && contactId) return `/app/contact/${contactId}`
+  return '/app'
 }
 
 function pushUrl(url: string) {
@@ -35,7 +35,8 @@ function pushUrl(url: string) {
 }
 
 function pathnameToSlug(pathname: string): string[] {
-  return pathname.split('/').filter(Boolean)
+  const stripped = pathname.startsWith('/app') ? pathname.slice(4) : pathname
+  return stripped.split('/').filter(Boolean)
 }
 
 export function usePanelNavigation(
@@ -113,7 +114,7 @@ export function usePanelNavigation(
   const handleBackToList = useCallback(() => {
     setSidebarView('list')
     setSelectedContact(null)
-    pushUrl('/')
+    pushUrl('/app')
     if (isMobile) setMobileView('dashboard')
   }, [isMobile, setMobileView])
 
@@ -130,7 +131,7 @@ export function usePanelNavigation(
     setEditingContact(null)
     setEditPrefill(prefill || {})
     setActivePanel('edit')
-    pushUrl('/contact/new')
+    pushUrl('/app/contact/new')
     if (isMobile) setMobileView('globe')
   }, [isMobile, setMobileView])
 
@@ -141,7 +142,7 @@ export function usePanelNavigation(
       setSidebarView('detail')
       pushUrl(stateToUrl(null, 'detail', selectedContact.id))
     } else {
-      pushUrl('/')
+      pushUrl('/app')
     }
     if (isMobile) setMobileView('dashboard')
   }, [selectedContact, isMobile, setMobileView])
@@ -171,13 +172,13 @@ export function usePanelNavigation(
     setSelectedContact(null)
     setSidebarView('list')
     setActivePanel(null)
-    pushUrl('/')
+    pushUrl('/app')
     if (isMobile) setMobileView('dashboard')
   }, [isMobile, setMobileView])
 
   const handleOpenSettings = useCallback(() => {
     setActivePanel('settings')
-    pushUrl('/settings')
+    pushUrl('/app/settings')
     if (isMobile) setMobileView('globe')
   }, [isMobile, setMobileView])
 
@@ -186,14 +187,14 @@ export function usePanelNavigation(
     if (selectedContact && sidebarView === 'detail') {
       pushUrl(stateToUrl(null, 'detail', selectedContact.id))
     } else {
-      pushUrl('/')
+      pushUrl('/app')
     }
     if (isMobile) setMobileView('dashboard')
   }, [selectedContact, sidebarView, isMobile, setMobileView])
 
   const handleOpenInsights = useCallback(() => {
     setActivePanel('insights')
-    pushUrl('/insights')
+    pushUrl('/app/insights')
     if (isMobile) setMobileView('globe')
   }, [isMobile, setMobileView])
 
@@ -202,7 +203,7 @@ export function usePanelNavigation(
     if (selectedContact && sidebarView === 'detail') {
       pushUrl(stateToUrl(null, 'detail', selectedContact.id))
     } else {
-      pushUrl('/')
+      pushUrl('/app')
     }
     if (isMobile) setMobileView('dashboard')
   }, [selectedContact, sidebarView, isMobile, setMobileView])

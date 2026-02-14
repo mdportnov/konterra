@@ -45,7 +45,7 @@ export function useDashboardRouting({ initialSlug, setDisplayOptions }: UseDashb
       setDisplayOptions((prev) => {
         const next = { ...prev, showTravel: true }
         const viewParam = buildViewParam(next.showNetwork, next.showTravel)
-        const url = `/travel?view=${viewParam}`
+        const url = `/app/travel?view=${viewParam}`
         if (window.location.pathname + window.location.search !== url) {
           window.history.pushState(null, '', url)
         }
@@ -55,7 +55,7 @@ export function useDashboardRouting({ initialSlug, setDisplayOptions }: UseDashb
       setDisplayOptions((prev) => {
         const viewParam = buildViewParam(prev.showNetwork, prev.showTravel)
         const search = viewParam !== 'network' ? `?view=${viewParam}` : ''
-        const url = `/${search}`
+        const url = `/app${search}`
         if (window.location.pathname + window.location.search !== url) {
           window.history.pushState(null, '', url)
         }
@@ -76,7 +76,7 @@ export function useDashboardRouting({ initialSlug, setDisplayOptions }: UseDashb
       }
       const viewParam = buildViewParam(showNetwork, showTravel)
       const pathname = window.location.pathname
-      const search = (showNetwork && !showTravel && pathname === '/') ? '' : `?view=${viewParam}`
+      const search = (showNetwork && !showTravel && pathname === '/app') ? '' : `?view=${viewParam}`
       window.history.replaceState(null, '', pathname + search)
       return { ...prev, showNetwork, showTravel }
     })
@@ -86,7 +86,7 @@ export function useDashboardRouting({ initialSlug, setDisplayOptions }: UseDashb
     const onPop = () => {
       const path = window.location.pathname
       const parsed = parseViewParam(window.location.search)
-      if (path === '/travel') {
+      if (path === '/app/travel') {
         setDashboardTabRaw('travel')
         if (parsed) {
           setDisplayOptions((prev) => ({ ...prev, showNetwork: parsed.showNetwork, showTravel: parsed.showTravel }))

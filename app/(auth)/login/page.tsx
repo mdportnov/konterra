@@ -74,7 +74,7 @@ export default function LoginPage() {
     setLoading(true)
     const result = await signIn('credentials', { email, password, redirect: false })
     if (result?.ok) {
-      router.push('/')
+      router.push('/app')
       router.refresh()
     } else {
       toast.error('Access denied. Authorized operators only.')
