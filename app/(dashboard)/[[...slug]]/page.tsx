@@ -154,6 +154,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
         countryConnections={data.countryConnections}
         highlightedContactIds={highlightedContactIds}
         trips={data.trips}
+        selectedTripId={tripSelection.selectedTripId}
       />
 
       {!data.loading && data.contacts.length === 0 && (

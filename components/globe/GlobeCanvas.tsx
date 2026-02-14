@@ -58,6 +58,7 @@ interface GlobeCanvasProps {
   countryConnections?: ContactCountryConnection[]
   highlightedContactIds?: Set<string>
   trips?: Trip[]
+  selectedTripId?: string | null
 }
 
 const EMPTY_ARCS: GlobeArc[] = []
@@ -121,6 +122,7 @@ export default memo(function GlobeCanvas({
   countryConnections = [],
   highlightedContactIds,
   trips = [],
+  selectedTripId,
 }: GlobeCanvasProps) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const globeRef = useRef<any>(null)
@@ -449,38 +451,80 @@ export default memo(function GlobeCanvas({
     return sorted
       .filter((t) => t.lat != null && t.lng != null)
       .map((t) => {
-        const isFuture = new Date(t.arrivalDate) > now
+        const arrival = new Date(t.arrivalDate)
+        const departure = t.departureDate ? new Date(t.departureDate) : arrival
+        const isCurrent = arrival <= now && departure >= now
+        const isFuture = arrival > now
+
+        let color: string
+        let size = 0.5
+        if (t.id === selectedTripId) {
+          color = TRAVEL_COLORS.selectedPoint
+          size = 0.6
+        } else if (isCurrent) {
+          color = TRAVEL_COLORS.currentPoint
+          size = 0.6
+        } else if (isFuture) {
+          color = TRAVEL_COLORS.futurePoint
+        } else {
+          color = TRAVEL_COLORS.pastPoint
+        }
+
         return {
           id: `trip:${t.id}`,
           lat: t.lat!,
           lng: t.lng!,
           name: t.city,
           city: t.country,
-          color: isFuture ? TRAVEL_COLORS.futurePoint : TRAVEL_COLORS.pastPoint,
-          size: 0.5,
+          color,
+          size,
         }
       })
-  }, [isTravelMode, trips, now])
+  }, [isTravelMode, trips, now, selectedTripId])
 
   const travelArcs: GlobeArc[] = useMemo(() => {
     if (!isTravelMode || trips.length === 0) return EMPTY_ARCS
     const sorted = [...trips]
       .filter((t) => t.lat != null && t.lng != null)
       .sort((a, b) => new Date(a.arrivalDate).getTime() - new Date(b.arrivalDate).getTime())
+
+    const currentTripIds = new Set<string>()
+    for (const t of sorted) {
+      const arrival = new Date(t.arrivalDate)
+      const departure = t.departureDate ? new Date(t.departureDate) : arrival
+      if (arrival <= now && departure >= now) currentTripIds.add(t.id)
+    }
+
     const result: GlobeArc[] = []
     for (let i = 0; i < sorted.length - 1; i++) {
+      const fromId = sorted[i].id
+      const toId = sorted[i + 1].id
+      const involvesSelected = selectedTripId != null && (fromId === selectedTripId || toId === selectedTripId)
+      const involvesCurrent = currentTripIds.has(fromId) || currentTripIds.has(toId)
       const nextIsFuture = new Date(sorted[i + 1].arrivalDate) > now
+
+      let color: string
+      if (involvesSelected) {
+        color = TRAVEL_COLORS.selectedArc
+      } else if (involvesCurrent) {
+        color = TRAVEL_COLORS.currentArc
+      } else if (nextIsFuture) {
+        color = TRAVEL_COLORS.futureArc
+      } else {
+        color = TRAVEL_COLORS.pastArc
+      }
+
       result.push({
         startLat: sorted[i].lat!,
         startLng: sorted[i].lng!,
         endLat: sorted[i + 1].lat!,
         endLng: sorted[i + 1].lng!,
-        color: nextIsFuture ? TRAVEL_COLORS.futureArc : TRAVEL_COLORS.pastArc,
+        color,
         isTravel: true,
       })
     }
     return result
-  }, [isTravelMode, trips, now])
+  }, [isTravelMode, trips, now, selectedTripId])
 
   const pastTravelCountries = useMemo(() => {
     if (!isTravelMode) return new Set<string>()
@@ -722,6 +766,10 @@ export default memo(function GlobeCanvas({
           }}
         >
           <div className="flex items-center gap-1.5">
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: TRAVEL_COLORS.currentPoint }} />
+            <span className="text-[10px] text-muted-foreground">Current trip</span>
+          </div>
+          <div className="flex items-center gap-1.5">
             <div className="w-3 h-3 rounded-full" style={{ backgroundColor: TRAVEL_COLORS.pastPoint }} />
             <span className="text-[10px] text-muted-foreground">Past trip</span>
           </div>
@@ -740,6 +788,12 @@ export default memo(function GlobeCanvas({
                 <span className="text-[10px] text-muted-foreground">Upcoming country</span>
               </div>
             </>
+          )}
+          {selectedTripId && (
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: TRAVEL_COLORS.selectedPoint }} />
+              <span className="text-[10px] text-muted-foreground">Selected trip</span>
+            </div>
           )}
           <div className="text-[9px] text-muted-foreground/60 mt-0.5">
             {trips.length} trips &middot; {pastTravelCountries.size} countries

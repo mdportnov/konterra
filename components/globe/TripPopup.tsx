@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import type { Trip } from '@/lib/db/schema'
 import { GLASS } from '@/lib/constants/ui'
+import { TENSE_COLORS } from '@/lib/constants/globe-colors'
 import { ChevronLeft, ChevronRight, X, Calendar, Clock, MapPin } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
@@ -43,6 +44,13 @@ export default function TripPopup({ trip, prevTrip, nextTrip, onNavigate, onClos
   const arrival = formatDate(trip.arrivalDate)
   const departure = formatDate(trip.departureDate)
 
+  const now = new Date()
+  const arrDate = new Date(trip.arrivalDate)
+  const depDate = trip.departureDate ? new Date(trip.departureDate) : arrDate
+  const tense: 'past' | 'current' | 'future' =
+    arrDate <= now && depDate >= now ? 'current' : arrDate > now ? 'future' : 'past'
+  const colors = TENSE_COLORS[tense]
+
   return (
     <div
       className={`absolute right-6 z-20 ${GLASS.panel} rounded-xl shadow-lg p-3 w-[320px]`}
@@ -56,8 +64,8 @@ export default function TripPopup({ trip, prevTrip, nextTrip, onNavigate, onClos
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 min-w-0">
-          <div className="shrink-0 w-6 h-6 rounded bg-blue-500/10 flex items-center justify-center">
-            <MapPin className="h-3.5 w-3.5 text-blue-400" />
+          <div className={`shrink-0 w-6 h-6 rounded ${colors.icon} flex items-center justify-center`}>
+            <MapPin className={`h-3.5 w-3.5 ${colors.iconText}`} />
           </div>
           <div className="min-w-0">
             <div className="text-sm font-semibold truncate">{trip.city}</div>
@@ -105,7 +113,7 @@ export default function TripPopup({ trip, prevTrip, nextTrip, onNavigate, onClos
           {prevTrip ? (
             <button
               onClick={() => onNavigate(prevTrip)}
-              className="flex items-center gap-0.5 text-[10px] text-blue-400 hover:text-blue-300 transition-colors max-w-[120px]"
+              className={`flex items-center gap-0.5 text-[10px] ${colors.iconText} hover:brightness-125 transition-colors max-w-[120px]`}
             >
               <ChevronLeft className="h-3 w-3 shrink-0" />
               <span className="truncate">{prevTrip.city}</span>
@@ -116,7 +124,7 @@ export default function TripPopup({ trip, prevTrip, nextTrip, onNavigate, onClos
           {nextTrip ? (
             <button
               onClick={() => onNavigate(nextTrip)}
-              className="flex items-center gap-0.5 text-[10px] text-blue-400 hover:text-blue-300 transition-colors max-w-[120px]"
+              className={`flex items-center gap-0.5 text-[10px] ${colors.iconText} hover:brightness-125 transition-colors max-w-[120px]`}
             >
               <span className="truncate">{nextTrip.city}</span>
               <ChevronRight className="h-3 w-3 shrink-0" />

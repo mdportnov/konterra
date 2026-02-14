@@ -1,8 +1,12 @@
 export const TRAVEL_COLORS = {
   pastPoint: '#3b82f6',
   futurePoint: '#22c55e',
+  currentPoint: '#ef4444',
+  selectedPoint: '#f59e0b',
   pastArc: 'rgba(96, 165, 250, 0.6)',
   futureArc: 'rgba(74, 222, 128, 0.6)',
+  currentArc: 'rgba(239, 68, 68, 0.6)',
+  selectedArc: 'rgba(245, 158, 11, 0.6)',
   pastCountry: { dark: 'rgba(59, 130, 246, 0.35)', light: 'rgba(59, 130, 246, 0.2)' },
   futureCountry: { dark: 'rgba(74, 222, 128, 0.25)', light: 'rgba(74, 222, 128, 0.15)' },
   pastStroke: { dark: 'rgba(59, 130, 246, 0.6)', light: 'rgba(59, 130, 246, 0.4)' },
