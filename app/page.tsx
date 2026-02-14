@@ -68,15 +68,15 @@ export default function LandingPage() {
       <NetworkBackground />
 
       <div className="relative z-10">
-        <header className="fixed top-0 inset-x-0 z-50">
-          <nav className="mx-auto max-w-6xl px-6 h-16 flex items-center justify-between">
+        <header className="landing-header fixed top-0 inset-x-0 z-50">
+          <nav className="mx-auto max-w-6xl px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
             <span className="font-mono tracking-[0.3em] uppercase text-sm text-white/90">
               Konterra
             </span>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 sm:gap-4">
               <Link
                 href="/login"
-                className="font-mono text-xs text-white/50 hover:text-white/80 transition-colors"
+                className="font-mono text-xs text-white/50 hover:text-white/80 transition-colors py-2 px-2"
               >
                 Sign In
               </Link>
@@ -92,38 +92,38 @@ export default function LandingPage() {
 
         <main>
           {/* Hero */}
-          <section className="relative min-h-dvh flex items-center justify-center px-6">
-            <div className="max-w-3xl mx-auto text-center">
-              <p className="font-mono text-xs uppercase tracking-[0.25em] text-[oklch(0.55_0.08_180)] mb-6">
+          <section className="relative min-h-dvh flex items-center justify-center px-4 sm:px-6">
+            <div className="max-w-3xl mx-auto text-center pt-14">
+              <p className="font-mono text-[10px] sm:text-xs uppercase tracking-[0.25em] text-[oklch(0.55_0.08_180)] mb-4 sm:mb-6">
                 Private Intelligence Network
               </p>
-              <h1 className="text-4xl sm:text-5xl md:text-6xl font-semibold leading-[1.1] text-white tracking-tight">
+              <h1 className="text-[1.75rem] sm:text-4xl md:text-5xl lg:text-6xl font-semibold leading-[1.15] sm:leading-[1.1] text-white tracking-tight">
                 AI can replace your expertise.{' '}
                 <span className="landing-gradient-text">
                   It can&apos;t replace your introductions.
                 </span>
               </h1>
-              <p className="mt-6 text-base sm:text-lg text-white/50 max-w-2xl mx-auto leading-relaxed">
+              <p className="mt-5 sm:mt-6 text-sm sm:text-base md:text-lg text-white/50 max-w-2xl mx-auto leading-relaxed">
                 Your network is the last competitive advantage AI cannot commoditize.
                 Konterra maps, measures, and mobilizes the relationships that define
                 your career — in a private intelligence system that belongs to you.
               </p>
-              <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
+              <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
                 <Link
                   href="/login"
-                  className="landing-cta-button-lg"
+                  className="landing-cta-button-lg w-full sm:w-auto justify-center"
                 >
                   Request Early Access
                 </Link>
                 <a
                   href="#why"
-                  className="font-mono text-xs text-white/40 hover:text-white/70 transition-colors"
+                  className="font-mono text-xs text-white/40 hover:text-white/70 transition-colors py-2 px-4"
                 >
                   Learn more
                 </a>
               </div>
             </div>
-            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
+            <div className="absolute bottom-6 sm:bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
               <svg viewBox="0 0 24 24" fill="none" stroke="oklch(0.55 0.08 180 / 40%)" strokeWidth="1.5" className="size-5">
                 <path d="M12 5v14M19 12l-7 7-7-7" />
               </svg>
@@ -131,29 +131,29 @@ export default function LandingPage() {
           </section>
 
           {/* Problem Statement */}
-          <section id="why" className="py-24 sm:py-32 px-6">
+          <section id="why" className="scroll-mt-16 py-16 sm:py-24 md:py-32 px-4 sm:px-6">
             <div className="max-w-3xl mx-auto">
-              <div className="landing-glass-panel p-8 sm:p-12 rounded-2xl">
-                <h2 className="text-2xl sm:text-3xl font-semibold text-white leading-snug mb-6">
+              <div className="landing-glass-panel p-6 sm:p-8 md:p-12 rounded-xl sm:rounded-2xl">
+                <h2 className="text-xl sm:text-2xl md:text-3xl font-semibold text-white leading-snug mb-4 sm:mb-6">
                   In the age of AI, knowledge is free and skills are automatable.
                 </h2>
-                <p className="text-white/50 leading-relaxed mb-4">
+                <p className="text-sm sm:text-base text-white/50 leading-relaxed mb-3 sm:mb-4">
                   The last durable competitive advantage is who you know — and who knows you.
                   Yet most people manage their most valuable asset with scattered contacts,
                   forgotten LinkedIn connections, and guesswork.
                 </p>
-                <p className="text-white/50 leading-relaxed mb-8">
+                <p className="text-sm sm:text-base text-white/50 leading-relaxed mb-6 sm:mb-8">
                   Every year, relationships decay silently. Introductions go unmade.
                   Opportunities pass to people who simply stayed in touch.
                   The problem isn&apos;t your network — it&apos;s your visibility into it.
                 </p>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                <div className="grid grid-cols-3 gap-3 sm:gap-6">
                   {STATS.map((stat) => (
                     <div key={stat.value} className="text-center">
-                      <p className="text-3xl font-bold landing-gradient-text">
+                      <p className="text-2xl sm:text-3xl font-bold landing-gradient-text">
                         {stat.value}
                       </p>
-                      <p className="text-xs text-white/40 mt-1 leading-relaxed">
+                      <p className="text-[10px] sm:text-xs text-white/40 mt-1 leading-snug sm:leading-relaxed">
                         {stat.label}
                       </p>
                     </div>
@@ -164,29 +164,29 @@ export default function LandingPage() {
           </section>
 
           {/* Three Pillars */}
-          <section className="py-24 sm:py-32 px-6">
+          <section className="py-16 sm:py-24 md:py-32 px-4 sm:px-6">
             <div className="max-w-5xl mx-auto">
-              <div className="text-center mb-16">
-                <p className="font-mono text-xs uppercase tracking-[0.25em] text-[oklch(0.55_0.08_180)] mb-4">
+              <div className="text-center mb-10 sm:mb-16">
+                <p className="font-mono text-[10px] sm:text-xs uppercase tracking-[0.25em] text-[oklch(0.55_0.08_180)] mb-3 sm:mb-4">
                   How it works
                 </p>
-                <h2 className="text-3xl sm:text-4xl font-semibold text-white">
+                <h2 className="text-2xl sm:text-3xl md:text-4xl font-semibold text-white">
                   Map. Measure. Mobilize.
                 </h2>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
                 {PILLARS.map((pillar) => (
-                  <div key={pillar.title} className="landing-glass-panel p-8 rounded-xl group">
-                    <div className="size-12 rounded-lg bg-[oklch(0.55_0.08_180/10%)] border border-[oklch(0.55_0.08_180/20%)] flex items-center justify-center text-[oklch(0.55_0.08_180)] mb-5 group-hover:bg-[oklch(0.55_0.08_180/15%)] transition-colors">
+                  <div key={pillar.title} className="landing-glass-panel p-6 sm:p-8 rounded-xl group">
+                    <div className="size-10 sm:size-12 rounded-lg bg-[oklch(0.55_0.08_180/10%)] border border-[oklch(0.55_0.08_180/20%)] flex items-center justify-center text-[oklch(0.55_0.08_180)] mb-4 sm:mb-5 group-hover:bg-[oklch(0.55_0.08_180/15%)] transition-colors">
                       {pillar.icon}
                     </div>
-                    <h3 className="text-lg font-semibold text-white mb-1">
+                    <h3 className="text-base sm:text-lg font-semibold text-white mb-1">
                       {pillar.title}
                     </h3>
-                    <p className="text-xs font-mono text-[oklch(0.55_0.08_180)] mb-3">
+                    <p className="text-[10px] sm:text-xs font-mono text-[oklch(0.55_0.08_180)] mb-2 sm:mb-3">
                       {pillar.subtitle}
                     </p>
-                    <p className="text-sm text-white/45 leading-relaxed">
+                    <p className="text-xs sm:text-sm text-white/45 leading-relaxed">
                       {pillar.description}
                     </p>
                   </div>
@@ -196,44 +196,44 @@ export default function LandingPage() {
           </section>
 
           {/* AI Paradox Section */}
-          <section className="py-24 sm:py-32 px-6">
+          <section className="py-16 sm:py-24 md:py-32 px-4 sm:px-6">
             <div className="max-w-4xl mx-auto">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 items-center">
                 <div>
-                  <p className="font-mono text-xs uppercase tracking-[0.25em] text-[oklch(0.55_0.08_180)] mb-4">
+                  <p className="font-mono text-[10px] sm:text-xs uppercase tracking-[0.25em] text-[oklch(0.55_0.08_180)] mb-3 sm:mb-4">
                     The social capital thesis
                   </p>
-                  <h2 className="text-2xl sm:text-3xl font-semibold text-white leading-snug mb-6">
+                  <h2 className="text-xl sm:text-2xl md:text-3xl font-semibold text-white leading-snug mb-4 sm:mb-6">
                     The more work becomes automated, the more human connection becomes a competitive advantage.
                   </h2>
-                  <p className="text-white/50 leading-relaxed mb-4">
+                  <p className="text-sm sm:text-base text-white/50 leading-relaxed mb-3 sm:mb-4">
                     AI is commoditizing knowledge at an unprecedented rate. Research that took weeks now
                     takes seconds. Skills that took years to learn are being compressed into prompts.
                   </p>
-                  <p className="text-white/50 leading-relaxed">
+                  <p className="text-sm sm:text-base text-white/50 leading-relaxed">
                     But AI cannot personally introduce you to a colleague, extend its social capital
                     on your behalf, or vouch for your character in a room you&apos;re not in.
                     Your relationships remain the one asset that is fundamentally non-replicable.
                   </p>
                 </div>
-                <div className="space-y-4">
-                  <div className="landing-glass-panel p-5 rounded-xl">
-                    <p className="text-sm text-white/60 mb-2">What AI commoditizes</p>
-                    <div className="space-y-2">
+                <div className="space-y-3 sm:space-y-4">
+                  <div className="landing-glass-panel p-4 sm:p-5 rounded-xl">
+                    <p className="text-xs sm:text-sm text-white/60 mb-2">What AI commoditizes</p>
+                    <div className="space-y-1.5 sm:space-y-2">
                       {['Knowledge & research', 'Technical skills', 'Content creation', 'Data analysis'].map((item) => (
-                        <div key={item} className="flex items-center gap-2 text-sm text-white/35">
-                          <span className="size-1.5 rounded-full bg-white/20" />
+                        <div key={item} className="flex items-center gap-2 text-xs sm:text-sm text-white/35">
+                          <span className="size-1.5 rounded-full bg-white/20 shrink-0" />
                           {item}
                         </div>
                       ))}
                     </div>
                   </div>
-                  <div className="landing-glass-panel landing-glass-panel-accent p-5 rounded-xl">
-                    <p className="text-sm text-[oklch(0.65_0.08_180)] mb-2">What remains yours</p>
-                    <div className="space-y-2">
+                  <div className="landing-glass-panel landing-glass-panel-accent p-4 sm:p-5 rounded-xl">
+                    <p className="text-xs sm:text-sm text-[oklch(0.65_0.08_180)] mb-2">What remains yours</p>
+                    <div className="space-y-1.5 sm:space-y-2">
                       {['Trusted introductions', 'Reciprocal relationships', 'Contextual reputation', 'Social proof & vouching'].map((item) => (
-                        <div key={item} className="flex items-center gap-2 text-sm text-white/60">
-                          <span className="size-1.5 rounded-full bg-[oklch(0.55_0.08_180)]" />
+                        <div key={item} className="flex items-center gap-2 text-xs sm:text-sm text-white/60">
+                          <span className="size-1.5 rounded-full bg-[oklch(0.55_0.08_180)] shrink-0" />
                           {item}
                         </div>
                       ))}
@@ -245,19 +245,19 @@ export default function LandingPage() {
           </section>
 
           {/* Features Grid */}
-          <section className="py-24 sm:py-32 px-6">
+          <section className="py-16 sm:py-24 md:py-32 px-4 sm:px-6">
             <div className="max-w-5xl mx-auto">
-              <div className="text-center mb-16">
-                <p className="font-mono text-xs uppercase tracking-[0.25em] text-[oklch(0.55_0.08_180)] mb-4">
+              <div className="text-center mb-10 sm:mb-16">
+                <p className="font-mono text-[10px] sm:text-xs uppercase tracking-[0.25em] text-[oklch(0.55_0.08_180)] mb-3 sm:mb-4">
                   Capabilities
                 </p>
-                <h2 className="text-3xl sm:text-4xl font-semibold text-white">
+                <h2 className="text-2xl sm:text-3xl md:text-4xl font-semibold text-white">
                   Everything you need. Nothing you don&apos;t.
                 </h2>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                 {FEATURES.map((feature) => (
-                  <div key={feature.title} className="landing-glass-panel p-6 rounded-xl">
+                  <div key={feature.title} className="landing-glass-panel p-5 sm:p-6 rounded-xl">
                     <h3 className="text-sm font-medium text-white mb-1">
                       {feature.title}
                     </h3>
@@ -271,27 +271,27 @@ export default function LandingPage() {
           </section>
 
           {/* Anti-CRM Positioning */}
-          <section className="py-24 sm:py-32 px-6">
+          <section className="py-16 sm:py-24 md:py-32 px-4 sm:px-6">
             <div className="max-w-3xl mx-auto text-center">
-              <h2 className="text-2xl sm:text-3xl font-semibold text-white leading-snug mb-6">
+              <h2 className="text-xl sm:text-2xl md:text-3xl font-semibold text-white leading-snug mb-4 sm:mb-6">
                 Konterra is not a CRM.
               </h2>
-              <p className="text-white/50 leading-relaxed mb-8 max-w-2xl mx-auto">
+              <p className="text-sm sm:text-base text-white/50 leading-relaxed mb-6 sm:mb-8 max-w-2xl mx-auto">
                 It&apos;s not a sales tool. It&apos;s not a lead tracker. It&apos;s a private intelligence
                 network — a sovereign map of your social capital that belongs to you,
                 not a platform. No ads. No data selling. No algorithmic feed deciding
                 who you should see.
               </p>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-2xl mx-auto">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6 max-w-2xl mx-auto">
                 {[
                   { label: 'Private', desc: 'Your data, your network' },
                   { label: 'Sovereign', desc: 'Not a platform\'s asset' },
                   { label: 'Visual', desc: '3D globe, not a spreadsheet' },
                   { label: 'Relational', desc: 'Built for depth, not volume' },
                 ].map((diff) => (
-                  <div key={diff.label} className="text-center">
+                  <div key={diff.label} className="text-center py-2">
                     <p className="text-sm font-medium text-white mb-0.5">{diff.label}</p>
-                    <p className="text-[11px] text-white/35">{diff.desc}</p>
+                    <p className="text-[10px] sm:text-[11px] text-white/35">{diff.desc}</p>
                   </div>
                 ))}
               </div>
@@ -299,21 +299,21 @@ export default function LandingPage() {
           </section>
 
           {/* Final CTA */}
-          <section className="py-24 sm:py-32 px-6">
+          <section className="py-16 sm:py-24 md:py-32 px-4 sm:px-6">
             <div className="max-w-2xl mx-auto text-center">
-              <div className="landing-glass-panel landing-glass-panel-accent p-10 sm:p-14 rounded-2xl">
-                <h2 className="text-2xl sm:text-3xl font-semibold text-white mb-4">
+              <div className="landing-glass-panel landing-glass-panel-accent p-8 sm:p-10 md:p-14 rounded-xl sm:rounded-2xl">
+                <h2 className="text-xl sm:text-2xl md:text-3xl font-semibold text-white mb-3 sm:mb-4">
                   Your network is your net worth.
                   <br />
                   <span className="landing-gradient-text">Start seeing it.</span>
                 </h2>
-                <p className="text-white/45 text-sm mb-8 max-w-md mx-auto">
+                <p className="text-white/45 text-xs sm:text-sm mb-6 sm:mb-8 max-w-md mx-auto">
                   Access is by invitation only. Request early access and we&apos;ll
                   review your application personally.
                 </p>
                 <Link
                   href="/login"
-                  className="landing-cta-button-lg"
+                  className="landing-cta-button-lg w-full sm:w-auto justify-center"
                 >
                   Request Early Access
                 </Link>
@@ -322,8 +322,8 @@ export default function LandingPage() {
           </section>
 
           {/* Footer */}
-          <footer className="py-12 px-6 border-t border-white/5">
-            <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+          <footer className="py-8 sm:py-12 px-4 sm:px-6 border-t border-white/5">
+            <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
               <div className="flex items-center gap-3">
                 <span className="font-mono tracking-[0.2em] uppercase text-xs text-white/40">
                   Konterra
