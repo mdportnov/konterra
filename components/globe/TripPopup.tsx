@@ -45,11 +45,11 @@ export default function TripPopup({ trip, prevTrip, nextTrip, onNavigate, onClos
 
   return (
     <div
-      className={`absolute left-1/2 z-20 ${GLASS.panel} rounded-xl shadow-lg p-3 min-w-[260px] max-w-[320px]`}
+      className={`absolute right-6 z-20 ${GLASS.panel} rounded-xl shadow-lg p-3 w-[320px]`}
       style={{
-        bottom: 'calc(max(1.25rem, env(safe-area-inset-bottom, 0px)) + 56px)',
+        bottom: 'calc(max(1.25rem, env(safe-area-inset-bottom, 0px)) + 60px)',
         opacity: visible ? 1 : 0,
-        transform: `translateX(-50%) ${visible ? 'translateY(0)' : 'translateY(8px)'}`,
+        transform: visible ? 'translateY(0)' : 'translateY(8px)',
         transition: 'opacity 200ms cubic-bezier(0.32,0.72,0,1), transform 200ms cubic-bezier(0.32,0.72,0,1)',
         pointerEvents: visible ? 'auto' : 'none',
       }}
