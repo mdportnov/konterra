@@ -81,7 +81,7 @@ export default function AdminPage() {
       setUsers(usersData)
     } catch {
       toast.error('Failed to load admin data')
-      if (!silent) router.push('/')
+      if (!silent) router.push('/app')
     } finally {
       setLoading(false)
       setRefreshing(false)
@@ -91,7 +91,7 @@ export default function AdminPage() {
   useEffect(() => {
     if (status === 'loading') return
     if (!session?.user) { router.push('/login'); return }
-    if (!hasAccess) { router.push('/'); return }
+    if (!hasAccess) { router.push('/app'); return }
     fetchData()
   }, [status, session, hasAccess, router, fetchData])
 
@@ -211,7 +211,7 @@ export default function AdminPage() {
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="shrink-0" onClick={() => router.push('/')}>
+                <Button variant="ghost" size="icon" className="shrink-0" onClick={() => router.push('/app')}>
                   <ArrowLeft className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
