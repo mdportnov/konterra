@@ -1,5 +1,5 @@
 import { auth } from '@/auth'
-import { getTripsByUserId, createTrip, createTripsBulk, deleteAllTrips } from '@/lib/db/queries'
+import { getTripsByUserId, createTrip, createTripsBulk, deleteAllTrips, addVisitedCountriesBulk } from '@/lib/db/queries'
 import { unauthorized, badRequest, success } from '@/lib/api-utils'
 import type { NewTrip } from '@/lib/db/schema'
 
@@ -46,6 +46,15 @@ export async function POST(req: Request) {
     }
     if (tripsData.length === 0) return badRequest('No valid trips in payload')
     const created = await createTripsBulk(tripsData)
+
+    const now = new Date()
+    const pastCountries = [...new Set(
+      tripsData.filter((t) => t.arrivalDate <= now).map((t) => t.country)
+    )]
+    if (pastCountries.length > 0) {
+      await addVisitedCountriesBulk(session.user!.id, pastCountries)
+    }
+
     return success({ created: created.length })
   }
 

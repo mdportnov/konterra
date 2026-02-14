@@ -83,6 +83,10 @@ export function useGlobeData() {
     return fetchTrips().then(setTrips).catch(() => { toast.error('Failed to reload trips') })
   }, [])
 
+  const reloadVisitedCountries = useCallback(() => {
+    return fetchVisitedCountries().then((data) => { if (Array.isArray(data)) setVisitedCountries(new Set(data)) }).catch(() => {})
+  }, [])
+
   const geocodingRef = useRef(false)
 
   const runBatchGeocode = useCallback(async () => {
@@ -216,6 +220,7 @@ export function useGlobeData() {
     reloadContacts,
     reloadConnections,
     reloadTrips,
+    reloadVisitedCountries,
     runBatchGeocode,
     handleCountryVisitToggle,
     handleCountryConnectionsChange,
