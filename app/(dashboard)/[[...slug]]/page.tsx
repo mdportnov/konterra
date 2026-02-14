@@ -452,6 +452,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
         <TripCountryPopup
           country={tripCountryPopup.country}
           trips={tripCountryTrips}
+          allTrips={data.trips}
           x={tripCountryPopup.x}
           y={tripCountryPopup.y}
           open={tripCountryPopupOpen}

@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo } from 'react'
-import { Plane, Upload, Calendar, Clock, MoveDown } from 'lucide-react'
+import { Plane, Upload, Calendar, Clock, MoveUp } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { GLASS } from '@/lib/constants/ui'
@@ -177,7 +177,7 @@ export default function TravelJourney({ trips, loading, onImport, onTripClick }:
                     const connTextColor = nextFuture ? 'text-green-400/50' : 'text-blue-400/50'
                     return (
                       <div className="relative pl-5 py-0.5 flex items-center gap-1.5">
-                        <MoveDown className={`h-2.5 w-2.5 ${connColor}`} />
+                        <MoveUp className={`h-2.5 w-2.5 ${connColor}`} />
                         <span className={`text-[9px] ${connTextColor} font-medium`}>
                           {nextInSorted.city === trip.city && nextInSorted.country === trip.country
                             ? 'stayed'

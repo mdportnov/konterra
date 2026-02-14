@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useMemo } from 'react'
-import { X, MapPin, Calendar, Clock, Plane } from 'lucide-react'
+import { X, MapPin, Calendar, Clock, Plane, ArrowRight, ArrowLeft } from 'lucide-react'
 import { useClickOutside } from '@/hooks/use-click-outside'
 import { useHotkey } from '@/hooks/use-hotkey'
 import { GLASS, Z } from '@/lib/constants/ui'
@@ -10,6 +10,7 @@ import type { Trip } from '@/lib/db/schema'
 interface TripCountryPopupProps {
   country: string
   trips: Trip[]
+  allTrips: Trip[]
   x: number
   y: number
   open: boolean
@@ -33,7 +34,7 @@ function formatShortDate(d: Date | string | null): string {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
-export default function TripCountryPopup({ country, trips, x, y, open, onTripClick, onClose }: TripCountryPopupProps) {
+export default function TripCountryPopup({ country, trips, allTrips, x, y, open, onTripClick, onClose }: TripCountryPopupProps) {
   const ref = useRef<HTMLDivElement>(null)
   useClickOutside(ref, onClose, open)
   useHotkey('Escape', onClose, { enabled: open })
@@ -42,6 +43,18 @@ export default function TripCountryPopup({ country, trips, x, y, open, onTripCli
     [...trips].sort((a, b) => new Date(b.arrivalDate).getTime() - new Date(a.arrivalDate).getTime()),
     [trips]
   )
+
+  const routeMap = useMemo(() => {
+    const chronological = [...allTrips].sort((a, b) => new Date(a.arrivalDate).getTime() - new Date(b.arrivalDate).getTime())
+    const map = new Map<string, { prev: Trip | null; next: Trip | null }>()
+    for (let i = 0; i < chronological.length; i++) {
+      map.set(chronological[i].id, {
+        prev: i > 0 ? chronological[i - 1] : null,
+        next: i < chronological.length - 1 ? chronological[i + 1] : null,
+      })
+    }
+    return map
+  }, [allTrips])
 
   const stats = useMemo(() => {
     const cities = new Set(trips.map((t) => t.city))
@@ -154,34 +167,54 @@ export default function TripCountryPopup({ country, trips, x, y, open, onTripCli
               <span className="text-[10px] font-semibold text-foreground/80 uppercase tracking-wider">{city}</span>
               <span className="text-[9px] text-muted-foreground/50">{cityTrips.length}x</span>
             </div>
-            {cityTrips.map((trip) => (
-              <button
-                key={trip.id}
-                onClick={() => onTripClick?.(trip)}
-                className="w-full text-left px-4 py-2 hover:bg-blue-500/5 transition-colors flex items-center gap-3 cursor-pointer"
-              >
-                <div className="shrink-0 w-6 h-6 rounded-md bg-blue-500/10 flex items-center justify-center">
-                  <MapPin className="h-3 w-3 text-blue-400" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 text-[11px] text-foreground">
-                    <span className="flex items-center gap-1">
-                      <Calendar className="h-2.5 w-2.5 text-muted-foreground/60" />
-                      {formatShortDate(trip.arrivalDate)}
-                      {trip.departureDate && ` \u2013 ${formatShortDate(trip.departureDate)}`}
-                    </span>
+            {cityTrips.map((trip) => {
+              const route = routeMap.get(trip.id)
+              return (
+                <button
+                  key={trip.id}
+                  onClick={() => onTripClick?.(trip)}
+                  className="w-full text-left px-4 py-2 hover:bg-blue-500/5 transition-colors cursor-pointer"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="shrink-0 w-6 h-6 rounded-md bg-blue-500/10 flex items-center justify-center">
+                      <MapPin className="h-3 w-3 text-blue-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 text-[11px] text-foreground">
+                        <span className="flex items-center gap-1">
+                          <Calendar className="h-2.5 w-2.5 text-muted-foreground/60" />
+                          {formatShortDate(trip.arrivalDate)}
+                          {trip.departureDate && ` \u2013 ${formatShortDate(trip.departureDate)}`}
+                        </span>
+                        {trip.durationDays != null && (
+                          <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
+                            <Clock className="h-2.5 w-2.5" />
+                            {trip.durationDays}d
+                          </span>
+                        )}
+                      </div>
+                      {route && (route.prev || route.next) && (
+                        <div className="flex items-center gap-1.5 mt-1 text-[9px] text-muted-foreground/70">
+                          {route.prev && (
+                            <span className="flex items-center gap-0.5">
+                              <ArrowLeft className="h-2.5 w-2.5 text-blue-400/50" />
+                              {route.prev.city}
+                            </span>
+                          )}
+                          {route.prev && route.next && <span className="text-muted-foreground/30">&middot;</span>}
+                          {route.next && (
+                            <span className="flex items-center gap-0.5">
+                              {route.next.city}
+                              <ArrowRight className="h-2.5 w-2.5 text-blue-400/50" />
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    {trip.durationDays != null && (
-                      <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
-                        <Clock className="h-2.5 w-2.5" />
-                        {trip.durationDays} day{trip.durationDays !== 1 ? 's' : ''}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </button>
-            ))}
+                </button>
+              )
+            })}
           </div>
         ))}
       </div>
