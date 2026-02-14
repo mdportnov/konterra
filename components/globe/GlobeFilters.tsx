@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState, useCallback, useMemo } from 'react'
+import { useRef, useState, useCallback, useMemo, useEffect } from 'react'
 import { Filter, X, Star, Plus } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { Button } from '@/components/ui/button'
@@ -51,10 +51,23 @@ export default function GlobeFilters({
   onTagDeleted,
 }: GlobeFiltersProps) {
   const [open, setOpen] = useState(false)
+  const [panelVisible, setPanelVisible] = useState(false)
+  const [panelMounted, setPanelMounted] = useState(false)
   const [managingTags, setManagingTags] = useState(false)
   const [newTagName, setNewTagName] = useState('')
   const [creatingTag, setCreatingTag] = useState(false)
   const panelRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (open) {
+      setPanelMounted(true)
+      requestAnimationFrame(() => requestAnimationFrame(() => setPanelVisible(true)))
+    } else {
+      setPanelVisible(false)
+      const timer = setTimeout(() => setPanelMounted(false), 200)
+      return () => clearTimeout(timer)
+    }
+  }, [open])
 
   const close = useCallback(() => setOpen(false), [])
 
@@ -174,8 +187,16 @@ export default function GlobeFilters({
       className="absolute top-4 left-4"
       style={{ zIndex: Z.controls }}
     >
-      {open ? (
-        <div className={`${GLASS.panel} rounded-2xl p-4 w-[calc(100vw-2rem)] sm:w-[240px] max-w-[280px] max-h-[calc(100dvh-6rem)] sm:max-h-[calc(100dvh-2rem)] overflow-y-auto transition-[opacity,transform] duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] animate-in fade-in slide-in-from-top-2`}>
+      {panelMounted && (
+        <div
+          className={`${GLASS.panel} rounded-2xl p-4 w-[calc(100vw-2rem)] sm:w-[240px] max-w-[280px] max-h-[calc(100dvh-6rem)] sm:max-h-[calc(100dvh-2rem)] overflow-y-auto`}
+          style={{
+            opacity: panelVisible ? 1 : 0,
+            transform: panelVisible ? 'translateY(0) scale(1)' : 'translateY(-8px) scale(0.97)',
+            transition: 'opacity 200ms cubic-bezier(0.32,0.72,0,1), transform 200ms cubic-bezier(0.32,0.72,0,1)',
+            pointerEvents: panelVisible ? 'auto' : 'none',
+          }}
+        >
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
               Filters
@@ -397,7 +418,8 @@ export default function GlobeFilters({
             )}
           </div>
         </div>
-      ) : (
+      )}
+      {!open && (
         <TooltipProvider delayDuration={300}>
           <Tooltip>
             <TooltipTrigger asChild>

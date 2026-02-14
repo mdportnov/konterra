@@ -412,15 +412,13 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
         onTagDeleted={data.handleTagDeleted}
       />
 
-      {selectedTrip && (
-        <TripPopup
-          trip={selectedTrip}
-          prevTrip={selectedTripIndex > 0 ? sortedTrips[selectedTripIndex - 1] : null}
-          nextTrip={selectedTripIndex < sortedTrips.length - 1 ? sortedTrips[selectedTripIndex + 1] : null}
-          onNavigate={handleTripNavigate}
-          onClose={() => setSelectedTripId(null)}
-        />
-      )}
+      <TripPopup
+        trip={selectedTrip}
+        prevTrip={selectedTripIndex > 0 ? sortedTrips[selectedTripIndex - 1] : null}
+        nextTrip={selectedTripIndex < sortedTrips.length - 1 ? sortedTrips[selectedTripIndex + 1] : null}
+        onNavigate={handleTripNavigate}
+        onClose={() => setSelectedTripId(null)}
+      />
 
       {countryPopup && (
         <CountryPopup

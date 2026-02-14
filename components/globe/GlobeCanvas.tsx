@@ -711,38 +711,52 @@ export default memo(function GlobeCanvas({
         arcStroke={getArcStroke}
         arcsTransitionDuration={0}
       />
-      {isTravelMode ? (
-        trips.length > 0 && (
-          <div className={`absolute top-14 right-4 ${GLASS.control} rounded-lg px-2.5 py-2 flex flex-col gap-1`}>
-            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#3b82f6' }} />
-              <span className="text-[10px] text-muted-foreground">Past trip</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? 'rgba(59, 130, 246, 0.35)' : 'rgba(59, 130, 246, 0.2)' }} />
-              <span className="text-[10px] text-muted-foreground">Visited country</span>
-            </div>
-            {futureTravelCountries.size > 0 && (
-              <>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#22c55e' }} />
-                  <span className="text-[10px] text-muted-foreground">Upcoming trip</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? 'rgba(74, 222, 128, 0.25)' : 'rgba(74, 222, 128, 0.15)' }} />
-                  <span className="text-[10px] text-muted-foreground">Upcoming country</span>
-                </div>
-              </>
-            )}
-            <div className="text-[9px] text-muted-foreground/60 mt-0.5">
-              {trips.length} trips &middot; {pastTravelCountries.size} countries
-              {futureTravelCountries.size > 0 && ` \u00b7 ${futureTravelCountries.size} upcoming`}
-            </div>
+      {trips.length > 0 && (
+        <div
+          className={`absolute top-14 right-4 ${GLASS.control} rounded-lg px-2.5 py-2 flex flex-col gap-1`}
+          style={{
+            opacity: isTravelMode ? 1 : 0,
+            transform: isTravelMode ? 'translateY(0)' : 'translateY(-4px)',
+            transition: 'opacity 200ms ease-out, transform 200ms ease-out',
+            pointerEvents: isTravelMode ? 'auto' : 'none',
+          }}
+        >
+          <div className="flex items-center gap-1.5">
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#3b82f6' }} />
+            <span className="text-[10px] text-muted-foreground">Past trip</span>
           </div>
-        )
-      ) : (
-        (hasCountryContacts || (visitedCountries && visitedCountries.size > 0) || countryConnections.length > 0 || !!userCountry) && <ContactDensityLegend isDark={isDark} visitedCountries={visitedCountries} hasIndirect={countryConnections.length > 0} showUserCountry={!!userCountry} />
+          <div className="flex items-center gap-1.5">
+            <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? 'rgba(59, 130, 246, 0.35)' : 'rgba(59, 130, 246, 0.2)' }} />
+            <span className="text-[10px] text-muted-foreground">Visited country</span>
+          </div>
+          {futureTravelCountries.size > 0 && (
+            <>
+              <div className="flex items-center gap-1.5">
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#22c55e' }} />
+                <span className="text-[10px] text-muted-foreground">Upcoming trip</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? 'rgba(74, 222, 128, 0.25)' : 'rgba(74, 222, 128, 0.15)' }} />
+                <span className="text-[10px] text-muted-foreground">Upcoming country</span>
+              </div>
+            </>
+          )}
+          <div className="text-[9px] text-muted-foreground/60 mt-0.5">
+            {trips.length} trips &middot; {pastTravelCountries.size} countries
+            {futureTravelCountries.size > 0 && ` \u00b7 ${futureTravelCountries.size} upcoming`}
+          </div>
+        </div>
       )}
+      <div
+        style={{
+          opacity: !isTravelMode ? 1 : 0,
+          transform: !isTravelMode ? 'translateY(0)' : 'translateY(-4px)',
+          transition: 'opacity 200ms ease-out, transform 200ms ease-out',
+          pointerEvents: !isTravelMode ? 'auto' : 'none',
+        }}
+      >
+        {(hasCountryContacts || (visitedCountries && visitedCountries.size > 0) || countryConnections.length > 0 || !!userCountry) && <ContactDensityLegend isDark={isDark} visitedCountries={visitedCountries} hasIndirect={countryConnections.length > 0} showUserCountry={!!userCountry} />}
+      </div>
       {clusterData && (
         <ClusterPopup
           open={clusterOpen}

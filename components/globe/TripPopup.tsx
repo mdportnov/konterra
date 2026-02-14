@@ -1,12 +1,13 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import type { Trip } from '@/lib/db/schema'
 import { GLASS } from '@/lib/constants/ui'
 import { ChevronLeft, ChevronRight, X, Calendar, Clock, MapPin } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
 interface TripPopupProps {
-  trip: Trip
+  trip: Trip | null
   prevTrip: Trip | null
   nextTrip: Trip | null
   onNavigate: (trip: Trip) => void
@@ -23,12 +24,34 @@ function formatDate(date: Date | null | undefined): string | null {
 }
 
 export default function TripPopup({ trip, prevTrip, nextTrip, onNavigate, onClose }: TripPopupProps) {
+  const [visible, setVisible] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    if (trip) {
+      setMounted(true)
+      requestAnimationFrame(() => requestAnimationFrame(() => setVisible(true)))
+    } else {
+      setVisible(false)
+      const timer = setTimeout(() => setMounted(false), 200)
+      return () => clearTimeout(timer)
+    }
+  }, [trip])
+
+  if (!mounted || !trip) return null
+
   const arrival = formatDate(trip.arrivalDate)
   const departure = formatDate(trip.departureDate)
 
   return (
     <div
       className={`absolute bottom-6 left-1/2 -translate-x-1/2 z-20 ${GLASS.panel} rounded-xl shadow-lg p-3 min-w-[260px] max-w-[320px]`}
+      style={{
+        opacity: visible ? 1 : 0,
+        transform: `translateX(-50%) ${visible ? 'translateY(0)' : 'translateY(8px)'}`,
+        transition: 'opacity 200ms cubic-bezier(0.32,0.72,0,1), transform 200ms cubic-bezier(0.32,0.72,0,1)',
+        pointerEvents: visible ? 'auto' : 'none',
+      }}
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 min-w-0">
