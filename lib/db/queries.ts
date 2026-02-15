@@ -860,6 +860,23 @@ export async function updateUserRole(id: string, role: 'user' | 'moderator' | 'a
   return updated
 }
 
+export async function updateUser(id: string, data: { name?: string; email?: string; role?: 'user' | 'moderator' | 'admin'; password?: string }) {
+  const set: Record<string, unknown> = {}
+  if (data.name !== undefined) set.name = data.name
+  if (data.email !== undefined) set.email = data.email
+  if (data.role !== undefined) set.role = data.role
+  if (data.password !== undefined) set.password = data.password
+  if (Object.keys(set).length === 0) return null
+  const [updated] = await db.update(users).set(set).where(eq(users.id, id)).returning({
+    id: users.id,
+    email: users.email,
+    name: users.name,
+    role: users.role,
+    createdAt: users.createdAt,
+  })
+  return updated
+}
+
 export async function deleteUser(id: string) {
   const [deleted] = await db.delete(users).where(eq(users.id, id)).returning({ id: users.id })
   return deleted

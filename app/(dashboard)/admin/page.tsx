@@ -14,9 +14,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+} from '@/components/ui/dialog'
+import {
   ArrowLeft, Users, Globe, Link2, MessageSquare, Heart, Plane, Tag,
   Plus, Loader2, Shield, ShieldCheck, User, Eye, EyeOff, Search, X,
-  ChevronDown, ChevronUp, Trash2, RefreshCw,
+  ChevronDown, ChevronUp, Trash2, RefreshCw, Pencil, Save, KeyRound,
 } from 'lucide-react'
 import { GLASS, TRANSITION } from '@/lib/constants/ui'
 import { toast } from 'sonner'
@@ -63,6 +66,15 @@ export default function AdminPage() {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [newUser, setNewUser] = useState({ email: '', name: '', password: '', role: 'user' })
+
+  const [editingUser, setEditingUser] = useState<string | null>(null)
+  const [editForm, setEditForm] = useState({ name: '', email: '', role: 'user' })
+  const [saving, setSaving] = useState(false)
+
+  const [resetPasswordUser, setResetPasswordUser] = useState<AdminUser | null>(null)
+  const [newPassword, setNewPassword] = useState('')
+  const [showNewPassword, setShowNewPassword] = useState(false)
+  const [resettingPassword, setResettingPassword] = useState(false)
 
   const isAdmin = session?.user?.role === 'admin'
   const hasAccess = isAdmin || session?.user?.role === 'moderator'
@@ -169,6 +181,70 @@ export default function AdminPage() {
     }
   }
 
+  const startEditing = (u: AdminUser) => {
+    setEditingUser(u.id)
+    setEditForm({ name: u.name || '', email: u.email, role: u.role })
+  }
+
+  const cancelEditing = () => {
+    setEditingUser(null)
+    setEditForm({ name: '', email: '', role: 'user' })
+  }
+
+  const handleSaveUser = async (userId: string) => {
+    if (!editForm.email || !editForm.name) {
+      toast.error('Name and email are required')
+      return
+    }
+    setSaving(true)
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, name: editForm.name, email: editForm.email, role: editForm.role }),
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Failed to update user')
+      }
+      toast.success('User updated')
+      setEditingUser(null)
+      fetchData(true)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to update user')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleResetPassword = async () => {
+    if (!resetPasswordUser || !newPassword) return
+    if (newPassword.length < 6) {
+      toast.error('Password must be at least 6 characters')
+      return
+    }
+    setResettingPassword(true)
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: resetPasswordUser.id, password: newPassword }),
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Failed to reset password')
+      }
+      toast.success('Password reset successfully')
+      setResetPasswordUser(null)
+      setNewPassword('')
+      setShowNewPassword(false)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to reset password')
+    } finally {
+      setResettingPassword(false)
+    }
+  }
+
   const filteredUsers = users.filter((u) => {
     const q = search.toLowerCase()
     return u.name?.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)
@@ -177,9 +253,9 @@ export default function AdminPage() {
   if (status === 'loading' || loading) {
     return (
       <div className="min-h-screen bg-background">
-        <div className="max-w-6xl mx-auto p-6 space-y-6">
+        <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-6">
           <Skeleton className="h-10 w-48" />
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {Array.from({ length: 8 }).map((_, i) => (
               <Skeleton key={i} className="h-24 rounded-xl" />
             ))}
@@ -201,13 +277,13 @@ export default function AdminPage() {
     { label: 'Favors', value: stats.totalFavors, icon: Heart, color: 'text-pink-500' },
     { label: 'Trips', value: stats.totalTrips, icon: Plane, color: 'text-cyan-500' },
     { label: 'Tags', value: stats.totalTags, icon: Tag, color: 'text-indigo-500' },
-    { label: 'Avg Contacts/User', value: stats.avgContactsPerUser, icon: Globe, color: 'text-orange-500' },
+    { label: 'Avg/User', value: stats.avgContactsPerUser, icon: Globe, color: 'text-orange-500' },
   ] : []
 
   return (
     <div className="min-h-screen bg-background">
       <header className={`sticky top-0 z-40 border-b ${GLASS.heavy}`}>
-        <div className="max-w-6xl mx-auto px-6 h-14 flex items-center gap-4">
+        <div className="max-w-6xl mx-auto px-3 sm:px-6 h-14 flex items-center gap-2 sm:gap-4">
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -218,11 +294,11 @@ export default function AdminPage() {
               <TooltipContent>Back to globe</TooltipContent>
             </Tooltip>
           </TooltipProvider>
-          <div className="flex items-center gap-2">
-            <Shield className="h-5 w-5 text-orange-500" />
-            <h1 className="text-lg font-semibold text-foreground">Admin Dashboard</h1>
+          <div className="flex items-center gap-2 min-w-0">
+            <Shield className="h-5 w-5 text-orange-500 shrink-0" />
+            <h1 className="text-base sm:text-lg font-semibold text-foreground truncate">Admin</h1>
           </div>
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -233,25 +309,25 @@ export default function AdminPage() {
                 <TooltipContent>Refresh data</TooltipContent>
               </Tooltip>
             </TooltipProvider>
-            <Badge variant="outline" className={ROLE_CONFIG[session?.user?.role as keyof typeof ROLE_CONFIG]?.bg || ''}>
+            <Badge variant="outline" className={`hidden sm:flex ${ROLE_CONFIG[session?.user?.role as keyof typeof ROLE_CONFIG]?.bg || ''}`}>
               {isAdmin ? 'Administrator' : 'Moderator'}
             </Badge>
           </div>
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto p-6 space-y-8">
+      <main className="max-w-6xl mx-auto p-4 sm:p-6 space-y-6 sm:space-y-8">
         <section>
-          <h2 className="text-sm font-medium text-muted-foreground/60 uppercase tracking-wider mb-4">Platform Overview</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <h2 className="text-sm font-medium text-muted-foreground/60 uppercase tracking-wider mb-3 sm:mb-4">Platform Overview</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
             {statCards.map(({ label, value, icon: Icon, color }) => (
               <div
                 key={label}
-                className={`rounded-xl border border-border bg-card/50 p-4 space-y-2 ${TRANSITION.color} hover:bg-card/80`}
+                className={`rounded-xl border border-border bg-card/50 p-3 sm:p-4 space-y-1 sm:space-y-2 ${TRANSITION.color} hover:bg-card/80`}
               >
-                <Icon className={`h-5 w-5 ${color}`} />
-                <p className="text-2xl font-bold text-foreground">{value.toLocaleString()}</p>
-                <p className="text-xs text-muted-foreground">{label}</p>
+                <Icon className={`h-4 w-4 sm:h-5 sm:w-5 ${color}`} />
+                <p className="text-xl sm:text-2xl font-bold text-foreground">{value.toLocaleString()}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">{label}</p>
               </div>
             ))}
           </div>
@@ -260,7 +336,7 @@ export default function AdminPage() {
         <Separator />
 
         <section>
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-3 sm:mb-4">
             <h2 className="text-sm font-medium text-muted-foreground/60 uppercase tracking-wider">
               Users ({filteredUsers.length})
             </h2>
@@ -270,14 +346,14 @@ export default function AdminPage() {
               onClick={() => setShowCreateUser(!showCreateUser)}
             >
               {showCreateUser ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
-              {showCreateUser ? 'Cancel' : 'Add User'}
+              <span className="hidden sm:inline">{showCreateUser ? 'Cancel' : 'Add User'}</span>
             </Button>
           </div>
 
           {showCreateUser && (
-            <div className="rounded-xl border border-border bg-card/50 p-5 mb-4 space-y-4">
+            <div className="rounded-xl border border-border bg-card/50 p-4 sm:p-5 mb-4 space-y-4">
               <h3 className="text-sm font-medium text-foreground">Create New User</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="new-name" className="text-xs text-muted-foreground">Name</Label>
                   <Input
@@ -359,7 +435,7 @@ export default function AdminPage() {
             </div>
           </div>
 
-          <ScrollArea className="max-h-[600px]">
+          <ScrollArea className="max-h-[calc(100vh-24rem)]">
             <div className="space-y-2">
               {filteredUsers.map((u) => {
                 const config = ROLE_CONFIG[u.role as keyof typeof ROLE_CONFIG] || ROLE_CONFIG.user
@@ -373,6 +449,7 @@ export default function AdminPage() {
                 const isExpanded = expandedUser === u.id
                 const isSelf = u.id === session?.user?.id
                 const isDeleteTarget = deleteConfirmId === u.id
+                const isEditing = editingUser === u.id
 
                 return (
                   <div
@@ -380,19 +457,23 @@ export default function AdminPage() {
                     className={`rounded-xl border bg-card/50 ${TRANSITION.color} hover:bg-card/80 ${isDeleteTarget ? 'border-destructive/50' : 'border-border'}`}
                   >
                     <button
-                      className="w-full px-4 py-3 flex items-center gap-3 text-left"
-                      onClick={() => setExpandedUser(isExpanded ? null : u.id)}
+                      className="w-full px-3 sm:px-4 py-3 flex items-center gap-2 sm:gap-3 text-left"
+                      onClick={() => {
+                        if (isEditing) return
+                        setExpandedUser(isExpanded ? null : u.id)
+                        if (isExpanded) cancelEditing()
+                      }}
                     >
-                      <Avatar className="h-9 w-9 shrink-0">
+                      <Avatar className="h-8 w-8 sm:h-9 sm:w-9 shrink-0">
                         <AvatarFallback className="bg-muted text-muted-foreground text-xs">
                           {initials}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5 sm:gap-2">
                           <span className="text-sm font-medium text-foreground truncate">{u.name || 'Unnamed'}</span>
                           {isSelf && (
-                            <Badge variant="outline" className="text-[10px] px-1.5 py-0">you</Badge>
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0">you</Badge>
                           )}
                         </div>
                         <span className="text-xs text-muted-foreground truncate block">{u.email}</span>
@@ -400,13 +481,14 @@ export default function AdminPage() {
                       <span className="text-xs text-muted-foreground shrink-0 hidden sm:block">{u.contactCount} contacts</span>
                       <Badge variant="outline" className={`shrink-0 gap-1 text-[10px] ${config.bg}`}>
                         <RoleIcon className={`h-3 w-3 ${config.color}`} />
-                        {config.label}
+                        <span className="hidden sm:inline">{config.label}</span>
                       </Badge>
                       {isExpanded ? <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" /> : <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />}
                     </button>
-                    {isExpanded && (
-                      <div className="px-4 pb-3 pt-0 space-y-3 border-t border-border">
-                        <div className="grid grid-cols-3 gap-3 pt-3 text-xs">
+
+                    {isExpanded && !isEditing && (
+                      <div className="px-3 sm:px-4 pb-3 pt-0 space-y-3 border-t border-border">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 pt-3 text-xs">
                           <div>
                             <span className="text-muted-foreground">ID</span>
                             <p className="text-foreground font-mono text-[10px] truncate">{u.id}</p>
@@ -423,7 +505,7 @@ export default function AdminPage() {
                           </div>
                         </div>
                         {isAdmin && !isSelf && (
-                          <div className="flex items-center gap-3">
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
                             <div className="flex items-center gap-2">
                               <span className="text-xs text-muted-foreground">Role:</span>
                               <Select value={u.role} onValueChange={(v) => handleRoleChange(u.id, v)}>
@@ -437,7 +519,39 @@ export default function AdminPage() {
                                 </SelectContent>
                               </Select>
                             </div>
-                            <div className="ml-auto">
+                            <div className="flex items-center gap-1.5 sm:ml-auto">
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-7 text-xs gap-1 text-muted-foreground hover:text-foreground"
+                                      onClick={() => startEditing(u)}
+                                    >
+                                      <Pencil className="h-3.5 w-3.5" />
+                                      <span className="sm:hidden">Edit</span>
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Edit user</TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-7 text-xs gap-1 text-muted-foreground hover:text-foreground"
+                                      onClick={() => setResetPasswordUser(u)}
+                                    >
+                                      <KeyRound className="h-3.5 w-3.5" />
+                                      <span className="sm:hidden">Password</span>
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Reset password</TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
                               {isDeleteTarget ? (
                                 <div className="flex items-center gap-1.5">
                                   <span className="text-xs text-destructive">Delete?</span>
@@ -466,11 +580,12 @@ export default function AdminPage() {
                                     <TooltipTrigger asChild>
                                       <Button
                                         variant="ghost"
-                                        size="icon"
-                                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                                        size="sm"
+                                        className="h-7 text-xs gap-1 text-muted-foreground hover:text-destructive"
                                         onClick={() => setDeleteConfirmId(u.id)}
                                       >
                                         <Trash2 className="h-3.5 w-3.5" />
+                                        <span className="sm:hidden">Delete</span>
                                       </Button>
                                     </TooltipTrigger>
                                     <TooltipContent>Delete user</TooltipContent>
@@ -480,6 +595,63 @@ export default function AdminPage() {
                             </div>
                           </div>
                         )}
+                      </div>
+                    )}
+
+                    {isExpanded && isEditing && (
+                      <div className="px-3 sm:px-4 pb-4 pt-0 space-y-3 border-t border-border">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3">
+                          <div className="space-y-1.5">
+                            <Label className="text-xs text-muted-foreground">Name</Label>
+                            <Input
+                              value={editForm.name}
+                              onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                              className="h-8 text-sm"
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label className="text-xs text-muted-foreground">Email</Label>
+                            <Input
+                              type="email"
+                              value={editForm.email}
+                              onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                              className="h-8 text-sm"
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label className="text-xs text-muted-foreground">Role</Label>
+                            <Select value={editForm.role} onValueChange={(v) => setEditForm({ ...editForm, role: v })}>
+                              <SelectTrigger className="h-8 text-sm">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="user">User</SelectItem>
+                                <SelectItem value="moderator">Moderator</SelectItem>
+                                <SelectItem value="admin">Admin</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-end gap-2 pt-1">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 text-xs"
+                            onClick={cancelEditing}
+                            disabled={saving}
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            size="sm"
+                            className="h-7 text-xs gap-1"
+                            onClick={() => handleSaveUser(u.id)}
+                            disabled={saving}
+                          >
+                            {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
+                            Save
+                          </Button>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -494,6 +666,55 @@ export default function AdminPage() {
           </ScrollArea>
         </section>
       </main>
+
+      <Dialog open={!!resetPasswordUser} onOpenChange={(open) => {
+        if (!open) {
+          setResetPasswordUser(null)
+          setNewPassword('')
+          setShowNewPassword(false)
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reset Password</DialogTitle>
+            <DialogDescription>
+              Set a new password for {resetPasswordUser?.name || resetPasswordUser?.email}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="reset-password" className="text-xs text-muted-foreground">New Password</Label>
+            <div className="relative">
+              <Input
+                id="reset-password"
+                type={showNewPassword ? 'text' : 'password'}
+                placeholder="Min 6 characters"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+              />
+              <button
+                type="button"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                onClick={() => setShowNewPassword(!showNewPassword)}
+              >
+                {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setResetPasswordUser(null)
+              setNewPassword('')
+              setShowNewPassword(false)
+            }}>
+              Cancel
+            </Button>
+            <Button onClick={handleResetPassword} disabled={resettingPassword || newPassword.length < 6} className="gap-1.5">
+              {resettingPassword ? <Loader2 className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4" />}
+              Reset Password
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
