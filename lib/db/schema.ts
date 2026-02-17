@@ -294,7 +294,10 @@ export const waitlist = pgTable('waitlist', {
   name: text('name').notNull(),
   message: text('message'),
   status: waitlistStatusEnum('status').notNull().default('pending'),
+  adminNote: text('admin_note'),
+  reviewedBy: text('reviewed_by').references(() => users.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at').defaultNow(),
+  reviewedAt: timestamp('reviewed_at'),
 })
 
 export type WaitlistEntry = typeof waitlist.$inferSelect
