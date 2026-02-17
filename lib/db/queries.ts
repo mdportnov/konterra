@@ -900,6 +900,14 @@ export async function getAdminStats() {
     .leftJoin(contacts, eq(users.id, contacts.userId))
     .groupBy(users.id)
 
+  const [waitlistPending] = await db
+    .select({ count: sql<number>`cast(count(*) as int)` })
+    .from(waitlist)
+    .where(eq(waitlist.status, 'pending'))
+  const [waitlistTotal] = await db
+    .select({ count: sql<number>`cast(count(*) as int)` })
+    .from(waitlist)
+
   return {
     totalUsers: userCount.count,
     totalContacts: contactCount.count,
@@ -909,5 +917,55 @@ export async function getAdminStats() {
     totalTrips: tripCount.count,
     totalTags: tagCount.count,
     avgContactsPerUser: userCount.count > 0 ? Math.round(contactCount.count / userCount.count) : 0,
+    waitlistPending: waitlistPending.count,
+    waitlistTotal: waitlistTotal.count,
   }
+}
+
+export async function getWaitlistEntries(status?: 'pending' | 'approved' | 'rejected') {
+  const condition = status ? eq(waitlist.status, status) : undefined
+  return db.query.waitlist.findMany({
+    where: condition,
+    orderBy: desc(waitlist.createdAt),
+  })
+}
+
+export async function getWaitlistEntryById(id: string) {
+  return db.query.waitlist.findFirst({
+    where: eq(waitlist.id, id),
+  })
+}
+
+export async function getWaitlistEntryByEmail(email: string) {
+  return db.query.waitlist.findFirst({
+    where: eq(waitlist.email, email),
+  })
+}
+
+export async function updateWaitlistStatus(
+  id: string,
+  status: 'approved' | 'rejected',
+  reviewedBy: string,
+  adminNote?: string,
+) {
+  const set: Record<string, unknown> = {
+    status,
+    reviewedBy,
+    reviewedAt: new Date(),
+  }
+  if (adminNote !== undefined) set.adminNote = adminNote
+  const [updated] = await db
+    .update(waitlist)
+    .set(set)
+    .where(eq(waitlist.id, id))
+    .returning()
+  return updated
+}
+
+export async function deleteWaitlistEntry(id: string) {
+  const [deleted] = await db
+    .delete(waitlist)
+    .where(eq(waitlist.id, id))
+    .returning({ id: waitlist.id })
+  return deleted
 }

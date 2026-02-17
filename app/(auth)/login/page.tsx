@@ -86,11 +86,17 @@ export default function LoginPage() {
     e.preventDefault()
     setLoading(true)
     try {
-      await fetch('/api/waitlist', {
+      const res = await fetch('/api/waitlist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, name, message: message || undefined }),
       })
+      if (!res.ok) {
+        const data = await res.json()
+        toast.error(data.error || 'Failed to submit request')
+        setLoading(false)
+        return
+      }
       setSubmitted(true)
     } catch {
       toast.error('Failed to submit request. Try again.')
