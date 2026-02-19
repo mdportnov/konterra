@@ -4,7 +4,8 @@ import { useState } from 'react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import { Loader2, Trash2 } from 'lucide-react'
+import { Separator } from '@/components/ui/separator'
+import { Loader2, Trash2, Merge, SkipForward } from 'lucide-react'
 import { toast } from 'sonner'
 import ContactMergeFields from './ContactMergeFields'
 import type { Contact } from '@/lib/db/schema'
@@ -12,6 +13,8 @@ import type { DuplicateGroup } from '@/lib/dedup/find-duplicate-groups'
 
 interface DupGroupCardProps {
   group: DuplicateGroup
+  index: number
+  total: number
   onResolved: () => void
 }
 
@@ -30,7 +33,7 @@ function getVal(contact: Contact, field: string): unknown {
   return (contact as Record<string, unknown>)[field]
 }
 
-export default function DupGroupCard({ group, onResolved }: DupGroupCardProps) {
+export default function DupGroupCard({ group, index, total, onResolved }: DupGroupCardProps) {
   const [action, setAction] = useState<Action>('skip')
   const [winnerId, setWinnerId] = useState(group.contacts[0].id)
   const [deleteId, setDeleteId] = useState(group.contacts[1].id)
@@ -103,43 +106,56 @@ export default function DupGroupCard({ group, onResolved }: DupGroupCardProps) {
     : 'bg-yellow-500/15 text-yellow-600 dark:text-yellow-300'
 
   return (
-    <div className="rounded-lg border border-border p-3 space-y-3">
-      <div className="flex items-center justify-between">
-        <span className={`text-[10px] font-medium uppercase px-1.5 py-0.5 rounded ${confidenceColor}`}>
-          {group.confidence} &middot; {group.matchField}
-        </span>
+    <div className="rounded-xl border border-border p-4 space-y-4">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-medium text-muted-foreground">{index}/{total}</span>
+          <span className={`text-xs font-medium uppercase px-2 py-1 rounded-md ${confidenceColor}`}>
+            {group.confidence} &middot; {group.matchField}
+          </span>
+        </div>
         <ToggleGroup
           type="single"
           value={action}
           onValueChange={(v) => { if (v) setAction(v as Action) }}
-          className="h-7"
+          className="h-8"
         >
-          <ToggleGroupItem value="skip" className="text-[10px] h-6 px-2 data-[state=on]:bg-accent">Skip</ToggleGroupItem>
-          <ToggleGroupItem value="merge" className="text-[10px] h-6 px-2 data-[state=on]:bg-accent">Merge</ToggleGroupItem>
-          <ToggleGroupItem value="delete" className="text-[10px] h-6 px-2 data-[state=on]:bg-accent">Delete</ToggleGroupItem>
+          <ToggleGroupItem value="skip" className="text-xs h-8 px-3 gap-1.5 data-[state=on]:bg-accent">
+            <SkipForward className="h-3.5 w-3.5" />
+            Skip
+          </ToggleGroupItem>
+          <ToggleGroupItem value="merge" className="text-xs h-8 px-3 gap-1.5 data-[state=on]:bg-accent">
+            <Merge className="h-3.5 w-3.5" />
+            Merge
+          </ToggleGroupItem>
+          <ToggleGroupItem value="delete" className="text-xs h-8 px-3 gap-1.5 data-[state=on]:bg-accent">
+            <Trash2 className="h-3.5 w-3.5" />
+            Delete
+          </ToggleGroupItem>
         </ToggleGroup>
       </div>
 
-      <div className="flex gap-3">
+      <div className="grid grid-cols-2 gap-4">
         {group.contacts.map((c) => (
-          <div key={c.id} className="flex-1 flex items-center gap-2 min-w-0">
-            <Avatar className="h-8 w-8 shrink-0">
+          <div key={c.id} className="flex items-center gap-3 min-w-0 rounded-lg bg-muted/40 p-3">
+            <Avatar className="h-10 w-10 shrink-0">
               <AvatarImage src={c.photo || undefined} />
-              <AvatarFallback className="text-[10px] bg-muted">{initials(c.name)}</AvatarFallback>
+              <AvatarFallback className="text-xs bg-muted">{initials(c.name)}</AvatarFallback>
             </Avatar>
-            <div className="min-w-0">
-              <p className="text-xs font-medium truncate">{c.name}</p>
-              {c.email && <p className="text-[10px] text-muted-foreground truncate">{c.email}</p>}
-              {!c.email && c.phone && <p className="text-[10px] text-muted-foreground truncate">{c.phone}</p>}
-              {c.company && <p className="text-[10px] text-muted-foreground truncate">{c.company}</p>}
+            <div className="min-w-0 space-y-0.5">
+              <p className="text-sm font-medium truncate">{c.name}</p>
+              {c.email && <p className="text-xs text-muted-foreground truncate">{c.email}</p>}
+              {!c.email && c.phone && <p className="text-xs text-muted-foreground truncate">{c.phone}</p>}
+              {c.company && <p className="text-xs text-muted-foreground truncate">{c.company}</p>}
             </div>
           </div>
         ))}
       </div>
 
       {action === 'merge' && group.contacts.length === 2 && (
-        <div className="space-y-2">
-          <p className="text-[10px] text-muted-foreground uppercase font-medium">Keep as primary</p>
+        <div className="space-y-3">
+          <Separator />
+          <p className="text-xs text-muted-foreground uppercase font-medium tracking-wide">Keep as primary</p>
           <ToggleGroup
             type="single"
             value={winnerId}
@@ -150,7 +166,7 @@ export default function DupGroupCard({ group, onResolved }: DupGroupCardProps) {
               <ToggleGroupItem
                 key={c.id}
                 value={c.id}
-                className="flex-1 text-xs data-[state=on]:bg-accent"
+                className="flex-1 text-sm h-9 data-[state=on]:bg-accent"
               >
                 {c.name}
               </ToggleGroupItem>
@@ -166,20 +182,21 @@ export default function DupGroupCard({ group, onResolved }: DupGroupCardProps) {
           />
 
           <Button
-            size="sm"
+            size="default"
             className="w-full"
             onClick={handleMerge}
             disabled={processing}
           >
-            {processing && <Loader2 className="mr-2 h-3 w-3 animate-spin" />}
+            {processing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Merge Contacts
           </Button>
         </div>
       )}
 
       {action === 'delete' && group.contacts.length === 2 && (
-        <div className="space-y-2">
-          <p className="text-[10px] text-muted-foreground uppercase font-medium">Select contact to delete</p>
+        <div className="space-y-3">
+          <Separator />
+          <p className="text-xs text-muted-foreground uppercase font-medium tracking-wide">Select contact to delete</p>
           <ToggleGroup
             type="single"
             value={deleteId}
@@ -190,7 +207,7 @@ export default function DupGroupCard({ group, onResolved }: DupGroupCardProps) {
               <ToggleGroupItem
                 key={c.id}
                 value={c.id}
-                className="flex-1 text-xs data-[state=on]:bg-destructive/15 data-[state=on]:text-destructive"
+                className="flex-1 text-sm h-9 data-[state=on]:bg-destructive/15 data-[state=on]:text-destructive"
               >
                 {c.name}
               </ToggleGroupItem>
@@ -198,13 +215,13 @@ export default function DupGroupCard({ group, onResolved }: DupGroupCardProps) {
           </ToggleGroup>
 
           <Button
-            size="sm"
+            size="default"
             variant="destructive"
             className="w-full"
             onClick={handleDelete}
             disabled={processing}
           >
-            {processing ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <Trash2 className="mr-2 h-3 w-3" />}
+            {processing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
             Delete Contact
           </Button>
         </div>
