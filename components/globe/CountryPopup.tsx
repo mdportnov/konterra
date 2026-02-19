@@ -7,8 +7,15 @@ import { X, UserPlus } from 'lucide-react'
 import { useClickOutside } from '@/hooks/use-click-outside'
 import { useHotkey } from '@/hooks/use-hotkey'
 import { GLASS, Z } from '@/lib/constants/ui'
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
 import { countryFlag } from '@/lib/country-flags'
+import { PerplexityIcon } from '@/components/icons/perplexity'
 import type { Contact } from '@/lib/db/schema'
+
+function buildPerplexityCountryUrl(country: string): string {
+  const query = `Best hidden gems, specialty coffee shops, cocktail bars, popular local spots, and networking-friendly places in ${country}`
+  return `https://www.perplexity.ai/search?q=${encodeURIComponent(query)}`
+}
 
 interface CountryPopupProps {
   country: string
@@ -165,9 +172,26 @@ export default function CountryPopup({ country, contacts, x, y, open, onSelect, 
             </span>
           )}
         </div>
-        <button onClick={onClose} className="text-muted-foreground/60 hover:text-muted-foreground shrink-0 ml-2 cursor-pointer">
-          <X className="h-3.5 w-3.5" />
-        </button>
+        <div className="flex items-center gap-1 shrink-0 ml-2">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <a
+                  href={buildPerplexityCountryUrl(country)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-muted-foreground/60 hover:text-[#20808D] transition-colors cursor-pointer"
+                >
+                  <PerplexityIcon className="h-3.5 w-3.5" />
+                </a>
+              </TooltipTrigger>
+              <TooltipContent>Explore on Perplexity</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <button onClick={onClose} className="text-muted-foreground/60 hover:text-muted-foreground shrink-0 cursor-pointer">
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
       </div>
 
       {onToggleVisited && (
