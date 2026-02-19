@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo } from 'react'
-import { Plane, Upload, Calendar, Clock, MoveUp, Plus } from 'lucide-react'
+import { Plane, Upload, Calendar, Clock, ArrowRight, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
@@ -248,17 +248,17 @@ export default function TravelJourney({ trips, loading, onImport, onTripClick, o
                       )
                     }
 
-                    const nextFuture = new Date(nextInSorted.arrivalDate) > now
-                    const connColor = nextFuture ? 'text-green-400/40' : 'text-blue-400/40'
-                    const connTextColor = nextFuture ? 'text-green-400/50' : 'text-blue-400/50'
                     return (
-                      <div className="relative pl-5 py-0.5 flex items-center gap-1.5">
-                        <MoveUp className={`h-2.5 w-2.5 ${connColor}`} />
-                        <span className={`text-[9px] ${connTextColor} font-medium`}>
-                          {nextInSorted.city === trip.city && nextInSorted.country === trip.country
-                            ? 'stayed'
-                            : `${nextInSorted.city}, ${nextInSorted.country} ${countryFlag(nextInSorted.country)}`}
-                        </span>
+                      <div className="relative pl-5 py-0.5 flex items-center gap-1 text-[9px] text-muted-foreground/40">
+                        {nextInSorted.city === trip.city && nextInSorted.country === trip.country
+                          ? <span>stayed</span>
+                          : (
+                            <>
+                              <span>{nextInSorted.city}, {nextInSorted.country}</span>
+                              <ArrowRight className="h-2.5 w-2.5 text-green-400/60 shrink-0" />
+                              <span>{trip.city}, {trip.country}</span>
+                            </>
+                          )}
                       </div>
                     )
                   })()}

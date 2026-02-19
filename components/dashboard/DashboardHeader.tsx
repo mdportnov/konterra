@@ -2,13 +2,17 @@
 
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
-import { ChevronLeft, Plus, Globe as GlobeIcon } from 'lucide-react'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { ChevronLeft, ChevronDown, Plus, Globe as GlobeIcon, Settings, Sparkles, LogOut } from 'lucide-react'
+import { signOut } from 'next-auth/react'
 
 interface DashboardHeaderProps {
   isMobile?: boolean
   onSwitchToGlobe?: () => void
   onAddContact: () => void
   onCollapse?: () => void
+  onSettings?: () => void
+  onInsights?: () => void
   dashboardTab: 'connections' | 'travel'
   onDashboardTabChange: (tab: 'connections' | 'travel') => void
 }
@@ -18,6 +22,8 @@ export default function DashboardHeader({
   onSwitchToGlobe,
   onAddContact,
   onCollapse,
+  onSettings,
+  onInsights,
   dashboardTab,
   onDashboardTabChange,
 }: DashboardHeaderProps) {
@@ -26,9 +32,33 @@ export default function DashboardHeader({
       <div className="px-4 pt-4 md:px-5 md:pt-5">
         <div className="flex items-center justify-between gap-2">
           <div className="min-w-0">
-            <p className="text-lg font-semibold text-foreground truncate">
-              Konterra
-            </p>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex items-center gap-1 hover:opacity-80 transition-opacity cursor-pointer">
+                  <span className="text-lg font-semibold text-foreground truncate">Konterra</span>
+                  <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-48">
+                <DropdownMenuItem onClick={onAddContact}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Contact
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={onInsights}>
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Insights
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={onSettings}>
+                  <Settings className="h-4 w-4 mr-2" />
+                  Settings
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => signOut({ callbackUrl: '/login' })}>
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Sign Out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <p className="text-xs text-muted-foreground">Your network command center</p>
           </div>
           <div className="flex items-center gap-1 shrink-0">

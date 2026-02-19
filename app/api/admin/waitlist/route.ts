@@ -25,14 +25,19 @@ export async function GET(req: Request) {
   const result = await requireAdmin()
   if ('error' in result && result.error) return result.error
 
-  const { searchParams } = new URL(req.url)
-  const status = searchParams.get('status') as 'pending' | 'approved' | 'rejected' | null
+  try {
+    const { searchParams } = new URL(req.url)
+    const status = searchParams.get('status') as 'pending' | 'approved' | 'rejected' | null
 
-  const validStatuses = ['pending', 'approved', 'rejected']
-  const filter = status && validStatuses.includes(status) ? status : undefined
+    const validStatuses = ['pending', 'approved', 'rejected']
+    const filter = status && validStatuses.includes(status) ? status : undefined
 
-  const entries = await getWaitlistEntries(filter)
-  return success(entries)
+    const entries = await getWaitlistEntries(filter)
+    return success(entries)
+  } catch (e) {
+    console.error('Waitlist GET error:', e)
+    return serverError('Failed to fetch waitlist entries')
+  }
 }
 
 export async function PATCH(req: Request) {

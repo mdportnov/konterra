@@ -176,7 +176,17 @@ export function usePanelNavigation(
     if (isMobile) setMobileView('dashboard')
   }, [isMobile, setMobileView])
 
+  const [settingsTab, setSettingsTab] = useState<'profile' | 'settings' | 'countries'>('settings')
+
   const handleOpenSettings = useCallback(() => {
+    setSettingsTab('settings')
+    setActivePanel('settings')
+    pushUrl('/app/settings')
+    if (isMobile) setMobileView('globe')
+  }, [isMobile, setMobileView])
+
+  const handleOpenProfile = useCallback(() => {
+    setSettingsTab('profile')
     setActivePanel('settings')
     pushUrl('/app/settings')
     if (isMobile) setMobileView('globe')
@@ -279,7 +289,9 @@ export function usePanelNavigation(
     handleCancelEdit,
     handleContactSaved,
     handleDeleteContact,
+    settingsTab,
     handleOpenSettings,
+    handleOpenProfile,
     handleCloseSettings,
     handleOpenInsights,
     handleCloseInsights,

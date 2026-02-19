@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Separator } from '@/components/ui/separator'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { User, Settings, Globe } from 'lucide-react'
@@ -17,6 +17,7 @@ const TAB_ICONS = { profile: User, settings: Settings, countries: Globe } as con
 interface SettingsPanelProps {
   open: boolean
   onClose: () => void
+  initialTab?: Tab
   displayOptions: DisplayOptions
   onDisplayChange: (opts: DisplayOptions) => void
   defaultTab: DashboardTab
@@ -36,6 +37,7 @@ interface SettingsPanelProps {
 export default function SettingsPanel({
   open,
   onClose,
+  initialTab,
   displayOptions,
   onDisplayChange,
   defaultTab,
@@ -51,7 +53,11 @@ export default function SettingsPanel({
   visitedCountryCount,
   contactCountsByCountry,
 }: SettingsPanelProps) {
-  const [tab, setTab] = useState<Tab>('profile')
+  const [tab, setTab] = useState<Tab>(initialTab ?? 'settings')
+
+  useEffect(() => {
+    if (open && initialTab) setTab(initialTab)
+  }, [open, initialTab])
 
   const handleDefaultTabChange = useCallback((t: DashboardTab) => {
     saveDefaultTab(t)

@@ -213,6 +213,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
       <SettingsPanel
         open={nav.activePanel === 'settings'}
         onClose={nav.handleCloseSettings}
+        initialTab={nav.settingsTab}
         displayOptions={displayOptions}
         onDisplayChange={setDisplayOptions}
         defaultTab={dashboardTab}
@@ -272,6 +273,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
         onAddContact={nav.handleAddContact}
         onImport={() => setImportDialogOpen(true)}
         onSettings={nav.handleOpenSettings}
+        onProfile={nav.handleOpenProfile}
         onInsights={nav.handleOpenInsights}
         isMobile={isMobile}
         onSwitchToDashboard={() => setMobileView('dashboard')}

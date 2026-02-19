@@ -25,7 +25,7 @@ import {
 } from '@/lib/validation'
 import type { Contact, Tag as DbTag } from '@/lib/db/schema'
 import {
-  SectionLabel, FieldRow, SelectField, RangeField, PrefixInput,
+  SectionLabel, FieldRow, SelectField, MultiSelectField, ChipInput, RangeField, PrefixInput,
   DatePickerField, CollapsibleSection, TimezoneSelect, LanguageMultiSelect, TagSelector,
 } from './contact-edit'
 
@@ -515,14 +515,14 @@ export default function ContactEditPanel({ contact, open, onSaved, onCancel, ava
                 value={formData.birthday}
                 onChange={(v) => setFormData((prev) => ({ ...prev, birthday: v }))}
               />
-              <FieldRow
+              <ChipInput
                 label="Personal Interests"
                 name="personalInterests"
                 value={formData.personalInterests}
                 onChange={handleChange}
                 placeholder="surfing, chess, cooking"
               />
-              <FieldRow
+              <ChipInput
                 label="Professional Goals"
                 name="professionalGoals"
                 value={formData.professionalGoals}
@@ -540,14 +540,14 @@ export default function ContactEditPanel({ contact, open, onSaved, onCancel, ava
           >
             <div className="space-y-3">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <SelectField
+                <MultiSelectField
                   label="Communication Style"
                   name="communicationStyle"
                   value={formData.communicationStyle}
                   onChange={handleSelectChange}
                   options={COMMUNICATION_STYLES}
                 />
-                <SelectField
+                <MultiSelectField
                   label="Preferred Channel"
                   name="preferredChannel"
                   value={formData.preferredChannel}
@@ -555,21 +555,21 @@ export default function ContactEditPanel({ contact, open, onSaved, onCancel, ava
                   options={PREFERRED_CHANNELS}
                 />
               </div>
-              <SelectField
+              <MultiSelectField
                 label="Response Speed"
                 name="responseSpeed"
                 value={formData.responseSpeed}
                 onChange={handleSelectChange}
                 options={RESPONSE_SPEEDS}
               />
-              <FieldRow
+              <ChipInput
                 label="Motivations"
                 name="motivations"
                 value={formData.motivations}
                 onChange={handleChange}
                 placeholder="wealth, impact, recognition"
               />
-              <FieldRow
+              <ChipInput
                 label="Pain Points"
                 name="painPoints"
                 value={formData.painPoints}

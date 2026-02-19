@@ -52,20 +52,23 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
-    if (open && !fetched.current) {
-      fetched.current = true
-      fetch('/api/profile')
-        .then((r) => r.json())
-        .then((data) => setUser(data))
-        .catch(() => toast.error('Failed to load profile'))
-
-      setHomebaseLoading(true)
-      fetch('/api/me/location')
-        .then((r) => r.json())
-        .then((data) => setHomebase(data))
-        .catch(() => toast.error('Failed to load homebase'))
-        .finally(() => setHomebaseLoading(false))
+    if (!open) {
+      fetched.current = false
+      return
     }
+    if (fetched.current) return
+    fetched.current = true
+    fetch('/api/profile')
+      .then((r) => r.json())
+      .then((data) => setUser(data))
+      .catch(() => toast.error('Failed to load profile'))
+
+    setHomebaseLoading(true)
+    fetch('/api/me/location')
+      .then((r) => r.json())
+      .then((data) => setHomebase(data))
+      .catch(() => toast.error('Failed to load homebase'))
+      .finally(() => setHomebaseLoading(false))
   }, [open])
 
   const searchCity = useCallback((query: string) => {

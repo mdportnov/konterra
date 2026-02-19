@@ -23,6 +23,16 @@ export function validateEnum(value: unknown, allowed: readonly string[], fieldNa
   return null
 }
 
+export function validateMultiEnum(value: unknown, allowed: readonly string[], fieldName: string): string | null {
+  if (!value) return null
+  if (typeof value !== 'string') return `Invalid ${fieldName}`
+  const parts = value.split(',').map((s) => s.trim()).filter(Boolean)
+  for (const part of parts) {
+    if (!allowed.includes(part)) return `Invalid ${fieldName}: ${part}`
+  }
+  return null
+}
+
 export function validateIntRange(value: unknown, min: number, max: number, fieldName: string): string | null {
   if (value === null || value === undefined) return null
   if (typeof value !== 'number' || !Number.isInteger(value) || value < min || value > max)
@@ -68,11 +78,11 @@ export function validateContact(body: Record<string, unknown>, requireName = tru
   err = validateIntRange(body.trustLevel, 0, 5, 'trustLevel')
   if (err) return err
 
-  err = validateEnum(body.communicationStyle, COMMUNICATION_STYLES, 'communicationStyle')
+  err = validateMultiEnum(body.communicationStyle, COMMUNICATION_STYLES, 'communicationStyle')
   if (err) return err
-  err = validateEnum(body.preferredChannel, PREFERRED_CHANNELS, 'preferredChannel')
+  err = validateMultiEnum(body.preferredChannel, PREFERRED_CHANNELS, 'preferredChannel')
   if (err) return err
-  err = validateEnum(body.responseSpeed, RESPONSE_SPEEDS, 'responseSpeed')
+  err = validateMultiEnum(body.responseSpeed, RESPONSE_SPEEDS, 'responseSpeed')
   if (err) return err
   err = validateEnum(body.loyaltyIndicator, LOYALTY_INDICATORS, 'loyaltyIndicator')
   if (err) return err
