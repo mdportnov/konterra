@@ -2,12 +2,21 @@
 
 import { useRef, useMemo } from 'react'
 import { X, MapPin, Calendar, Clock, Plane, ArrowRight, ArrowLeft } from 'lucide-react'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { useClickOutside } from '@/hooks/use-click-outside'
 import { useHotkey } from '@/hooks/use-hotkey'
 import { GLASS, Z } from '@/lib/constants/ui'
 import { TENSE_COLORS } from '@/lib/constants/globe-colors'
 import { countryFlag } from '@/lib/country-flags'
 import type { Trip } from '@/lib/db/schema'
+
+function PerplexityIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 16 16" fill="currentColor" className={className}>
+      <path fillRule="evenodd" d="M8 .188a.5.5 0 0 1 .503.5V4.03l3.022-2.92.059-.048a.51.51 0 0 1 .49-.054.5.5 0 0 1 .306.46v3.247h1.117l.1.01a.5.5 0 0 1 .403.49v5.558a.5.5 0 0 1-.503.5H12.38v3.258a.5.5 0 0 1-.312.462.51.51 0 0 1-.55-.11l-3.016-3.018v3.448c0 .275-.225.5-.503.5a.5.5 0 0 1-.503-.5v-3.448l-3.018 3.019a.51.51 0 0 1-.548.11.5.5 0 0 1-.312-.463v-3.258H2.503a.5.5 0 0 1-.503-.5V5.215l.01-.1c.047-.229.25-.4.493-.4H3.62V1.469l.006-.074a.5.5 0 0 1 .302-.387.51.51 0 0 1 .547.102l3.023 2.92V.687c0-.276.225-.5.503-.5M4.626 9.333v3.984l2.87-2.872v-4.01zm3.877 1.113 2.871 2.871V9.333l-2.87-2.897zm3.733-1.668a.5.5 0 0 1 .145.35v1.145h.612V5.715H9.201zm-9.23 1.495h.613V9.13c0-.131.052-.257.145-.35l3.033-3.064h-3.79zm1.62-5.558H6.76L4.626 2.652zm4.613 0h2.134V2.652z" />
+    </svg>
+  )
+}
 
 interface TripCountryPopupProps {
   country: string
@@ -144,9 +153,26 @@ export default function TripCountryPopup({ country, trips, allTrips, x, y, open,
             {stats.visits} visit{stats.visits !== 1 ? 's' : ''}
           </span>
         </div>
-        <button onClick={onClose} className="text-muted-foreground/60 hover:text-muted-foreground shrink-0 ml-2 cursor-pointer">
-          <X className="h-3.5 w-3.5" />
-        </button>
+        <div className="flex items-center gap-1 shrink-0 ml-2">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <a
+                  href={`https://www.perplexity.ai/search?q=${encodeURIComponent(`${country} travel guide things to do`)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="h-6 w-6 flex items-center justify-center rounded-md text-muted-foreground/60 hover:text-foreground hover:bg-accent transition-colors"
+                >
+                  <PerplexityIcon className="h-3.5 w-3.5" />
+                </a>
+              </TooltipTrigger>
+              <TooltipContent className="text-xs">Explore on Perplexity</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <button onClick={onClose} className="text-muted-foreground/60 hover:text-muted-foreground cursor-pointer">
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-3 gap-px bg-border/50 border-b border-border shrink-0">
