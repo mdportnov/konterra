@@ -1,5 +1,6 @@
 'use client'
 
+import { Check } from 'lucide-react'
 import type { Contact } from '@/lib/db/schema'
 
 interface ContactMergeFieldsProps {
@@ -47,46 +48,59 @@ export default function ContactMergeFields({ contactA, contactB, winnerId, overr
   })
 
   if (fields.length === 0) {
-    return <p className="text-xs text-muted-foreground pl-4">No conflicting fields</p>
+    return <p className="text-sm text-muted-foreground py-2">No conflicting fields</p>
   }
 
   return (
-    <div className="space-y-2 pl-4 border-l-2 border-border">
-      {fields.map((field) => {
-        const winnerVal = getVal(winner, field)!
-        const loserVal = getVal(loser, field)!
-        const selected = overrides[field] || winnerId
+    <div className="space-y-3">
+      <p className="text-xs text-muted-foreground uppercase font-medium tracking-wide">
+        Resolve {fields.length} conflicting field{fields.length > 1 ? 's' : ''}
+      </p>
+      <div className="space-y-2">
+        {fields.map((field) => {
+          const winnerVal = getVal(winner, field)!
+          const loserVal = getVal(loser, field)!
+          const selected = overrides[field] || winnerId
 
-        return (
-          <div key={field} className="text-xs space-y-1">
-            <p className="font-medium text-muted-foreground">{fieldLabels[field]}</p>
-            <div className="flex gap-2">
-              <button
-                onClick={() => onOverrideChange(field, winnerId)}
-                className={`flex-1 p-1.5 rounded border text-left truncate transition-all duration-150 ${
-                  selected === winnerId
-                    ? 'border-foreground/30 bg-accent text-foreground scale-[1.02]'
-                    : 'border-border text-muted-foreground hover:border-foreground/20 scale-100'
-                }`}
-              >
-                <span className="block text-[10px] text-muted-foreground/60 uppercase truncate">{winner.name}</span>
-                {winnerVal}
-              </button>
-              <button
-                onClick={() => onOverrideChange(field, loserId)}
-                className={`flex-1 p-1.5 rounded border text-left truncate transition-all duration-150 ${
-                  selected === loserId
-                    ? 'border-foreground/30 bg-accent text-foreground scale-[1.02]'
-                    : 'border-border text-muted-foreground hover:border-foreground/20 scale-100'
-                }`}
-              >
-                <span className="block text-[10px] text-muted-foreground/60 uppercase truncate">{loser.name}</span>
-                {loserVal}
-              </button>
+          return (
+            <div key={field} className="rounded-lg border border-border overflow-hidden">
+              <div className="px-3 py-1.5 bg-muted/50 border-b border-border">
+                <p className="text-xs font-medium text-muted-foreground">{fieldLabels[field]}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-0">
+                <button
+                  onClick={() => onOverrideChange(field, winnerId)}
+                  className={`relative p-3 text-left transition-colors duration-150 border-r border-border ${
+                    selected === winnerId
+                      ? 'bg-accent/60'
+                      : 'hover:bg-muted/30'
+                  }`}
+                >
+                  <span className="block text-[10px] text-muted-foreground uppercase mb-0.5 truncate">{winner.name}</span>
+                  <span className="block text-sm truncate">{winnerVal}</span>
+                  {selected === winnerId && (
+                    <Check className="absolute top-2.5 right-2.5 h-3.5 w-3.5 text-foreground/60" />
+                  )}
+                </button>
+                <button
+                  onClick={() => onOverrideChange(field, loserId)}
+                  className={`relative p-3 text-left transition-colors duration-150 ${
+                    selected === loserId
+                      ? 'bg-accent/60'
+                      : 'hover:bg-muted/30'
+                  }`}
+                >
+                  <span className="block text-[10px] text-muted-foreground uppercase mb-0.5 truncate">{loser.name}</span>
+                  <span className="block text-sm truncate">{loserVal}</span>
+                  {selected === loserId && (
+                    <Check className="absolute top-2.5 right-2.5 h-3.5 w-3.5 text-foreground/60" />
+                  )}
+                </button>
+              </div>
             </div>
-          </div>
-        )
-      })}
+          )
+        })}
+      </div>
     </div>
   )
 }
