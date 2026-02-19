@@ -33,14 +33,45 @@ export function levenshtein(a: string, b: string): number {
   return dp[m][n]
 }
 
+function tokensMatch(a: string, b: string): boolean {
+  if (a === b) return true
+  if (a.length >= 4 && b.length >= 4) {
+    const maxDist = Math.max(a.length, b.length) <= 6 ? 1 : 2
+    if (levenshtein(a, b) <= maxDist) return true
+  }
+  return false
+}
+
 export function namesMatch(a: string, b: string): boolean {
   const na = normalizeName(a)
   const nb = normalizeName(b)
   if (!na || !nb) return false
   if (na === nb) return true
-  const shorter = na.length <= nb.length ? na : nb
-  const longer = na.length > nb.length ? na : nb
-  if (shorter.length >= 4 && longer.includes(shorter)) return true
-  if (na.length >= 4 && nb.length >= 4 && levenshtein(na, nb) <= 2) return true
-  return false
+
+  const tokensA = na.split(' ').filter(Boolean)
+  const tokensB = nb.split(' ').filter(Boolean)
+
+  if (tokensA.length === 0 || tokensB.length === 0) return false
+
+  const shorter = tokensA.length <= tokensB.length ? tokensA : tokensB
+  const longer = tokensA.length > tokensB.length ? tokensA : tokensB
+
+  if (shorter.length === 1 && longer.length === 1) {
+    return tokensMatch(shorter[0], longer[0])
+  }
+
+  const usedIndices = new Set<number>()
+  let matched = 0
+  for (const st of shorter) {
+    for (let i = 0; i < longer.length; i++) {
+      if (usedIndices.has(i)) continue
+      if (tokensMatch(st, longer[i])) {
+        usedIndices.add(i)
+        matched++
+        break
+      }
+    }
+  }
+
+  return matched >= shorter.length && shorter.length >= 1 && longer.length - matched <= 1
 }

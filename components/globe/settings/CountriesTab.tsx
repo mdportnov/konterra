@@ -5,7 +5,9 @@ import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Search, ChevronDown } from 'lucide-react'
+import { Search, ChevronDown, ChevronsUpDown } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { countryNames } from '@/components/globe/data/country-centroids'
 import { COUNTRY_REGIONS } from '@/lib/constants/country-regions'
 import { countryFlag } from '@/lib/country-flags'
@@ -32,7 +34,7 @@ const countriesByContinent = (() => {
 
 export function CountriesTab({ visitedCountries, onToggleVisitedCountry, contactCountsByCountry }: CountriesTabProps) {
   const [countrySearch, setCountrySearch] = useState('')
-  const [collapsedContinents, setCollapsedContinents] = useState<Set<string>>(new Set())
+  const [collapsedContinents, setCollapsedContinents] = useState<Set<string>>(() => new Set(CONTINENT_ORDER))
 
   const filteredCountries = useMemo(
     () => countrySearch
@@ -59,6 +61,15 @@ export function CountriesTab({ visitedCountries, onToggleVisitedCountry, contact
     })
   }
 
+  const allCollapsed = useMemo(
+    () => CONTINENT_ORDER.every((c) => collapsedContinents.has(c)),
+    [collapsedContinents]
+  )
+
+  const toggleAll = () => {
+    setCollapsedContinents(allCollapsed ? new Set() : new Set(CONTINENT_ORDER))
+  }
+
   if (!onToggleVisitedCountry) return null
 
   const orderedContinents = CONTINENT_ORDER.filter((c) => countriesByContinent.has(c))
@@ -68,7 +79,17 @@ export function CountriesTab({ visitedCountries, onToggleVisitedCountry, contact
       <div className="px-6 pt-6 pb-3 space-y-3">
         <div className="flex items-center justify-between">
           <span className="text-xs font-medium text-muted-foreground/60 uppercase tracking-wider">Countries I&apos;ve visited</span>
-          <span className="text-xs text-muted-foreground/60">{visitedCountries?.size || 0} of {allCountryNames.length}</span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs text-muted-foreground/60">{visitedCountries?.size || 0} of {allCountryNames.length}</span>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={toggleAll}>
+                  <ChevronsUpDown className="h-3.5 w-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">{allCollapsed ? 'Expand all' : 'Collapse all'}</TooltipContent>
+            </Tooltip>
+          </div>
         </div>
 
         <div className="flex flex-wrap gap-1.5">
@@ -105,7 +126,7 @@ export function CountriesTab({ visitedCountries, onToggleVisitedCountry, contact
               ? countries.filter((c) => filteredCountries.has(c))
               : countries
             if (visible.length === 0) return null
-            const isCollapsed = collapsedContinents.has(continent)
+            const isCollapsed = !countrySearch && collapsedContinents.has(continent)
             const stats = continentStats.get(continent)
 
             return (
