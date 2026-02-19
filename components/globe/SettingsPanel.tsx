@@ -1,12 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { Separator } from '@/components/ui/separator'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { User, Settings, Globe } from 'lucide-react'
 import GlobePanel from '@/components/globe/GlobePanel'
 import { PANEL_WIDTH } from '@/lib/constants/ui'
 import { ProfileTab, SettingsTab, CountriesTab, TABS, isTab } from '@/components/globe/settings'
+import { saveDefaultTab } from '@/hooks/use-dashboard-routing'
+import type { DashboardTab } from '@/hooks/use-dashboard-routing'
 import type { Tab } from '@/components/globe/settings'
 import type { DisplayOptions } from '@/types/display'
 
@@ -17,6 +19,8 @@ interface SettingsPanelProps {
   onClose: () => void
   displayOptions: DisplayOptions
   onDisplayChange: (opts: DisplayOptions) => void
+  defaultTab: DashboardTab
+  onDefaultTabChange: (tab: DashboardTab) => void
   visitedCountries?: Set<string>
   onToggleVisitedCountry?: (country: string) => void
   onOpenImport?: () => void
@@ -34,6 +38,8 @@ export default function SettingsPanel({
   onClose,
   displayOptions,
   onDisplayChange,
+  defaultTab,
+  onDefaultTabChange,
   visitedCountries,
   onToggleVisitedCountry,
   onOpenImport,
@@ -46,6 +52,11 @@ export default function SettingsPanel({
   contactCountsByCountry,
 }: SettingsPanelProps) {
   const [tab, setTab] = useState<Tab>('profile')
+
+  const handleDefaultTabChange = useCallback((t: DashboardTab) => {
+    saveDefaultTab(t)
+    onDefaultTabChange(t)
+  }, [onDefaultTabChange])
 
   const activeLabel = TABS.find((t) => t.value === tab)?.label ?? 'Profile'
 
@@ -97,6 +108,8 @@ export default function SettingsPanel({
             <SettingsTab
               displayOptions={displayOptions}
               onDisplayChange={onDisplayChange}
+              defaultTab={defaultTab}
+              onDefaultTabChange={handleDefaultTabChange}
               onOpenImport={onOpenImport}
               onOpenExport={onOpenExport}
               onOpenDuplicates={onOpenDuplicates}

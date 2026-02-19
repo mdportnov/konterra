@@ -27,7 +27,10 @@ export function useClickOutside(
       startPos.current = null
       if (wasDrag) return
       if (ref.current && !ref.current.contains(e.target as Node)) {
-        if ((e.target as HTMLElement).closest?.('[data-globe-panel]')) return
+        const target = e.target as HTMLElement
+        if (target.closest?.('[data-globe-panel]')) return
+        if (target.closest?.('[data-radix-popper-content-wrapper]')) return
+        if (target.closest?.('[role="dialog"], [data-slot="dialog-overlay"]')) return
         handler()
       }
     }

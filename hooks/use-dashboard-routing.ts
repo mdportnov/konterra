@@ -3,6 +3,20 @@
 import { useState, useCallback, useEffect } from 'react'
 import type { DisplayOptions, GlobeLayer } from '@/types/display'
 
+const STORAGE_KEY = 'konterra-default-tab'
+
+export type DashboardTab = 'connections' | 'travel'
+
+function loadDefaultTab(): DashboardTab {
+  if (typeof window === 'undefined') return 'connections'
+  const stored = localStorage.getItem(STORAGE_KEY)
+  return stored === 'travel' ? 'travel' : 'connections'
+}
+
+export function saveDefaultTab(tab: DashboardTab) {
+  localStorage.setItem(STORAGE_KEY, tab)
+}
+
 interface UseDashboardRoutingOptions {
   initialSlug?: string[]
   setDisplayOptions: React.Dispatch<React.SetStateAction<DisplayOptions>>
@@ -27,8 +41,12 @@ function buildViewParam(showNetwork: boolean, showTravel: boolean): string {
 }
 
 export function useDashboardRouting({ initialSlug, setDisplayOptions }: UseDashboardRoutingOptions) {
-  const initialTab = initialSlug?.[0] === 'travel' ? 'travel' as const : 'connections' as const
-  const [dashboardTab, setDashboardTabRaw] = useState<'connections' | 'travel'>(initialTab)
+  const initialTab = initialSlug?.[0] === 'travel'
+    ? 'travel' as const
+    : initialSlug?.length
+      ? 'connections' as const
+      : loadDefaultTab()
+  const [dashboardTab, setDashboardTabRaw] = useState<DashboardTab>(initialTab)
 
   useEffect(() => {
     const parsed = parseViewParam(window.location.search)
@@ -39,7 +57,7 @@ export function useDashboardRouting({ initialSlug, setDisplayOptions }: UseDashb
     }
   }, [initialTab, setDisplayOptions])
 
-  const setDashboardTab = useCallback((tab: 'connections' | 'travel') => {
+  const setDashboardTab = useCallback((tab: DashboardTab) => {
     setDashboardTabRaw(tab)
     if (tab === 'travel') {
       setDisplayOptions((prev) => {

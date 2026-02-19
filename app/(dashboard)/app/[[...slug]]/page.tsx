@@ -215,6 +215,8 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
         onClose={nav.handleCloseSettings}
         displayOptions={displayOptions}
         onDisplayChange={setDisplayOptions}
+        defaultTab={dashboardTab}
+        onDefaultTabChange={setDashboardTab}
         visitedCountries={data.visitedCountries}
         onToggleVisitedCountry={data.handleCountryVisitToggle}
         onOpenImport={() => setImportDialogOpen(true)}
