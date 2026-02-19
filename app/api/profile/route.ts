@@ -109,7 +109,7 @@ export async function PATCH(req: Request) {
       username: updated.username,
       profileVisibility: updated.profileVisibility,
       profilePrivacyLevel: updated.profilePrivacyLevel,
-      globeAutoRotate: updated.globeAutoRotate,
+      globeAutoRotate: (updated as { globeAutoRotate?: boolean }).globeAutoRotate ?? true,
     })
   } catch (err) {
     console.error('[PATCH /api/profile]', err)

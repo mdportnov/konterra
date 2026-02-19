@@ -38,8 +38,20 @@ export async function getUserProfile(id: string) {
 export async function getUserByUsername(username: string) {
   return db.query.users.findFirst({
     where: eq(users.username, username),
-    columns: { id: true, name: true, image: true, username: true, profileVisibility: true, profilePrivacyLevel: true, globeAutoRotate: true, createdAt: true },
+    columns: { id: true, name: true, image: true, username: true, profileVisibility: true, profilePrivacyLevel: true, createdAt: true },
   })
+}
+
+export async function getUserGlobeSettings(userId: string) {
+  try {
+    const row = await db.query.users.findFirst({
+      where: eq(users.id, userId),
+      columns: { globeAutoRotate: true },
+    })
+    return { globeAutoRotate: row?.globeAutoRotate ?? true }
+  } catch {
+    return { globeAutoRotate: true }
+  }
 }
 
 export async function getPublicProfileData(userId: string, privacyLevel: 'countries_only' | 'full_travel') {

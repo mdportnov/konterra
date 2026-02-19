@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { getUserByUsername, getPublicProfileData } from '@/lib/db/queries'
+import { getUserByUsername, getPublicProfileData, getUserGlobeSettings } from '@/lib/db/queries'
 import ProfileStub from '@/components/public/ProfileStub'
 import PublicProfilePage from '@/components/public/PublicProfilePage'
 
@@ -50,7 +50,10 @@ export default async function PublicProfilePageRoute({ params }: Props) {
     return <ProfileStub type="private" />
   }
 
-  const { countries, trips } = await getPublicProfileData(user.id, user.profilePrivacyLevel)
+  const [{ countries, trips }, { globeAutoRotate }] = await Promise.all([
+    getPublicProfileData(user.id, user.profilePrivacyLevel),
+    getUserGlobeSettings(user.id),
+  ])
 
   return (
     <PublicProfilePage
@@ -63,7 +66,7 @@ export default async function PublicProfilePageRoute({ params }: Props) {
       privacyLevel={user.profilePrivacyLevel}
       countries={countries}
       trips={trips}
-      globeAutoRotate={user.globeAutoRotate}
+      globeAutoRotate={globeAutoRotate}
     />
   )
 }
