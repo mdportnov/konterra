@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic'
 import { feature } from 'topojson-client'
 import { MeshPhongMaterial, Color } from 'three'
 import type { Contact, ContactConnection, ContactCountryConnection, Trip } from '@/lib/db/schema'
-import { countryNames, buildCountryLabels } from './data/country-centroids'
+import { countryNames, buildCountryLabels, normalizeToGlobeName } from './data/country-centroids'
 import type { DisplayOptions } from '@/types/display'
 import ClusterPopup from './ClusterPopup'
 import { useTheme } from '@/components/providers'
@@ -118,7 +118,8 @@ export default memo(function GlobeCanvas({
     const counts = new Map<string, number>()
     for (const c of contacts) {
       if (c.country) {
-        counts.set(c.country, (counts.get(c.country) || 0) + 1)
+        const name = normalizeToGlobeName(c.country)
+        counts.set(name, (counts.get(name) || 0) + 1)
       }
     }
     return counts
@@ -347,10 +348,10 @@ export default memo(function GlobeCanvas({
   }, [countries])
 
   const indirectOnlyCountries = useMemo(() => {
-    const ccCountries = new Set(countryConnections.map((cc) => cc.country))
+    const ccCountries = new Set(countryConnections.map((cc) => normalizeToGlobeName(cc.country)))
     const directCountries = new Set<string>()
     for (const c of contacts) {
-      if (c.country) directCountries.add(c.country)
+      if (c.country) directCountries.add(normalizeToGlobeName(c.country))
     }
     const result = new Set<string>()
     for (const country of ccCountries) {
@@ -362,7 +363,8 @@ export default memo(function GlobeCanvas({
   const countryConnectionCountMap = useMemo(() => {
     const map = new Map<string, number>()
     for (const cc of countryConnections) {
-      map.set(cc.country, (map.get(cc.country) || 0) + 1)
+      const name = normalizeToGlobeName(cc.country)
+      map.set(name, (map.get(name) || 0) + 1)
     }
     return map
   }, [countryConnections])
@@ -483,12 +485,12 @@ export default memo(function GlobeCanvas({
 
   const pastTravelCountries = useMemo(() => {
     if (!showTravel) return new Set<string>()
-    return new Set(trips.filter((t) => new Date(t.arrivalDate) <= now).map((t) => t.country))
+    return new Set(trips.filter((t) => new Date(t.arrivalDate) <= now).map((t) => normalizeToGlobeName(t.country)))
   }, [showTravel, trips, now])
 
   const futureTravelCountries = useMemo(() => {
     if (!showTravel) return new Set<string>()
-    const future = new Set(trips.filter((t) => new Date(t.arrivalDate) > now).map((t) => t.country))
+    const future = new Set(trips.filter((t) => new Date(t.arrivalDate) > now).map((t) => normalizeToGlobeName(t.country)))
     for (const c of pastTravelCountries) future.delete(c)
     return future
   }, [showTravel, trips, now, pastTravelCountries])
@@ -607,7 +609,7 @@ export default memo(function GlobeCanvas({
       if (userCountry && name === userCountry) parts.push('Your location')
     }
     if (showTravel) {
-      const tripCount = trips.filter((t) => t.country === name).length
+      const tripCount = trips.filter((t) => normalizeToGlobeName(t.country) === name).length
       if (tripCount > 0) parts.push(`${tripCount} trip${tripCount === 1 ? '' : 's'}`)
       if (futureTravelCountries.has(name)) parts.push('Upcoming')
     }

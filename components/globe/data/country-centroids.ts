@@ -46,6 +46,48 @@ export const countryNames: Record<string, string> = {
   '776': 'Tonga', '882': 'Samoa',
 }
 
+const GLOBE_ALIASES: Record<string, string> = {
+  'south korea': 'S. Korea',
+  'north korea': 'N. Korea',
+  'united states': 'USA',
+  'united kingdom': 'UK',
+  'united arab emirates': 'UAE',
+  'dominican republic': 'Dom. Rep.',
+  'central african republic': 'C.A.R.',
+  'dr congo': 'DRC',
+  'democratic republic of the congo': 'DRC',
+  'bosnia and herzegovina': 'Bosnia & Herz.',
+  'equatorial guinea': 'Eq. Guinea',
+  'north macedonia': 'N. Macedonia',
+  'south sudan': 'S. Sudan',
+  'papua new guinea': 'Papua N.G.',
+  'trinidad and tobago': 'Trinidad & T.',
+  'solomon islands': 'Solomon Is.',
+  'falkland islands': 'Falkland Is.',
+  'western sahara': 'W. Sahara',
+  'northern cyprus': 'N. Cyprus',
+  'ivory coast': "Côte d'Ivoire",
+  'cote d\'ivoire': "Côte d'Ivoire",
+  'czech republic': 'Czechia',
+  'east timor': 'Timor-Leste',
+  'swaziland': 'eSwatini',
+}
+
+const globeNameSet = new Set(Object.values(countryNames))
+const globeNameLower = new Map<string, string>()
+for (const name of globeNameSet) {
+  globeNameLower.set(name.toLowerCase(), name)
+}
+
+export function normalizeToGlobeName(country: string): string {
+  if (!country) return country
+  if (globeNameSet.has(country)) return country
+  const lower = country.toLowerCase().trim()
+  const exact = globeNameLower.get(lower)
+  if (exact) return exact
+  return GLOBE_ALIASES[lower] ?? country
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function getCentroid(feature: any): [number, number] {
   const coords: number[][] = []

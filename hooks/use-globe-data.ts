@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { toast } from 'sonner'
 import { fetchContacts, fetchConnections, fetchVisitedCountries, fetchTags, fetchRecentInteractions, fetchAllFavors, fetchAllCountryConnections, fetchTrips } from '@/lib/api'
+import { normalizeToGlobeName } from '@/components/globe/data/country-centroids'
 import type { Contact, ContactConnection, ContactCountryConnection, Tag, Interaction, Favor, Trip } from '@/lib/db/schema'
 
 export function useGlobeData() {
@@ -49,7 +50,7 @@ export function useGlobeData() {
     load()
 
     fetchVisitedCountries(signal)
-      .then((data) => { if (Array.isArray(data)) setVisitedCountries(new Set(data)) })
+      .then((data) => { if (Array.isArray(data)) setVisitedCountries(new Set(data.map(normalizeToGlobeName))) })
       .catch((e) => { if (!signal.aborted) toast.error('Failed to load visited countries') })
 
     fetchConnections(signal)
@@ -84,7 +85,7 @@ export function useGlobeData() {
   }, [])
 
   const reloadVisitedCountries = useCallback(() => {
-    return fetchVisitedCountries().then((data) => { if (Array.isArray(data)) setVisitedCountries(new Set(data)) }).catch(() => {})
+    return fetchVisitedCountries().then((data) => { if (Array.isArray(data)) setVisitedCountries(new Set(data.map(normalizeToGlobeName))) }).catch(() => {})
   }, [])
 
   const geocodingRef = useRef(false)

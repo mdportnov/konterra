@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo } from 'react'
-import { Plane, Upload, Calendar, Clock, ArrowRight, Plus } from 'lucide-react'
+import { Plane, Upload, Calendar, Clock, ArrowRight, Plus, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
@@ -221,29 +221,35 @@ export default function TravelJourney({ trips, loading, onImport, onTripClick, o
                   </button>
                   {!isLastOverall && nextInSorted && (() => {
                     if (gapDays > 1) {
+                      const gapEndDate = nextInSorted.departureDate || nextInSorted.arrivalDate
+                      const gapStartDate = trip.arrivalDate
                       return (
                         <button
                           onClick={() => {
                             if (!onAddTrip) return
-                            const gapStart = nextInSorted.departureDate || nextInSorted.arrivalDate
-                            const startDate = new Date(gapStart)
+                            const startDate = new Date(gapEndDate)
                             startDate.setDate(startDate.getDate() + 1)
-                            const endDate = new Date(trip.arrivalDate)
+                            const endDate = new Date(gapStartDate)
                             endDate.setDate(endDate.getDate() - 1)
                             onAddTrip({
                               arrivalDate: toDateStr(startDate),
                               departureDate: toDateStr(endDate),
                             })
                           }}
-                          className="relative pl-5 py-1 flex items-center gap-1.5 w-full text-left group/gap hover:bg-blue-500/5 rounded-md transition-colors"
+                          className="relative ml-5 my-1 flex items-start gap-1.5 w-[calc(100%-1.25rem)] text-left rounded-md bg-yellow-500/10 border border-yellow-500/20 px-2.5 py-1.5 group/gap hover:bg-yellow-500/15 transition-colors cursor-pointer"
                         >
-                          <div className="absolute left-[-1px] top-0 bottom-0 w-0.5 border-l border-dashed border-blue-400/20" />
-                          <span className="text-[9px] text-muted-foreground/40 group-hover/gap:text-muted-foreground/60 transition-colors">
-                            {gapDays}d gap
-                          </span>
-                          {onAddTrip && (
-                            <Plus className="h-2.5 w-2.5 text-muted-foreground/30 group-hover/gap:text-blue-400/60 transition-colors" />
-                          )}
+                          <AlertTriangle className="h-3 w-3 text-yellow-500 shrink-0 mt-0.5" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[9px] text-yellow-600 dark:text-yellow-400 leading-tight">
+                              Dates don&apos;t connect between {formatDate(gapEndDate)} {nextInSorted.city} and {formatDate(gapStartDate)} {trip.city} — {gapDays}d gap
+                            </p>
+                            {onAddTrip && (
+                              <p className="text-[8px] text-yellow-600/60 dark:text-yellow-400/50 mt-0.5 group-hover/gap:text-yellow-600 dark:group-hover/gap:text-yellow-400 transition-colors flex items-center gap-0.5">
+                                <Plus className="h-2 w-2" />
+                                Add missing trip
+                              </p>
+                            )}
+                          </div>
                         </button>
                       )
                     }
