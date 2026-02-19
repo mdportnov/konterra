@@ -31,6 +31,10 @@ export const relationshipTypeEnum = pgEnum('relationship_type', [
 
 export const userRoleEnum = pgEnum('user_role', ['user', 'moderator', 'admin'])
 
+export const profileVisibilityEnum = pgEnum('profile_visibility', ['private', 'public'])
+
+export const profilePrivacyLevelEnum = pgEnum('profile_privacy_level', ['countries_only', 'full_travel'])
+
 export const genderEnum = pgEnum('gender', ['male', 'female'])
 
 export const communicationStyleEnum = pgEnum('communication_style', [
@@ -61,6 +65,9 @@ export const users = pgTable('users', {
   image: text('image'),
   role: userRoleEnum('role').notNull().default('user'),
   emailVerified: timestamp('email_verified', { mode: 'date' }),
+  username: text('username').unique(),
+  profileVisibility: profileVisibilityEnum('profile_visibility').notNull().default('private'),
+  profilePrivacyLevel: profilePrivacyLevelEnum('profile_privacy_level').notNull().default('countries_only'),
   createdAt: timestamp('created_at').defaultNow(),
 })
 

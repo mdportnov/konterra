@@ -31,6 +31,7 @@ interface SettingsPanelProps {
   contactCount: number
   connectionCount: number
   visitedCountryCount: number
+  visitedCityCount: number
   contactCountsByCountry: Map<string, number>
 }
 
@@ -51,6 +52,7 @@ export default function SettingsPanel({
   contactCount,
   connectionCount,
   visitedCountryCount,
+  visitedCityCount,
   contactCountsByCountry,
 }: SettingsPanelProps) {
   const [tab, setTab] = useState<Tab>(initialTab ?? 'settings')
@@ -108,6 +110,7 @@ export default function SettingsPanel({
               contactCount={contactCount}
               connectionCount={connectionCount}
               visitedCountryCount={visitedCountryCount}
+              visitedCityCount={visitedCityCount}
             />
           )}
           {tab === 'settings' && (

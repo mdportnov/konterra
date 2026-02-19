@@ -59,6 +59,7 @@ interface GlobeCanvasProps {
   highlightedContactIds?: Set<string>
   trips?: Trip[]
   selectedTripId?: string | null
+  readOnly?: boolean
 }
 
 const EMPTY_ARCS: GlobeArc[] = []
@@ -78,6 +79,7 @@ export default memo(function GlobeCanvas({
   highlightedContactIds,
   trips = [],
   selectedTripId,
+  readOnly = false,
 }: GlobeCanvasProps) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const globeRef = useRef<any>(null)
@@ -150,6 +152,7 @@ export default memo(function GlobeCanvas({
   }, [])
 
   useEffect(() => {
+    if (readOnly) return
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
@@ -165,7 +168,7 @@ export default memo(function GlobeCanvas({
         { enableHighAccuracy: false, timeout: 10000 }
       )
     }
-  }, [])
+  }, [readOnly])
 
   useEffect(() => {
     if (!userLocation || countries.length === 0) return

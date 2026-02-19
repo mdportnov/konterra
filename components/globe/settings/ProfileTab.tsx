@@ -5,10 +5,12 @@ import { signOut } from 'next-auth/react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Switch } from '@/components/ui/switch'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
-import { LogOut, Loader2, Pencil, Check, X, Users, Globe, Link2, CalendarDays, Shield, MapPin } from 'lucide-react'
+import { LogOut, Loader2, Pencil, Check, X, Users, Globe, Link2, CalendarDays, Shield, MapPin, Copy, ExternalLink } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
 import type { ProfileTabProps } from './types'
@@ -18,6 +20,9 @@ interface SessionUser {
   email?: string | null
   image?: string | null
   role?: string | null
+  username?: string | null
+  profileVisibility?: string | null
+  profilePrivacyLevel?: string | null
   createdAt?: string | null
 }
 
@@ -35,7 +40,7 @@ interface GeoSuggestion {
   lng: number
 }
 
-export function ProfileTab({ open, contactCount, connectionCount, visitedCountryCount }: ProfileTabProps) {
+export function ProfileTab({ open, contactCount, connectionCount, visitedCountryCount, visitedCityCount }: ProfileTabProps) {
   const [user, setUser] = useState<SessionUser | null>(null)
   const [signingOut, setSigningOut] = useState(false)
   const [editingName, setEditingName] = useState(false)
@@ -50,6 +55,10 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
   const [selectedGeo, setSelectedGeo] = useState<GeoSuggestion | null>(null)
   const [savingHomebase, setSavingHomebase] = useState(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const [editingUsername, setEditingUsername] = useState(false)
+  const [usernameValue, setUsernameValue] = useState('')
+  const [savingUsername, setSavingUsername] = useState(false)
 
   useEffect(() => {
     if (!open) {
@@ -179,6 +188,81 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
     }
   }
 
+  const handleEditUsername = () => {
+    setUsernameValue(user?.username || '')
+    setEditingUsername(true)
+  }
+
+  const handleCancelUsername = () => {
+    setUsernameValue('')
+    setEditingUsername(false)
+  }
+
+  const handleSaveUsername = async () => {
+    setSavingUsername(true)
+    try {
+      const res = await fetch('/api/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: usernameValue || null }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        toast.error(data.error || 'Failed to update username')
+        return
+      }
+      setUser((prev) => prev ? { ...prev, username: data.username, profileVisibility: data.profileVisibility } : prev)
+      setEditingUsername(false)
+      toast.success('Username updated')
+    } catch {
+      toast.error('Failed to update username')
+    } finally {
+      setSavingUsername(false)
+    }
+  }
+
+  const handleTogglePublic = async (checked: boolean) => {
+    try {
+      const res = await fetch('/api/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profileVisibility: checked ? 'public' : 'private' }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        toast.error(data.error || 'Failed to update')
+        return
+      }
+      setUser((prev) => prev ? { ...prev, profileVisibility: data.profileVisibility } : prev)
+    } catch {
+      toast.error('Failed to update visibility')
+    }
+  }
+
+  const handlePrivacyLevelChange = async (value: string) => {
+    try {
+      const res = await fetch('/api/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profilePrivacyLevel: value }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        toast.error(data.error || 'Failed to update')
+        return
+      }
+      setUser((prev) => prev ? { ...prev, profilePrivacyLevel: data.profilePrivacyLevel } : prev)
+    } catch {
+      toast.error('Failed to update privacy level')
+    }
+  }
+
+  const handleCopyLink = () => {
+    const url = `${window.location.origin}/u/${user?.username}`
+    navigator.clipboard.writeText(url)
+    toast.success('Profile link copied')
+  }
+
   const memberSince = user?.createdAt
     ? new Date(user.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
     : null
@@ -186,13 +270,16 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
   const stats = [
     { label: 'Contacts', value: contactCount, icon: Users },
     { label: 'Countries', value: visitedCountryCount, icon: Globe },
+    { label: 'Cities', value: visitedCityCount, icon: MapPin },
     { label: 'Connections', value: connectionCount, icon: Link2 },
-    { label: 'Member since', value: memberSince || '...', icon: CalendarDays },
   ]
 
   const homebaseDisplay = homebase?.city
     ? [homebase.city, homebase.country].filter(Boolean).join(', ')
     : null
+
+  const isPublic = user?.profileVisibility === 'public'
+  const hasUsername = !!user?.username
 
   return (
     <div className="flex flex-col h-full">
@@ -257,6 +344,124 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
               </>
             )}
           </div>
+
+          <Separator className="bg-border" />
+
+          {user && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <ExternalLink className="h-3.5 w-3.5 text-muted-foreground/60" />
+                    <span className="text-xs font-medium text-muted-foreground/60 uppercase tracking-wider">Username</span>
+                  </div>
+                  {!editingUsername && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={handleEditUsername}>
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Edit username</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                </div>
+                {editingUsername ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs text-muted-foreground shrink-0">konterra.app/u/</span>
+                      <Input
+                        value={usernameValue}
+                        onChange={(e) => setUsernameValue(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ''))}
+                        placeholder="username"
+                        className="h-8 text-sm"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleSaveUsername()
+                          if (e.key === 'Escape') handleCancelUsername()
+                        }}
+                      />
+                    </div>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={handleSaveUsername}
+                        disabled={savingUsername}
+                      >
+                        {savingUsername ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Check className="h-3 w-3 mr-1" />}
+                        Save
+                      </Button>
+                      <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={handleCancelUsername}>
+                        <X className="h-3 w-3 mr-1" />
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    {user.username ? `konterra.app/u/${user.username}` : 'Not set'}
+                  </p>
+                )}
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <p className="text-sm font-medium text-foreground">Public Profile</p>
+                  <p className="text-xs text-muted-foreground">
+                    {!hasUsername ? 'Set a username first' : 'Allow anyone to view your profile'}
+                  </p>
+                </div>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div>
+                        <Switch
+                          checked={isPublic}
+                          onCheckedChange={handleTogglePublic}
+                          disabled={!hasUsername}
+                        />
+                      </div>
+                    </TooltipTrigger>
+                    {!hasUsername && <TooltipContent>Set a username to enable</TooltipContent>}
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+
+              {isPublic && (
+                <>
+                  <div className="space-y-1.5">
+                    <p className="text-xs font-medium text-muted-foreground/60 uppercase tracking-wider">Privacy Level</p>
+                    <Select
+                      value={user.profilePrivacyLevel || 'countries_only'}
+                      onValueChange={handlePrivacyLevelChange}
+                    >
+                      <SelectTrigger className="h-8 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="countries_only">Countries only</SelectItem>
+                        <SelectItem value="full_travel">Full travel history</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full h-8 text-xs"
+                    onClick={handleCopyLink}
+                  >
+                    <Copy className="h-3 w-3 mr-1.5" />
+                    Copy profile link
+                  </Button>
+                </>
+              )}
+            </div>
+          )}
 
           <Separator className="bg-border" />
 

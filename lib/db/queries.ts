@@ -24,8 +24,21 @@ export async function createWaitlistEntry(data: { email: string; name: string; m
 export async function getUserById(id: string) {
   return db.query.users.findFirst({
     where: eq(users.id, id),
-    columns: { id: true, email: true, name: true, image: true, role: true, createdAt: true },
+    columns: { id: true, email: true, name: true, image: true, role: true, username: true, profileVisibility: true, profilePrivacyLevel: true, createdAt: true },
   })
+}
+
+export async function getUserByUsername(username: string) {
+  return db.query.users.findFirst({
+    where: eq(users.username, username),
+    columns: { id: true, name: true, image: true, username: true, profileVisibility: true, profilePrivacyLevel: true, createdAt: true },
+  })
+}
+
+export async function getPublicProfileData(userId: string, privacyLevel: 'countries_only' | 'full_travel') {
+  const countries = await getVisitedCountries(userId)
+  const tripsData = privacyLevel === 'full_travel' ? await getTripsByUserId(userId) : undefined
+  return { countries, trips: tripsData }
 }
 
 export async function upsertUser(id: string, email: string, name: string, password: string) {
@@ -37,7 +50,13 @@ export async function upsertUser(id: string, email: string, name: string, passwo
   return row ?? db.query.users.findFirst({ where: eq(users.id, id) })
 }
 
-export async function updateUserProfile(id: string, data: { name?: string; image?: string | null }) {
+export async function updateUserProfile(id: string, data: {
+  name?: string
+  image?: string | null
+  username?: string | null
+  profileVisibility?: 'private' | 'public'
+  profilePrivacyLevel?: 'countries_only' | 'full_travel'
+}) {
   const [updated] = await db.update(users).set(data).where(eq(users.id, id)).returning()
   return updated
 }

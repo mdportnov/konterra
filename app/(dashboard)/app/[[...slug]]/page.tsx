@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, use } from 'react'
+import { useState, useEffect, useCallback, useMemo, use } from 'react'
 import dynamic from 'next/dynamic'
 import DashboardPanel from '@/components/dashboard/DashboardPanel'
 import GlobePanel from '@/components/globe/GlobePanel'
@@ -124,6 +124,15 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
     data.reloadVisitedCountries()
   }, [data.reloadTrips, data.reloadVisitedCountries])
 
+  const visitedCityCount = useMemo(() => {
+    const now = new Date()
+    return new Set(
+      data.trips
+        .filter((t) => new Date(t.arrivalDate) <= now)
+        .map((t) => t.city)
+    ).size
+  }, [data.trips])
+
   useEffect(() => {
     if (!data.loading) nav.resolveInitialContact(data.contacts)
   }, [data.loading, data.contacts, nav.resolveInitialContact])
@@ -227,6 +236,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
         contactCount={data.contacts.length}
         connectionCount={data.connections.length}
         visitedCountryCount={data.visitedCountries.size}
+        visitedCityCount={visitedCityCount}
         contactCountsByCountry={popups.contactCountsByCountry}
       />
 

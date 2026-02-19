@@ -18,6 +18,7 @@ export interface ProfileTabProps {
   contactCount: number
   connectionCount: number
   visitedCountryCount: number
+  visitedCityCount: number
 }
 
 export interface SettingsTabProps {
