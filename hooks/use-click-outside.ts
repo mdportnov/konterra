@@ -31,6 +31,9 @@ export function useClickOutside(
         if (target.closest?.('[data-globe-panel]')) return
         if (target.closest?.('[data-radix-popper-content-wrapper]')) return
         if (target.closest?.('[role="dialog"], [data-slot="dialog-overlay"]')) return
+        if (target.closest?.('[data-radix-select-content]')) return
+        if (target.hasAttribute?.('data-radix-focus-guard')) return
+        if (document.querySelector('[data-radix-popper-content-wrapper]')) return
         handler()
       }
     }

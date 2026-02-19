@@ -4,6 +4,8 @@ import { useMemo } from 'react'
 import dynamic from 'next/dynamic'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Globe, MapPin, Calendar } from 'lucide-react'
+import { normalizeToGlobeName } from '@/components/globe/data/country-centroids'
+import { countryFlag } from '@/lib/country-flags'
 import type { Trip } from '@/lib/db/schema'
 import type { DisplayOptions } from '@/types/display'
 
@@ -22,7 +24,7 @@ interface PublicProfilePageProps {
 }
 
 export default function PublicProfilePage({ user, privacyLevel, countries, trips = [] }: PublicProfilePageProps) {
-  const visitedCountries = useMemo(() => new Set(countries), [countries])
+  const visitedCountries = useMemo(() => new Set(countries.map(normalizeToGlobeName)), [countries])
 
   const display: DisplayOptions = useMemo(() => ({
     arcMode: 'off',
@@ -92,7 +94,7 @@ export default function PublicProfilePage({ user, privacyLevel, countries, trips
               <div className="flex flex-wrap gap-1">
                 {countries.slice(0, 20).map((c) => (
                   <span key={c} className="inline-block rounded-md bg-muted/50 border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground">
-                    {c}
+                    {countryFlag(c)} {c}
                   </span>
                 ))}
                 {countries.length > 20 && (
@@ -110,6 +112,13 @@ export default function PublicProfilePage({ user, privacyLevel, countries, trips
               <span>Member since {memberSince}</span>
             </div>
           )}
+
+          <a
+            href="/login"
+            className="block w-full text-center rounded-lg bg-orange-500 hover:bg-orange-600 text-white text-xs font-medium py-2 transition-colors"
+          >
+            Join Konterra to track your travels
+          </a>
         </div>
       </div>
     </div>

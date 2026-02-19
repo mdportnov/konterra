@@ -1,10 +1,5 @@
-import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Globe } from 'lucide-react'
-
-export const metadata: Metadata = {
-  title: 'Public Profile',
-}
 
 export default function PublicProfileLayout({ children }: { children: React.ReactNode }) {
   return (

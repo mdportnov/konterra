@@ -616,6 +616,9 @@ export default memo(function GlobeCanvas({
       if (tripCount > 0) parts.push(`${tripCount} trip${tripCount === 1 ? '' : 's'}`)
       if (futureTravelCountries.has(name)) parts.push('Upcoming')
     }
+    if (!showNetwork && !showTravel && visitedCountries?.has(name)) {
+      parts.push('Visited')
+    }
     const label = parts.join(' <span style="opacity:0.4">&middot;</span> ')
     return `<div style="background:${bg};color:${textColor};padding:5px 10px;border-radius:6px;font-size:11px;backdrop-filter:blur(12px);border:1px solid ${border};font-family:system-ui,sans-serif;line-height:1.4;box-shadow:0 2px 8px rgba(0,0,0,${isDark ? '0.4' : '0.08'})">${label}</div>`
   }, [isDark, countryContactCount, countryConnectionCountMap, visitedCountries, userCountry, showNetwork, showTravel, trips, futureTravelCountries])
@@ -648,6 +651,9 @@ export default memo(function GlobeCanvas({
         if (futureTravelCountries.has(name) && !(countryContactCount.get(name) || 0)) return isDark ? TRAVEL_COLORS.futureCountry.dark : TRAVEL_COLORS.futureCountry.light
         if (pastTravelCountries.has(name) && !(countryContactCount.get(name) || 0)) return isDark ? TRAVEL_COLORS.pastCountry.dark : TRAVEL_COLORS.pastCountry.light
       }
+      if (!showNetwork && !showTravel && visitedCountries?.has(name)) {
+        return isDark ? POLYGON_COLORS.visitedOnly.dark : POLYGON_COLORS.visitedOnly.light
+      }
     }
     return isDark ? POLYGON_COLORS.defaultCap.dark : POLYGON_COLORS.defaultCap.light
   }, [isDark, countryContactCount, visitedCountries, indirectOnlyCountries, userCountry, showNetwork, showTravel, pastTravelCountries, futureTravelCountries])
@@ -679,6 +685,9 @@ export default memo(function GlobeCanvas({
         if (showTravel && showNetwork) {
           if (futureTravelCountries.has(name) && !(countryContactCount.get(name) || 0)) return isDark ? TRAVEL_COLORS.futureStroke.dark : TRAVEL_COLORS.futureStroke.light
           if (pastTravelCountries.has(name) && !(countryContactCount.get(name) || 0)) return isDark ? TRAVEL_COLORS.pastStroke.dark : TRAVEL_COLORS.pastStroke.light
+        }
+        if (!showNetwork && !showTravel && visitedCountries?.has(name)) {
+          return isDark ? POLYGON_COLORS.visitedStroke.dark : POLYGON_COLORS.visitedStroke.light
         }
       }
       return isDark ? POLYGON_COLORS.defaultStroke.dark : POLYGON_COLORS.defaultStroke.light

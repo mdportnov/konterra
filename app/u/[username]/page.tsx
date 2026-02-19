@@ -1,12 +1,44 @@
+import type { Metadata } from 'next'
 import { getUserByUsername, getPublicProfileData } from '@/lib/db/queries'
 import ProfileStub from '@/components/public/ProfileStub'
 import PublicProfilePage from '@/components/public/PublicProfilePage'
 
-export default async function PublicProfilePageRoute({
-  params,
-}: {
+interface Props {
   params: Promise<{ username: string }>
-}) {
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { username } = await params
+  const user = await getUserByUsername(username)
+
+  if (!user || user.profileVisibility !== 'public') {
+    return { title: 'Profile | Konterra' }
+  }
+
+  const { countries } = await getPublicProfileData(user.id, user.profilePrivacyLevel)
+  const name = user.name || username
+  const title = `${name} — ${countries.length} countries | Konterra`
+  const description = `${name} (@${username}) has visited ${countries.length} countries. Track your travel on Konterra.`
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: 'profile',
+      url: `https://konterra.app/u/${username}`,
+      siteName: 'Konterra',
+    },
+    twitter: {
+      card: 'summary',
+      title,
+      description,
+    },
+  }
+}
+
+export default async function PublicProfilePageRoute({ params }: Props) {
   const { username } = await params
   const user = await getUserByUsername(username)
 
