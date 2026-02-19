@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { unauthorized, badRequest, notFound, success, serverError } from '@/lib/api-utils'
-import { getUserById, updateUserProfile, getUserByUsername } from '@/lib/db/queries'
+import { getUserById, getUserProfile, updateUserProfile, getUserByUsername } from '@/lib/db/queries'
 
 const USERNAME_RE = /^[a-z0-9][a-z0-9_-]{1,28}[a-z0-9]$/
 
@@ -10,7 +10,7 @@ export async function GET() {
   if (!session?.user?.id) return unauthorized()
 
   try {
-    const user = await getUserById(session.user.id)
+    const user = await getUserProfile(session.user.id)
     return success({
       name: user?.name ?? session.user.name ?? '',
       email: user?.email ?? session.user.email ?? '',

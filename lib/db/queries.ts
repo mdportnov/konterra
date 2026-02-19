@@ -24,6 +24,13 @@ export async function createWaitlistEntry(data: { email: string; name: string; m
 export async function getUserById(id: string) {
   return db.query.users.findFirst({
     where: eq(users.id, id),
+    columns: { id: true, email: true, name: true, image: true, role: true, username: true, profileVisibility: true, profilePrivacyLevel: true, createdAt: true },
+  })
+}
+
+export async function getUserProfile(id: string) {
+  return db.query.users.findFirst({
+    where: eq(users.id, id),
     columns: { id: true, email: true, name: true, image: true, role: true, username: true, profileVisibility: true, profilePrivacyLevel: true, globeAutoRotate: true, createdAt: true },
   })
 }
