@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { SessionProvider } from 'next-auth/react'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
+import { TooltipProvider } from '@/components/ui/tooltip'
 
 type Theme = 'light' | 'dark' | 'system'
 
@@ -71,7 +72,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <ErrorBoundary>
       <SessionProvider>
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          <TooltipProvider>{children}</TooltipProvider>
+        </ThemeProvider>
       </SessionProvider>
     </ErrorBoundary>
   )
