@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ThemeToggle } from '@/components/theme-toggle'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Switch } from '@/components/ui/switch'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { Loader2, Upload, Download, Trash2, Copy } from 'lucide-react'
 import { toast } from 'sonner'
 import type { ArcMode } from '@/types/display'
@@ -25,6 +26,8 @@ function isArcMode(v: string): v is ArcMode {
 export function SettingsTab({
   displayOptions,
   onDisplayChange,
+  defaultTab,
+  onDefaultTabChange,
   onOpenImport,
   onOpenExport,
   onOpenDuplicates,
@@ -90,6 +93,22 @@ export function SettingsTab({
               checked={displayOptions.showLabels}
               onCheckedChange={(v) => onDisplayChange({ ...displayOptions, showLabels: v })}
             />
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-muted-foreground">Default tab</span>
+            <ToggleGroup
+              type="single"
+              value={defaultTab}
+              onValueChange={(v) => { if (v === 'connections' || v === 'travel') onDefaultTabChange(v) }}
+              className="gap-0"
+            >
+              <ToggleGroupItem value="connections" className="h-8 px-3 text-xs rounded-r-none data-[state=on]:bg-accent data-[state=on]:text-foreground">
+                Connections
+              </ToggleGroupItem>
+              <ToggleGroupItem value="travel" className="h-8 px-3 text-xs rounded-l-none data-[state=on]:bg-accent data-[state=on]:text-foreground">
+                Travel
+              </ToggleGroupItem>
+            </ToggleGroup>
           </div>
         </div>
 

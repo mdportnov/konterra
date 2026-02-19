@@ -1,4 +1,5 @@
 import type { DisplayOptions } from '@/types/display'
+import type { DashboardTab } from '@/hooks/use-dashboard-routing'
 
 export const TABS = [
   { value: 'profile', label: 'Profile' },
@@ -22,6 +23,8 @@ export interface ProfileTabProps {
 export interface SettingsTabProps {
   displayOptions: DisplayOptions
   onDisplayChange: (opts: DisplayOptions) => void
+  defaultTab: DashboardTab
+  onDefaultTabChange: (tab: DashboardTab) => void
   onOpenImport?: () => void
   onOpenExport?: () => void
   onOpenDuplicates?: () => void
