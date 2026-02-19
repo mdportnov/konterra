@@ -24,14 +24,14 @@ export async function createWaitlistEntry(data: { email: string; name: string; m
 export async function getUserById(id: string) {
   return db.query.users.findFirst({
     where: eq(users.id, id),
-    columns: { id: true, email: true, name: true, image: true, role: true, username: true, profileVisibility: true, profilePrivacyLevel: true, createdAt: true },
+    columns: { id: true, email: true, name: true, image: true, role: true, username: true, profileVisibility: true, profilePrivacyLevel: true, globeAutoRotate: true, createdAt: true },
   })
 }
 
 export async function getUserByUsername(username: string) {
   return db.query.users.findFirst({
     where: eq(users.username, username),
-    columns: { id: true, name: true, image: true, username: true, profileVisibility: true, profilePrivacyLevel: true, createdAt: true },
+    columns: { id: true, name: true, image: true, username: true, profileVisibility: true, profilePrivacyLevel: true, globeAutoRotate: true, createdAt: true },
   })
 }
 
@@ -56,6 +56,7 @@ export async function updateUserProfile(id: string, data: {
   username?: string | null
   profileVisibility?: 'private' | 'public'
   profilePrivacyLevel?: 'countries_only' | 'full_travel'
+  globeAutoRotate?: boolean
 }) {
   const [updated] = await db.update(users).set(data).where(eq(users.id, id)).returning()
   return updated

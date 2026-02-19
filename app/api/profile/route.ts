@@ -19,6 +19,7 @@ export async function GET() {
       username: user?.username ?? null,
       profileVisibility: user?.profileVisibility ?? 'private',
       profilePrivacyLevel: user?.profilePrivacyLevel ?? 'countries_only',
+      globeAutoRotate: user?.globeAutoRotate ?? true,
       createdAt: user?.createdAt ?? null,
     })
   } catch (err) {
@@ -31,6 +32,7 @@ export async function GET() {
       username: null,
       profileVisibility: 'private',
       profilePrivacyLevel: 'countries_only',
+      globeAutoRotate: true,
       createdAt: null,
     })
   }
@@ -48,6 +50,7 @@ export async function PATCH(req: Request) {
       username?: string | null
       profileVisibility?: 'private' | 'public'
       profilePrivacyLevel?: 'countries_only' | 'full_travel'
+      globeAutoRotate?: boolean
     } = {}
 
     if (typeof body.name === 'string') {
@@ -89,6 +92,10 @@ export async function PATCH(req: Request) {
       data.profilePrivacyLevel = body.profilePrivacyLevel
     }
 
+    if (typeof body.globeAutoRotate === 'boolean') {
+      data.globeAutoRotate = body.globeAutoRotate
+    }
+
     if (Object.keys(data).length === 0) {
       return badRequest('No valid fields to update')
     }
@@ -102,6 +109,7 @@ export async function PATCH(req: Request) {
       username: updated.username,
       profileVisibility: updated.profileVisibility,
       profilePrivacyLevel: updated.profilePrivacyLevel,
+      globeAutoRotate: updated.globeAutoRotate,
     })
   } catch (err) {
     console.error('[PATCH /api/profile]', err)

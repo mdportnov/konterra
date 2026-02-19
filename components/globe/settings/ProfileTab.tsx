@@ -23,6 +23,7 @@ interface SessionUser {
   username?: string | null
   profileVisibility?: string | null
   profilePrivacyLevel?: string | null
+  globeAutoRotate?: boolean | null
   createdAt?: string | null
 }
 
@@ -447,6 +448,33 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
                         <SelectItem value="full_travel">Full travel history</SelectItem>
                       </SelectContent>
                     </Select>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <p className="text-sm font-medium text-foreground">Globe auto-rotation</p>
+                      <p className="text-xs text-muted-foreground">Rotate globe on your public profile</p>
+                    </div>
+                    <Switch
+                      checked={user.globeAutoRotate !== false}
+                      onCheckedChange={async (checked) => {
+                        try {
+                          const res = await fetch('/api/profile', {
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ globeAutoRotate: checked }),
+                          })
+                          const data = await res.json()
+                          if (!res.ok) {
+                            toast.error(data.error || 'Failed to update')
+                            return
+                          }
+                          setUser((prev) => prev ? { ...prev, globeAutoRotate: data.globeAutoRotate } : prev)
+                        } catch {
+                          toast.error('Failed to update auto-rotation')
+                        }
+                      }}
+                    />
                   </div>
 
                   <Button

@@ -68,6 +68,7 @@ export const users = pgTable('users', {
   username: text('username').unique(),
   profileVisibility: profileVisibilityEnum('profile_visibility').notNull().default('private'),
   profilePrivacyLevel: profilePrivacyLevelEnum('profile_privacy_level').notNull().default('countries_only'),
+  globeAutoRotate: boolean('globe_auto_rotate').notNull().default(true),
   createdAt: timestamp('created_at').defaultNow(),
 })
 

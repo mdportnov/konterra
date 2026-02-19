@@ -63,6 +63,7 @@ export default async function PublicProfilePageRoute({ params }: Props) {
       privacyLevel={user.profilePrivacyLevel}
       countries={countries}
       trips={trips}
+      globeAutoRotate={user.globeAutoRotate}
     />
   )
 }

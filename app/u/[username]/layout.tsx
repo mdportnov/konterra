@@ -1,5 +1,8 @@
+'use client'
+
 import Link from 'next/link'
 import { Globe } from 'lucide-react'
+import { ThemeToggle } from '@/components/theme-toggle'
 
 export default function PublicProfileLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -9,12 +12,15 @@ export default function PublicProfileLayout({ children }: { children: React.Reac
           <Globe className="h-5 w-5 text-orange-500" />
           <span className="font-semibold text-sm">Konterra</span>
         </Link>
-        <Link
-          href="/login"
-          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-        >
-          Sign in
-        </Link>
+        <div className="flex items-center gap-3">
+          <ThemeToggle />
+          <Link
+            href="/login"
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Sign in
+          </Link>
+        </div>
       </header>
       {children}
     </div>

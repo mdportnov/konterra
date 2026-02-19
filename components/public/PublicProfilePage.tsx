@@ -21,18 +21,19 @@ interface PublicProfilePageProps {
   privacyLevel: string
   countries: string[]
   trips?: Trip[]
+  globeAutoRotate?: boolean
 }
 
-export default function PublicProfilePage({ user, privacyLevel, countries, trips = [] }: PublicProfilePageProps) {
+export default function PublicProfilePage({ user, privacyLevel, countries, trips = [], globeAutoRotate }: PublicProfilePageProps) {
   const visitedCountries = useMemo(() => new Set(countries.map(normalizeToGlobeName)), [countries])
 
   const display: DisplayOptions = useMemo(() => ({
     arcMode: 'off',
     showNetwork: false,
     showTravel: privacyLevel === 'full_travel' && trips.length > 0,
-    autoRotate: true,
+    autoRotate: globeAutoRotate ?? true,
     showLabels: true,
-  }), [privacyLevel, trips.length])
+  }), [privacyLevel, trips.length, globeAutoRotate])
 
   const initials = user.name
     ?.split(' ')
@@ -58,8 +59,8 @@ export default function PublicProfilePage({ user, privacyLevel, countries, trips
         readOnly
       />
 
-      <div className="absolute top-4 left-4 max-w-xs w-full">
-        <div className="rounded-xl border border-border bg-card/80 backdrop-blur-xl p-5 space-y-4">
+      <div className="absolute bottom-0 left-0 right-0 sm:bottom-auto sm:right-auto sm:top-4 sm:left-4 sm:max-w-xs w-full">
+        <div className="rounded-t-xl sm:rounded-xl border border-border bg-card/80 backdrop-blur-xl p-5 space-y-4 max-h-[35dvh] sm:max-h-none overflow-y-auto">
           <div className="flex items-center gap-3">
             <Avatar className="h-14 w-14 border-2 border-border shrink-0">
               <AvatarImage src={user.image || undefined} />
