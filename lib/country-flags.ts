@@ -45,9 +45,35 @@ const NAME_TO_ALPHA2: Record<string, string> = {
   'Tonga': 'TO', 'Samoa': 'WS',
 }
 
+const ALIASES: Record<string, string> = {
+  'South Korea': 'KR', 'North Korea': 'KP',
+  'United States': 'US', 'United Kingdom': 'GB',
+  'United Arab Emirates': 'AE', 'Dominican Republic': 'DO',
+  'Central African Republic': 'CF', 'DR Congo': 'CD',
+  'Democratic Republic of the Congo': 'CD',
+  'Bosnia and Herzegovina': 'BA', 'Equatorial Guinea': 'GQ',
+  'North Macedonia': 'MK', 'South Sudan': 'SS',
+  'Papua New Guinea': 'PG', 'Trinidad and Tobago': 'TT',
+  'Solomon Islands': 'SB', 'Falkland Islands': 'FK',
+  'Western Sahara': 'EH', 'Northern Cyprus': 'CY',
+  'Ivory Coast': 'CI', "Cote d'Ivoire": 'CI',
+  'Czech Republic': 'CZ', 'East Timor': 'TL',
+  'Swaziland': 'SZ', 'Hong Kong': 'HK', 'Macau': 'MO',
+  'Singapore': 'SG', 'Monaco': 'MC', 'Malta': 'MT',
+  'Maldives': 'MV', 'Bahrain': 'BH', 'Barbados': 'BB',
+  'Seychelles': 'SC', 'Mauritius': 'MU', 'Cape Verde': 'CV',
+  'Andorra': 'AD', 'Liechtenstein': 'LI', 'San Marino': 'SM',
+  'Vatican City': 'VA', 'Belize': 'BZ', 'Grenada': 'GD',
+  'Dominica': 'DM', 'Bahamas': 'BS', 'Comoros': 'KM',
+  'Kiribati': 'KI', 'Nauru': 'NR', 'Tuvalu': 'TV',
+  'Palau': 'PW', 'Marshall Islands': 'MH', 'Micronesia': 'FM',
+  'Saint Lucia': 'LC', 'Saint Kitts and Nevis': 'KN',
+  'Antigua and Barbuda': 'AG', 'Kosovo': 'XK',
+}
+
 export function countryFlag(name: string | null | undefined): string {
   if (!name) return ''
-  const code = NAME_TO_ALPHA2[name]
+  const code = NAME_TO_ALPHA2[name] ?? ALIASES[name]
   if (!code) return ''
   return String.fromCodePoint(
     ...code.split('').map((c) => 0x1f1e6 + c.charCodeAt(0) - 65)

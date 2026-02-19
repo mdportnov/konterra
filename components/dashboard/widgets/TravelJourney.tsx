@@ -1,7 +1,7 @@
 'use client'
 
-import { useMemo } from 'react'
-import { Plane, Upload, Calendar, Clock, ArrowRight, Plus, AlertTriangle } from 'lucide-react'
+import { useState, useMemo } from 'react'
+import { Plane, Upload, Calendar, Clock, ArrowRight, Plus, AlertTriangle, Search, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
@@ -43,6 +43,7 @@ function computeGap(laterTrip: Trip, earlierTrip: Trip): number {
 
 export default function TravelJourney({ trips, loading, onImport, onTripClick, onAddTrip }: TravelJourneyProps) {
   const now = useMemo(() => new Date(), [])
+  const [search, setSearch] = useState('')
 
   const stats = useMemo(() => {
     const pastCountries = new Set<string>()
@@ -62,16 +63,24 @@ export default function TravelJourney({ trips, loading, onImport, onTripClick, o
     [trips]
   )
 
+  const filtered = useMemo(() => {
+    if (!search.trim()) return sorted
+    const q = search.toLowerCase().trim()
+    return sorted.filter((t) =>
+      t.city.toLowerCase().includes(q) || t.country.toLowerCase().includes(q)
+    )
+  }, [sorted, search])
+
   const groupedByYear = useMemo(() => {
     const groups = new Map<number, Trip[]>()
-    for (const trip of sorted) {
+    for (const trip of filtered) {
       const year = formatYear(trip.arrivalDate)
       const arr = groups.get(year) || []
       arr.push(trip)
       groups.set(year, arr)
     }
     return Array.from(groups.entries()).sort((a, b) => b[0] - a[0])
-  }, [sorted])
+  }, [filtered])
 
   if (loading) {
     return (
@@ -177,6 +186,24 @@ export default function TravelJourney({ trips, loading, onImport, onTripClick, o
         </div>
       </div>
 
+      {trips.length > 5 && (
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground/40" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by city or country..."
+            className="w-full h-7 rounded-md border border-input bg-muted/50 pl-7 pr-7 text-xs text-foreground placeholder:text-muted-foreground/40 outline-none focus:ring-1 focus:ring-orange-500/30 focus:border-orange-500/50"
+          />
+          {search && (
+            <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground/40 hover:text-foreground transition-colors">
+              <X className="h-3 w-3" />
+            </button>
+          )}
+        </div>
+      )}
+
       <div className="relative ml-2.5">
         <div className="absolute left-0 top-2 bottom-2 w-0.5 bg-blue-400/30 rounded-full" />
         {groupedByYear.map(([year, yearTrips]) => (
@@ -186,8 +213,9 @@ export default function TravelJourney({ trips, loading, onImport, onTripClick, o
             </div>
             {yearTrips.map((trip) => {
               const idx = globalIdx++
-              const nextInSorted = sorted[idx + 1]
-              const isLastOverall = idx === sorted.length - 1
+              const nextInSorted = filtered[idx + 1]
+              const isLastOverall = idx === filtered.length - 1
+              const isSearching = search.trim().length > 0
               const isFuture = new Date(trip.arrivalDate) > now
 
               const gapDays = nextInSorted ? computeGap(trip, nextInSorted) : 0
@@ -219,7 +247,7 @@ export default function TravelJourney({ trips, loading, onImport, onTripClick, o
                       </div>
                     </div>
                   </button>
-                  {!isLastOverall && nextInSorted && (() => {
+                  {!isSearching && !isLastOverall && nextInSorted && (() => {
                     if (gapDays > 1) {
                       const gapEndDate = nextInSorted.departureDate || nextInSorted.arrivalDate
                       const gapStartDate = trip.arrivalDate
