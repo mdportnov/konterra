@@ -31,6 +31,14 @@ import { trajectoryIcon, trajectoryColor, computeTrajectory, computeRelationship
 import { fetchContactInteractions, fetchContactConnections, fetchContactFavors, fetchContactCountryConnections } from '@/lib/api'
 import type { Contact, Interaction, ContactConnection, ContactCountryConnection, Favor } from '@/lib/db/schema'
 import type { ConnectedContact } from '@/components/globe/ContactDetail'
+import { PerplexityIcon } from '@/components/icons/perplexity'
+
+function buildPerplexityUrl(city: string | null, country: string | null): string {
+  const location = [city, country].filter(Boolean).join(', ')
+  if (!location) return ''
+  const query = `Best hidden gems, specialty coffee shops, cocktail bars, popular local spots, and networking-friendly places in ${location}`
+  return `https://www.perplexity.ai/search?q=${encodeURIComponent(query)}`
+}
 
 export interface ContactDetailContentProps {
   contact: Contact
@@ -530,6 +538,28 @@ export default function ContactDetailContent({
             <ArrowLeft className="h-4 w-4" />
             <span className="text-xs">Back</span>
           </Button>
+        )}
+        {(contact.city || contact.country) && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <a
+                  href={buildPerplexityUrl(contact.city, contact.country)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8 !text-muted-foreground hover:!text-[#20808D] hover:!bg-[#20808D]/10"
+                  >
+                    <PerplexityIcon className="h-4 w-4" />
+                  </Button>
+                </a>
+              </TooltipTrigger>
+              <TooltipContent>Explore location on Perplexity</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         )}
         <TooltipProvider>
           <Tooltip>
