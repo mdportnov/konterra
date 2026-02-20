@@ -32,7 +32,6 @@ export default function PublicProfilePage({ user, privacyLevel, countries, trips
     showNetwork: false,
     showTravel: privacyLevel === 'full_travel' && trips.length > 0,
     autoRotate: globeAutoRotate ?? true,
-    showLabels: true,
   }), [privacyLevel, trips.length, globeAutoRotate])
 
   const initials = user.name

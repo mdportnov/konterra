@@ -728,7 +728,7 @@ export default memo(function GlobeCanvas({
         pointColor={getPointColor}
         pointRadius={getPointRadius}
         pointAltitude={0.015}
-        pointLabel={display.showLabels ? getPointLabel : undefined}
+        pointLabel={getPointLabel}
         onPointClick={handlePointClick}
         arcsData={allArcs}
         arcStartLat="startLat"

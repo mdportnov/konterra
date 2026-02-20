@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { DatePickerField } from '@/components/globe/contact-edit'
+import { DatePickerField, CountrySelect } from '@/components/globe/contact-edit'
 import { toast } from 'sonner'
 import type { Trip } from '@/lib/db/schema'
 
@@ -127,10 +127,7 @@ export default function TripEditDialog({ open, onOpenChange, trip, prefill, trip
               <Label className="text-xs text-muted-foreground">City *</Label>
               <Input value={city} onChange={(e) => setCity(e.target.value)} placeholder="Berlin" className="h-8 text-sm" />
             </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">Country *</Label>
-              <Input value={country} onChange={(e) => setCountry(e.target.value)} placeholder="Germany" className="h-8 text-sm" />
-            </div>
+            <CountrySelect label="Country *" value={country} onChange={setCountry} />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <DatePickerField label="Arrival *" value={arrivalDate} onChange={setArrivalDate} />

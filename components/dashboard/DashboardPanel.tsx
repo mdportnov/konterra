@@ -27,6 +27,7 @@ interface DashboardPanelProps {
   onCountryConnectionsChange?: (contactId: string, connections: ContactCountryConnection[]) => void
   onOpenInsights?: () => void
   onOpenSettings?: () => void
+  onOpenProfile?: () => void
   isMobile?: boolean
   onSwitchToGlobe?: () => void
   contactsLoading?: boolean
@@ -59,6 +60,7 @@ export default function DashboardPanel({
   onCountryConnectionsChange,
   onOpenInsights,
   onOpenSettings,
+  onOpenProfile,
   isMobile,
   onSwitchToGlobe,
   contactsLoading = false,
@@ -123,7 +125,7 @@ export default function DashboardPanel({
             onContactClick={onContactClick}
             onAddContact={onAddContact}
             onOpenInsights={onOpenInsights}
-            onOpenSettings={onOpenSettings}
+            onOpenProfile={onOpenProfile}
             contactsLoading={contactsLoading}
             onSelectionChange={onSelectionChange}
             onBulkDelete={onBulkDelete}

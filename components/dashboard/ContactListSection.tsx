@@ -45,7 +45,7 @@ interface ContactListSectionProps {
   onContactClick: (contact: Contact) => void
   onAddContact: () => void
   onOpenInsights?: () => void
-  onOpenSettings?: () => void
+  onOpenProfile?: () => void
   contactsLoading: boolean
   onSelectionChange?: (ids: Set<string>) => void
   onBulkDelete?: (ids: string[]) => void
@@ -59,7 +59,7 @@ export default function ContactListSection({
   onContactClick,
   onAddContact,
   onOpenInsights,
-  onOpenSettings,
+  onOpenProfile,
   contactsLoading,
   onSelectionChange,
   onBulkDelete,
@@ -352,31 +352,36 @@ export default function ContactListSection({
   }, [selectedIds, contacts])
 
   const selfContact = contacts.find((c) => c.isSelf)
+  const nonSelfContacts = contacts.filter((c) => !c.isSelf)
 
   return (
     <div className="p-4 md:p-5 space-y-5 md:space-y-6">
-      {selfContact && <SelfProfileCard contact={selfContact} onOpenSettings={onOpenSettings || (() => {})} />}
+      {selfContact && <SelfProfileCard contact={selfContact} onOpenProfile={onOpenProfile || (() => {})} />}
       {!contactsLoading && contacts.length < 3 && (
         <GettingStartedCard
           contacts={contacts}
           connections={connections}
           recentInteractions={recentInteractions}
           onAddContact={onAddContact}
-          onOpenSettings={onOpenSettings || (() => {})}
+          onOpenProfile={onOpenProfile || (() => {})}
         />
       )}
       <StatsRow contacts={contacts} loading={contactsLoading} />
-      <NetworkHealth contacts={contacts} interactions={recentInteractions} loading={contactsLoading || interactionsLoading} />
+      {nonSelfContacts.length > 0 && (
+        <NetworkHealth contacts={contacts} interactions={recentInteractions} loading={contactsLoading || interactionsLoading} />
+      )}
       <ReconnectAlerts contacts={contacts} onContactClick={onContactClick} loading={contactsLoading} />
       <FavorLedger favors={favors} contacts={contacts} onContactClick={onContactClick} loading={contactsLoading || favorsLoading} />
-      <ConnectionInsightsSummary
-        contacts={contacts}
-        connections={connections}
-        interactions={recentInteractions}
-        favors={favors}
-        onOpenInsights={onOpenInsights || (() => {})}
-        loading={contactsLoading || interactionsLoading || favorsLoading}
-      />
+      {nonSelfContacts.length > 0 && (
+        <ConnectionInsightsSummary
+          contacts={contacts}
+          connections={connections}
+          interactions={recentInteractions}
+          favors={favors}
+          onOpenInsights={onOpenInsights || (() => {})}
+          loading={contactsLoading || interactionsLoading || favorsLoading}
+        />
+      )}
       <TopCountriesChart contacts={contacts} loading={contactsLoading} />
       <ActivityTimeline
         interactions={recentInteractions}
@@ -401,7 +406,7 @@ export default function ContactListSection({
                 <TooltipTrigger asChild>
                   <button
                     onClick={() => selectMode ? exitSelectMode() : setSelectMode(true)}
-                    className={`p-1 rounded transition-colors ${selectMode ? 'text-orange-500 bg-orange-500/10' : 'text-muted-foreground/60 hover:text-muted-foreground'}`}
+                    className={`p-1 rounded-md transition-colors ${selectMode ? 'text-orange-500 bg-orange-500/10' : 'text-muted-foreground/60 hover:text-muted-foreground'}`}
                   >
                     <CheckSquare className="h-3.5 w-3.5" />
                   </button>
@@ -438,7 +443,7 @@ export default function ContactListSection({
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             ref={searchRef}
-            placeholder="Search contacts... (\u2318K)"
+            placeholder={`Search contacts... (\u2318K)`}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9 bg-muted/50 border-border text-foreground placeholder:text-muted-foreground/60 focus:border-ring"
@@ -674,7 +679,7 @@ export default function ContactListSection({
   )
 }
 
-function SelfProfileCard({ contact, onOpenSettings }: { contact: Contact; onOpenSettings: () => void }) {
+function SelfProfileCard({ contact, onOpenProfile }: { contact: Contact; onOpenProfile: () => void }) {
   return (
     <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/30 border border-border">
       <Avatar className="h-9 w-9 shrink-0">
@@ -689,7 +694,7 @@ function SelfProfileCard({ contact, onOpenSettings }: { contact: Contact; onOpen
           {[contact.city, contact.country].filter(Boolean).join(', ')
             ? <>{[contact.city, contact.country].filter(Boolean).join(', ')} {countryFlag(contact.country)}</>
             : (
-            <button onClick={onOpenSettings} className="text-orange-500 hover:text-orange-600 transition-colors cursor-pointer">
+            <button onClick={onOpenProfile} className="text-orange-500 hover:text-orange-600 transition-colors cursor-pointer">
               Set your location
             </button>
           )}
@@ -702,7 +707,7 @@ function SelfProfileCard({ contact, onOpenSettings }: { contact: Contact; onOpen
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <button onClick={onOpenSettings} className="text-muted-foreground/40 hover:text-foreground transition-colors cursor-pointer">
+              <button onClick={onOpenProfile} className="text-muted-foreground/40 hover:text-foreground transition-colors cursor-pointer">
                 <Home className="h-3.5 w-3.5" />
               </button>
             </TooltipTrigger>
@@ -729,7 +734,7 @@ function ViewModeToggle({ mode, onChange }: { mode: ViewMode; onChange: (m: View
             <TooltipTrigger asChild>
               <button
                 onClick={() => onChange(key)}
-                className={`p-1 rounded transition-colors ${
+                className={`p-1 rounded-md transition-colors ${
                   mode === key
                     ? 'bg-background text-foreground shadow-sm'
                     : 'text-muted-foreground/60 hover:text-muted-foreground'
@@ -854,7 +859,7 @@ function BulkActionBar({
                 <button
                   key={t}
                   onClick={() => onTagInputChange(t)}
-                  className="text-[10px] px-1.5 py-0.5 rounded bg-muted hover:bg-muted/80 text-muted-foreground transition-colors"
+                  className="text-[10px] px-1.5 py-0.5 rounded-md bg-muted hover:bg-muted/80 text-muted-foreground transition-colors"
                 >
                   {t}
                 </button>
@@ -869,7 +874,7 @@ function BulkActionBar({
                   <button
                     key={t}
                     onClick={() => onRemoveTag(t)}
-                    className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors flex items-center gap-0.5"
+                    className="text-[10px] px-1.5 py-0.5 rounded-md bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors flex items-center gap-0.5"
                   >
                     <X className="h-2.5 w-2.5" />
                     {t}
@@ -1011,10 +1016,10 @@ function PaginationRow({ current, total, onChange }: { current: number; total: n
           <button
             key={p}
             onClick={() => onChange(p)}
-            className={`h-5 min-w-5 px-1 rounded text-[10px] font-medium transition-colors ${
+            className={`h-5 min-w-5 px-1 rounded-md text-[10px] font-medium transition-colors ${
               p === current
                 ? 'bg-accent text-foreground'
-                : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
             }`}
           >
             {p}
@@ -1191,7 +1196,7 @@ function ContactCompactRow({ contact, selectMode, isChecked, isSelected, onClick
           ? 'bg-orange-500/10'
           : isSelected
             ? 'bg-accent'
-            : 'hover:bg-muted/30'
+            : 'hover:bg-muted/50'
       }`}
     >
       {selectMode ? (

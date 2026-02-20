@@ -61,7 +61,7 @@ export default function MergeFieldPicker({ parsed, existing, mergeFields, onMerg
             <div className="flex gap-2">
               <button
                 onClick={() => onMergeFieldChange(field, 'existing')}
-                className={`flex-1 p-1.5 rounded border text-left truncate transition-all duration-150 ${
+                className={`flex-1 p-1.5 rounded-md border text-left truncate transition-all duration-150 ${
                   selected === 'existing'
                     ? 'border-foreground/30 bg-accent text-foreground scale-[1.02]'
                     : 'border-border text-muted-foreground hover:border-foreground/20 scale-100'
@@ -72,7 +72,7 @@ export default function MergeFieldPicker({ parsed, existing, mergeFields, onMerg
               </button>
               <button
                 onClick={() => onMergeFieldChange(field, 'imported')}
-                className={`flex-1 p-1.5 rounded border text-left truncate transition-all duration-150 ${
+                className={`flex-1 p-1.5 rounded-md border text-left truncate transition-all duration-150 ${
                   selected === 'imported'
                     ? 'border-foreground/30 bg-accent text-foreground scale-[1.02]'
                     : 'border-border text-muted-foreground hover:border-foreground/20 scale-100'

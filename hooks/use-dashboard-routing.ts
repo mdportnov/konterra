@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import type { DisplayOptions, GlobeLayer } from '@/types/display'
 
 const STORAGE_KEY = 'konterra-default-tab'
@@ -40,6 +40,17 @@ function buildViewParam(showNetwork: boolean, showTravel: boolean): string {
   return parts.join(',')
 }
 
+function syncUrl(showNetwork: boolean, showTravel: boolean, method: 'push' | 'replace', pathname?: string) {
+  const path = pathname || window.location.pathname
+  const viewParam = buildViewParam(showNetwork, showTravel)
+  const search = (showNetwork && !showTravel && path === '/app') ? '' : `?view=${viewParam}`
+  const url = path + search
+  if (window.location.pathname + window.location.search !== url) {
+    if (method === 'push') window.history.pushState(null, '', url)
+    else window.history.replaceState(null, '', url)
+  }
+}
+
 export function useDashboardRouting({ initialSlug, setDisplayOptions }: UseDashboardRoutingOptions) {
   const initialTab = initialSlug?.[0] === 'travel'
     ? 'travel' as const
@@ -47,43 +58,43 @@ export function useDashboardRouting({ initialSlug, setDisplayOptions }: UseDashb
       ? 'connections' as const
       : loadDefaultTab()
   const [dashboardTab, setDashboardTabRaw] = useState<DashboardTab>(initialTab)
+  const optionsRef = useRef<DisplayOptions | null>(null)
+
+  const trackOptions = useCallback((updater: (prev: DisplayOptions) => DisplayOptions) => {
+    setDisplayOptions((prev) => {
+      const next = updater(prev)
+      optionsRef.current = next
+      return next
+    })
+  }, [setDisplayOptions])
 
   useEffect(() => {
     const parsed = parseViewParam(window.location.search)
     if (parsed) {
-      setDisplayOptions((prev) => ({ ...prev, showNetwork: parsed.showNetwork, showTravel: parsed.showTravel }))
+      trackOptions((prev) => ({ ...prev, showNetwork: parsed.showNetwork, showTravel: parsed.showTravel }))
     } else if (initialTab === 'travel') {
-      setDisplayOptions((prev) => ({ ...prev, showNetwork: false, showTravel: true }))
+      trackOptions((prev) => ({ ...prev, showNetwork: false, showTravel: true }))
     }
-  }, [initialTab, setDisplayOptions])
+  }, [initialTab, trackOptions])
 
   const setDashboardTab = useCallback((tab: DashboardTab) => {
     setDashboardTabRaw(tab)
     if (tab === 'travel') {
-      setDisplayOptions((prev) => {
-        const next = { ...prev, showTravel: true }
-        const viewParam = buildViewParam(next.showNetwork, next.showTravel)
-        const url = `/app/travel?view=${viewParam}`
-        if (window.location.pathname + window.location.search !== url) {
-          window.history.pushState(null, '', url)
-        }
-        return next
+      trackOptions((prev) => ({ ...prev, showTravel: true }))
+      queueMicrotask(() => {
+        const cur = optionsRef.current
+        if (cur) syncUrl(cur.showNetwork, cur.showTravel, 'push', '/app/travel')
       })
     } else {
-      setDisplayOptions((prev) => {
-        const viewParam = buildViewParam(prev.showNetwork, prev.showTravel)
-        const search = viewParam !== 'network' ? `?view=${viewParam}` : ''
-        const url = `/app${search}`
-        if (window.location.pathname + window.location.search !== url) {
-          window.history.pushState(null, '', url)
-        }
-        return prev
+      queueMicrotask(() => {
+        const cur = optionsRef.current
+        if (cur) syncUrl(cur.showNetwork, cur.showTravel, 'push', '/app')
       })
     }
-  }, [setDisplayOptions])
+  }, [trackOptions])
 
   const handleLayerToggle = useCallback((layer: GlobeLayer) => {
-    setDisplayOptions((prev) => {
+    trackOptions((prev) => {
       let showNetwork = prev.showNetwork
       let showTravel = prev.showTravel
       if (layer === 'network') showNetwork = !showNetwork
@@ -92,13 +103,13 @@ export function useDashboardRouting({ initialSlug, setDisplayOptions }: UseDashb
         if (layer === 'network') showTravel = true
         else showNetwork = true
       }
-      const viewParam = buildViewParam(showNetwork, showTravel)
-      const pathname = window.location.pathname
-      const search = (showNetwork && !showTravel && pathname === '/app') ? '' : `?view=${viewParam}`
-      window.history.replaceState(null, '', pathname + search)
       return { ...prev, showNetwork, showTravel }
     })
-  }, [setDisplayOptions])
+    queueMicrotask(() => {
+      const cur = optionsRef.current
+      if (cur) syncUrl(cur.showNetwork, cur.showTravel, 'replace')
+    })
+  }, [trackOptions])
 
   useEffect(() => {
     const onPop = () => {
@@ -107,22 +118,22 @@ export function useDashboardRouting({ initialSlug, setDisplayOptions }: UseDashb
       if (path === '/app/travel') {
         setDashboardTabRaw('travel')
         if (parsed) {
-          setDisplayOptions((prev) => ({ ...prev, showNetwork: parsed.showNetwork, showTravel: parsed.showTravel }))
+          trackOptions((prev) => ({ ...prev, showNetwork: parsed.showNetwork, showTravel: parsed.showTravel }))
         } else {
-          setDisplayOptions((prev) => ({ ...prev, showNetwork: false, showTravel: true }))
+          trackOptions((prev) => ({ ...prev, showNetwork: false, showTravel: true }))
         }
       } else {
         setDashboardTabRaw('connections')
         if (parsed) {
-          setDisplayOptions((prev) => ({ ...prev, showNetwork: parsed.showNetwork, showTravel: parsed.showTravel }))
+          trackOptions((prev) => ({ ...prev, showNetwork: parsed.showNetwork, showTravel: parsed.showTravel }))
         } else {
-          setDisplayOptions((prev) => ({ ...prev, showNetwork: true, showTravel: false }))
+          trackOptions((prev) => ({ ...prev, showNetwork: true, showTravel: false }))
         }
       }
     }
     window.addEventListener('popstate', onPop)
     return () => window.removeEventListener('popstate', onPop)
-  }, [setDisplayOptions])
+  }, [trackOptions])
 
   return {
     dashboardTab,

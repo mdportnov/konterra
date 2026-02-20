@@ -12,7 +12,7 @@ interface GettingStartedCardProps {
   connections: ContactConnection[]
   recentInteractions: { contactName: string }[]
   onAddContact: () => void
-  onOpenSettings: () => void
+  onOpenProfile: () => void
 }
 
 interface Step {
@@ -28,7 +28,7 @@ export default function GettingStartedCard({
   connections,
   recentInteractions,
   onAddContact,
-  onOpenSettings,
+  onOpenProfile,
 }: GettingStartedCardProps) {
   const steps = useMemo<Step[]>(() => {
     const hasProfile = contacts.some((c) => c.isSelf)
@@ -44,7 +44,7 @@ export default function GettingStartedCard({
         label: 'Set up your profile',
         done: hasProfile,
         icon: Home,
-        action: hasProfile ? undefined : { label: 'Set up', onClick: onOpenSettings },
+        action: hasProfile ? undefined : { label: 'Set up', onClick: onOpenProfile },
       },
       {
         key: 'contact',
@@ -72,7 +72,7 @@ export default function GettingStartedCard({
         icon: Tag,
       },
     ]
-  }, [contacts, connections, recentInteractions, onAddContact, onOpenSettings])
+  }, [contacts, connections, recentInteractions, onAddContact, onOpenProfile])
 
   const completed = steps.filter((s) => s.done).length
   const total = steps.length

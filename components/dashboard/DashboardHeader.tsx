@@ -73,14 +73,6 @@ export default function DashboardHeader({
                 Globe
               </Button>
             )}
-            <Button
-              size="sm"
-              onClick={onAddContact}
-              className="bg-orange-500 hover:bg-orange-600 text-white"
-            >
-              <Plus className="h-4 w-4 mr-1" />
-              Add
-            </Button>
             {onCollapse && !isMobile && (
               <TooltipProvider>
                 <Tooltip>

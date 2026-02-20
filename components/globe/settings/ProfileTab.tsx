@@ -75,9 +75,12 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
 
     setHomebaseLoading(true)
     fetch('/api/me/location')
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error()
+        return r.json()
+      })
       .then((data) => setHomebase(data))
-      .catch(() => toast.error('Failed to load homebase'))
+      .catch(() => setHomebase({ city: null, country: null, timezone: null, lat: null, lng: null }))
       .finally(() => setHomebaseLoading(false))
   }, [open])
 

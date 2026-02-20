@@ -22,6 +22,10 @@ export const metadata: Metadata = {
   description: 'Your personal network CRM with an interactive 3D globe. Map contacts, track relationships, and grow your social capital.',
   keywords: ['CRM', 'network', 'globe', 'contacts', 'relationship management'],
   authors: [{ name: 'Konterra' }],
+  icons: {
+    icon: '/icon.svg',
+    apple: '/apple-icon.svg',
+  },
   openGraph: {
     title: 'Konterra',
     description: 'Personal network CRM with an interactive 3D globe',

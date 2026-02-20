@@ -1,25 +1,43 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from '@/components/ui/select'
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import {
-  Globe, MapPin, UserPlus, Upload, LayoutDashboard, Settings, ArrowRight, ArrowLeft, Loader2, Check,
+  Globe, UserPlus, Upload, LayoutDashboard, Settings, ArrowRight, ArrowLeft, Loader2, Check, ChevronsUpDown, Search, X,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { GLASS, Z, TRANSITION } from '@/lib/constants/ui'
 
 const STORAGE_KEY = 'konterra-onboarded'
 
-const TIMEZONES = Intl.supportedValuesOf('timeZone')
+const RAW_TIMEZONES = Intl.supportedValuesOf('timeZone')
+
+function getUtcOffset(tz: string): string {
+  try {
+    const fmt = new Intl.DateTimeFormat('en-US', { timeZone: tz, timeZoneName: 'shortOffset' })
+    const parts = fmt.formatToParts(new Date())
+    const offsetPart = parts.find(p => p.type === 'timeZoneName')
+    return offsetPart?.value || ''
+  } catch {
+    return ''
+  }
+}
+
+function parseOffsetMinutes(offset: string): number {
+  if (offset === 'GMT') return 0
+  const match = offset.match(/^GMT([+-])(\d{1,2})(?::(\d{2}))?$/)
+  if (!match) return 0
+  const sign = match[1] === '+' ? 1 : -1
+  return sign * (parseInt(match[2]) * 60 + parseInt(match[3] || '0'))
+}
 
 interface WelcomeWizardProps {
   onAddContact: (prefill?: Record<string, string>) => void
@@ -40,6 +58,32 @@ export default function WelcomeWizard({ onAddContact, onOpenImport, onComplete }
     }
   })
   const [saving, setSaving] = useState(false)
+  const [tzOpen, setTzOpen] = useState(false)
+  const [tzSearch, setTzSearch] = useState('')
+  const tzInputRef = useRef<HTMLInputElement>(null)
+
+  const timezones = useMemo(() => {
+    const list = RAW_TIMEZONES.map(tz => {
+      const offset = getUtcOffset(tz)
+      return { tz, label: tz.replace(/_/g, ' '), offset, minutes: parseOffsetMinutes(offset) }
+    })
+    list.sort((a, b) => a.minutes - b.minutes || a.tz.localeCompare(b.tz))
+    return list
+  }, [])
+
+  const filteredTz = useMemo(() => {
+    if (!tzSearch) return timezones
+    const q = tzSearch.toLowerCase()
+    return timezones.filter(({ tz, label, offset }) =>
+      label.toLowerCase().includes(q) || tz.toLowerCase().includes(q) || offset.toLowerCase().includes(q)
+    )
+  }, [timezones, tzSearch])
+
+  const selectedTzLabel = useMemo(() => {
+    if (!timezone) return ''
+    const found = timezones.find(t => t.tz === timezone)
+    return found ? `${found.label} (${found.offset})` : timezone.replace(/_/g, ' ')
+  }, [timezone, timezones])
 
   useEffect(() => {
     if (!localStorage.getItem(STORAGE_KEY)) {
@@ -143,17 +187,61 @@ export default function WelcomeWizard({ onAddContact, onOpenImport, onComplete }
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="wizard-timezone" className="text-sm">Timezone</Label>
-            <Select value={timezone} onValueChange={setTimezone}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select timezone" />
-              </SelectTrigger>
-              <SelectContent position="popper" className="max-h-60">
-                {TIMEZONES.map((tz) => (
-                  <SelectItem key={tz} value={tz}>{tz.replace(/_/g, ' ')}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label className="text-sm">Timezone</Label>
+            <Popover open={tzOpen} onOpenChange={(v) => { setTzOpen(v); if (v) setTimeout(() => tzInputRef.current?.focus(), 0); if (!v) setTzSearch('') }}>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 text-sm shadow-xs transition-[color,box-shadow] outline-none hover:bg-accent/50 cursor-pointer"
+                >
+                  <span className={selectedTzLabel ? 'truncate' : 'text-muted-foreground truncate'}>
+                    {selectedTzLabel || 'Select timezone'}
+                  </span>
+                  <ChevronsUpDown className="h-4 w-4 text-muted-foreground/50 shrink-0 ml-1" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" side="bottom" align="start">
+                <div className="flex items-center border-b border-border px-2">
+                  <Search className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />
+                  <input
+                    ref={tzInputRef}
+                    value={tzSearch}
+                    onChange={(e) => setTzSearch(e.target.value)}
+                    placeholder="Search timezone..."
+                    className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground/40 h-9 px-2 outline-none"
+                  />
+                  {tzSearch && (
+                    <button type="button" onClick={() => setTzSearch('')} className="text-muted-foreground/50 hover:text-muted-foreground">
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+                <ScrollArea className="h-[200px]">
+                  <div className="p-1">
+                    {filteredTz.map(({ tz, label, offset }) => {
+                      const selected = timezone === tz
+                      return (
+                        <button
+                          key={tz}
+                          type="button"
+                          onClick={() => { setTimezone(tz); setTzOpen(false); setTzSearch('') }}
+                          className={`flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-xs cursor-pointer transition-colors ${
+                            selected ? 'bg-accent text-foreground' : 'text-foreground hover:bg-accent/50'
+                          }`}
+                        >
+                          <Check className={`h-3 w-3 shrink-0 ${selected ? 'opacity-100' : 'opacity-0'}`} />
+                          <span className="truncate">{label}</span>
+                          <span className="text-muted-foreground text-[10px] shrink-0 ml-auto">{offset}</span>
+                        </button>
+                      )
+                    })}
+                    {filteredTz.length === 0 && (
+                      <p className="text-xs text-muted-foreground/60 text-center py-4">No timezones found</p>
+                    )}
+                  </div>
+                </ScrollArea>
+              </PopoverContent>
+            </Popover>
           </div>
         </div>
       ),

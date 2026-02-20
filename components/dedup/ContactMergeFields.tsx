@@ -72,8 +72,8 @@ export default function ContactMergeFields({ contactA, contactB, winnerId, overr
                   onClick={() => onOverrideChange(field, winnerId)}
                   className={`relative p-3 text-left transition-colors duration-150 border-r border-border ${
                     selected === winnerId
-                      ? 'bg-accent/60'
-                      : 'hover:bg-muted/30'
+                      ? 'bg-accent'
+                      : 'hover:bg-accent/50'
                   }`}
                 >
                   <span className="block text-[10px] text-muted-foreground uppercase mb-0.5 truncate">{winner.name}</span>
@@ -86,8 +86,8 @@ export default function ContactMergeFields({ contactA, contactB, winnerId, overr
                   onClick={() => onOverrideChange(field, loserId)}
                   className={`relative p-3 text-left transition-colors duration-150 ${
                     selected === loserId
-                      ? 'bg-accent/60'
-                      : 'hover:bg-muted/30'
+                      ? 'bg-accent'
+                      : 'hover:bg-accent/50'
                   }`}
                 >
                   <span className="block text-[10px] text-muted-foreground uppercase mb-0.5 truncate">{loser.name}</span>

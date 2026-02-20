@@ -2,3 +2,4 @@ export { SectionLabel, FieldRow, SelectField, MultiSelectField, ChipInput, Range
 export { TimezoneSelect } from './TimezoneSelect'
 export { LanguageMultiSelect } from './LanguageMultiSelect'
 export { TagSelector } from './TagSelector'
+export { CountrySelect } from './CountrySelect'

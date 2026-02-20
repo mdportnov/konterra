@@ -26,7 +26,7 @@ import {
 import type { Contact, Tag as DbTag } from '@/lib/db/schema'
 import {
   SectionLabel, FieldRow, SelectField, MultiSelectField, ChipInput, RangeField, PrefixInput,
-  DatePickerField, CollapsibleSection, TimezoneSelect, LanguageMultiSelect, TagSelector,
+  DatePickerField, CollapsibleSection, TimezoneSelect, LanguageMultiSelect, TagSelector, CountrySelect,
 } from './contact-edit'
 
 const socialFields = [
@@ -349,7 +349,7 @@ export default function ContactEditPanel({ contact, open, onSaved, onCancel, ava
             <SectionLabel icon={MapPin} text="Location" />
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <FieldRow label="City" name="city" value={formData.city} onChange={handleChange} />
-              <FieldRow label="Country" name="country" value={formData.country} onChange={handleChange} />
+              <CountrySelect label="Country" value={formData.country} onChange={(v) => setFormData((prev) => ({ ...prev, country: v }))} />
             </div>
             <FieldRow label="Address" name="address" value={formData.address} onChange={handleChange} placeholder="Full address" />
           </div>

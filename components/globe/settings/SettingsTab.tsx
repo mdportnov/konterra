@@ -88,13 +88,6 @@ export function SettingsTab({
             />
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Point labels</span>
-            <Switch
-              checked={displayOptions.showLabels}
-              onCheckedChange={(v) => onDisplayChange({ ...displayOptions, showLabels: v })}
-            />
-          </div>
-          <div className="flex items-center justify-between">
             <span className="text-sm text-muted-foreground">Default tab</span>
             <ToggleGroup
               type="single"
@@ -102,10 +95,10 @@ export function SettingsTab({
               onValueChange={(v) => { if (v === 'connections' || v === 'travel') onDefaultTabChange(v) }}
               className="gap-0"
             >
-              <ToggleGroupItem value="connections" className="h-8 px-3 text-xs rounded-r-none data-[state=on]:bg-accent data-[state=on]:text-foreground">
+              <ToggleGroupItem value="connections" className="h-8 px-3 text-xs rounded-r-none hover:bg-accent/50 data-[state=on]:bg-accent data-[state=on]:text-foreground">
                 Connections
               </ToggleGroupItem>
-              <ToggleGroupItem value="travel" className="h-8 px-3 text-xs rounded-l-none data-[state=on]:bg-accent data-[state=on]:text-foreground">
+              <ToggleGroupItem value="travel" className="h-8 px-3 text-xs rounded-l-none hover:bg-accent/50 data-[state=on]:bg-accent data-[state=on]:text-foreground">
                 Travel
               </ToggleGroupItem>
             </ToggleGroup>

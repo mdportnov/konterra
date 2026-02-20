@@ -157,6 +157,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
     onCountryConnectionsChange: data.handleCountryConnectionsChange,
     onOpenInsights: nav.handleOpenInsights,
     onOpenSettings: nav.handleOpenSettings,
+    onOpenProfile: nav.handleOpenProfile,
     isMobile,
     contactsLoading: data.loading,
     onSelectionChange: handleSelectionChange,

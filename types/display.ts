@@ -6,7 +6,6 @@ export interface DisplayOptions {
   showNetwork: boolean
   showTravel: boolean
   autoRotate: boolean
-  showLabels: boolean
 }
 
 export const displayDefaults: DisplayOptions = {
@@ -14,5 +13,4 @@ export const displayDefaults: DisplayOptions = {
   showNetwork: true,
   showTravel: false,
   autoRotate: false,
-  showLabels: true,
 }
