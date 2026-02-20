@@ -10,6 +10,7 @@ import ContactEditPanel from '@/components/globe/ContactEditPanel'
 import SettingsPanel from '@/components/globe/SettingsPanel'
 import ImportDialog from '@/components/import/ImportDialog'
 import TripImportDialog from '@/components/import/TripImportDialog'
+import CommandMenu from '@/components/command-menu'
 import WelcomeWizard from '@/components/onboarding/WelcomeWizard'
 import DuplicatesDialog from '@/components/dedup/DuplicatesDialog'
 import ExportDialog from '@/components/export/ExportDialog'
@@ -367,6 +368,25 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
     </>
   )
 
+  const commandMenu = (
+    <CommandMenu
+      contacts={data.contacts}
+      trips={data.trips}
+      dashboardTab={dashboardTab}
+      onContactClick={nav.handleContactClick}
+      onAddContact={addContactCb}
+      onAddTrip={handleAddTrip}
+      onOpenSettings={nav.handleOpenSettings}
+      onOpenProfile={nav.handleOpenProfile}
+      onOpenInsights={nav.handleOpenInsights}
+      onDashboardTabChange={setDashboardTab}
+      onOpenImport={() => setImportDialogOpen(true)}
+      onOpenTripImport={() => setTripImportDialogOpen(true)}
+      onOpenExport={() => setExportDialogOpen(true)}
+      onOpenDuplicates={() => setDupDialogOpen(true)}
+    />
+  )
+
   if (isMobile) {
     return (
       <div className="fixed inset-0 overflow-hidden bg-background">
@@ -395,6 +415,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
             {globeSection}
           </div>
         </div>
+        {commandMenu}
       </div>
     )
   }
@@ -434,6 +455,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
       <div className="relative flex-1 overflow-hidden globe-bg">
         {globeSection}
       </div>
+      {commandMenu}
     </div>
   )
 }
