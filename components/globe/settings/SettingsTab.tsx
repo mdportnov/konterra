@@ -12,6 +12,7 @@ import { Loader2, Upload, Download, Trash2, Copy } from 'lucide-react'
 import { toast } from 'sonner'
 import type { ArcMode } from '@/types/display'
 import type { SettingsTabProps } from './types'
+import { saveDefaultTab } from '@/hooks/use-dashboard-routing'
 
 const ARC_MODES: { value: ArcMode; label: string }[] = [
   { value: 'animated', label: 'Animated' },
@@ -46,6 +47,7 @@ export function SettingsTab({
       onDeleteAllContacts?.()
     } catch {
       toast.error('Failed to remove contacts')
+      setDeleteConfirm(false)
     } finally {
       setDeleting(false)
     }
@@ -92,7 +94,7 @@ export function SettingsTab({
             <ToggleGroup
               type="single"
               value={defaultTab}
-              onValueChange={(v) => { if (v === 'connections' || v === 'travel') onDefaultTabChange(v) }}
+              onValueChange={(v) => { if (v === 'connections' || v === 'travel') { onDefaultTabChange(v); saveDefaultTab(v) } }}
               className="gap-0"
             >
               <ToggleGroupItem value="connections" className="h-8 px-3 text-xs rounded-r-none hover:bg-accent/50 data-[state=on]:bg-accent data-[state=on]:text-foreground">

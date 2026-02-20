@@ -28,6 +28,7 @@ import {
   LogOut,
   Globe,
   Users,
+  Search,
 } from 'lucide-react'
 import { useHotkey } from '@/hooks/use-hotkey'
 import { useTheme } from '@/components/providers'
@@ -50,6 +51,7 @@ interface CommandMenuProps {
   onOpenTripImport: () => void
   onOpenExport: () => void
   onOpenDuplicates: () => void
+  onTripClick?: (trip: Trip) => void
 }
 
 export default function CommandMenu({
@@ -67,6 +69,7 @@ export default function CommandMenu({
   onOpenTripImport,
   onOpenExport,
   onOpenDuplicates,
+  onTripClick,
 }: CommandMenuProps) {
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
@@ -80,6 +83,17 @@ export default function CommandMenu({
   }, [])
 
   useHotkey('k', toggleOpen, { meta: true })
+
+  const handleHotkeyAddContact = useCallback(() => {
+    if (!open) onAddContact()
+  }, [open, onAddContact])
+
+  const handleHotkeyInsights = useCallback(() => {
+    if (!open) onOpenInsights()
+  }, [open, onOpenInsights])
+
+  useHotkey('n', handleHotkeyAddContact, { meta: true })
+  useHotkey('i', handleHotkeyInsights, { meta: true })
 
   const runAction = useCallback((action: () => void) => {
     setOpen(false)
@@ -121,230 +135,250 @@ export default function CommandMenu({
     return parts.join(' · ')
   }, [])
 
+  const handleTripSelect = useCallback((trip: Trip) => {
+    if (onTripClick) {
+      onTripClick(trip)
+    } else {
+      onDashboardTabChange('travel')
+    }
+  }, [onTripClick, onDashboardTabChange])
+
   const showContacts = search.length > 0
 
   return (
-    <CommandDialog open={open} onOpenChange={setOpen}>
-      <CommandInput
-        placeholder="Search contacts, trips, actions..."
-        value={search}
-        onValueChange={setSearch}
-      />
-      <CommandList>
-        <CommandEmpty>No results found.</CommandEmpty>
+    <>
+      <button
+        onClick={toggleOpen}
+        className="fixed bottom-5 right-5 h-12 w-12 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center sm:hidden"
+        style={{ zIndex: 45 }}
+        aria-label="Open command menu"
+      >
+        <Search className="h-5 w-5" />
+      </button>
 
-        {showContacts && (
-          <CommandGroup heading="Contacts">
-            {contacts.slice(0, 10).map((contact) => (
-              <CommandItem
-                key={contact.id}
-                value={`contact-${contact.name}-${contact.company || ''}-${contact.city || ''}-${contact.country || ''}`}
-                onSelect={() => runAction(() => onContactClick(contact))}
-              >
-                <User className="text-muted-foreground" />
-                <div className="flex flex-col min-w-0">
-                  <span className="truncate">{countryFlag(contact.country)} {contact.name}</span>
-                  {contactSubline(contact) && (
-                    <span className="text-xs text-muted-foreground truncate">{contactSubline(contact)}</span>
-                  )}
-                </div>
-              </CommandItem>
-            ))}
-          </CommandGroup>
-        )}
+      <CommandDialog open={open} onOpenChange={setOpen}>
+        <CommandInput
+          placeholder="Search contacts, trips, actions..."
+          value={search}
+          onValueChange={setSearch}
+        />
+        <CommandList className="max-h-[min(300px,60dvh)]">
+          <CommandEmpty>No results found.</CommandEmpty>
 
-        {showContacts && trips.length > 0 && (
-          <>
-            <CommandSeparator />
-            <CommandGroup heading="Trips">
-              {trips.slice(0, 8).map((trip) => (
-                <CommandItem
-                  key={trip.id}
-                  value={`trip-${trip.city}-${trip.country}-${trip.arrivalDate}`}
-                  onSelect={() => runAction(() => {
-                    onDashboardTabChange('travel')
-                  })}
-                >
-                  <Plane className="text-muted-foreground" />
-                  <div className="flex flex-col min-w-0">
-                    <span className="truncate">{countryFlag(trip.country)} {trip.city}, {trip.country}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {new Date(trip.arrivalDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                    </span>
-                  </div>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </>
-        )}
-
-        {!showContacts && (
-          <>
-            <CommandGroup heading="Quick Actions">
-              <CommandItem onSelect={() => runAction(onAddContact)}>
-                <UserPlus className="text-muted-foreground" />
-                <span>Add Contact</span>
-                <CommandShortcut>⌘N</CommandShortcut>
-              </CommandItem>
-              <CommandItem onSelect={() => runAction(onAddTrip)}>
-                <Plane className="text-muted-foreground" />
-                <span>Add Trip</span>
-              </CommandItem>
-              <CommandItem onSelect={() => runAction(onOpenInsights)}>
-                <Sparkles className="text-muted-foreground" />
-                <span>Network Insights</span>
-                <CommandShortcut>⌘I</CommandShortcut>
-              </CommandItem>
-            </CommandGroup>
-
-            <CommandSeparator />
-
-            {recentContacts.length > 0 && (
-              <>
-                <CommandGroup heading="Recent Contacts">
-                  {recentContacts.map((contact) => (
-                    <CommandItem
-                      key={contact.id}
-                      value={`recent-${contact.name}-${contact.company || ''}`}
-                      onSelect={() => runAction(() => onContactClick(contact))}
-                    >
-                      <User className="text-muted-foreground" />
+          {showContacts && (
+            <CommandGroup heading="Contacts">
+              {contacts.slice(0, 10).map((contact) => {
+                const sub = contactSubline(contact)
+                return (
+                  <CommandItem
+                    key={contact.id}
+                    value={`contact-${contact.id}-${contact.name}-${contact.company || ''}-${contact.city || ''}-${contact.country || ''}`}
+                    onSelect={() => runAction(() => onContactClick(contact))}
+                  >
+                    <User className="text-muted-foreground" />
+                    <div className="flex flex-col min-w-0">
                       <span className="truncate">{countryFlag(contact.country)} {contact.name}</span>
-                      {contact.company && (
-                        <span className="text-xs text-muted-foreground ml-auto truncate max-w-32">{contact.company}</span>
+                      {sub && (
+                        <span className="text-xs text-muted-foreground truncate">{sub}</span>
                       )}
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-                <CommandSeparator />
-              </>
-            )}
+                    </div>
+                  </CommandItem>
+                )
+              })}
+            </CommandGroup>
+          )}
 
-            {upcomingTrips.length > 0 && (
-              <>
-                <CommandGroup heading="Upcoming Trips">
-                  {upcomingTrips.map((trip) => (
-                    <CommandItem
-                      key={trip.id}
-                      value={`upcoming-${trip.city}-${trip.country}`}
-                      onSelect={() => runAction(() => onDashboardTabChange('travel'))}
-                    >
-                      <MapPin className="text-muted-foreground" />
+          {showContacts && trips.length > 0 && (
+            <>
+              <CommandSeparator />
+              <CommandGroup heading="Trips">
+                {trips.slice(0, 8).map((trip) => (
+                  <CommandItem
+                    key={trip.id}
+                    value={`trip-${trip.id}-${trip.city}-${trip.country}-${trip.arrivalDate}`}
+                    onSelect={() => runAction(() => handleTripSelect(trip))}
+                  >
+                    <Plane className="text-muted-foreground" />
+                    <div className="flex flex-col min-w-0">
                       <span className="truncate">{countryFlag(trip.country)} {trip.city}, {trip.country}</span>
-                      <span className="text-xs text-muted-foreground ml-auto">
-                        {new Date(trip.arrivalDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(trip.arrivalDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                       </span>
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-                <CommandSeparator />
-              </>
-            )}
+                    </div>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </>
+          )}
 
-            {recentTrips.length > 0 && upcomingTrips.length === 0 && (
-              <>
-                <CommandGroup heading="Recent Trips">
-                  {recentTrips.map((trip) => (
-                    <CommandItem
-                      key={trip.id}
-                      value={`past-${trip.city}-${trip.country}`}
-                      onSelect={() => runAction(() => onDashboardTabChange('travel'))}
-                    >
-                      <MapPin className="text-muted-foreground" />
-                      <span className="truncate">{countryFlag(trip.country)} {trip.city}, {trip.country}</span>
-                      <span className="text-xs text-muted-foreground ml-auto">
-                        {new Date(trip.arrivalDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                      </span>
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-                <CommandSeparator />
-              </>
-            )}
+          {!showContacts && (
+            <>
+              <CommandGroup heading="Quick Actions">
+                <CommandItem onSelect={() => runAction(onAddContact)}>
+                  <UserPlus className="text-muted-foreground" />
+                  <span>Add Contact</span>
+                  <CommandShortcut>⌘N</CommandShortcut>
+                </CommandItem>
+                <CommandItem onSelect={() => runAction(onAddTrip)}>
+                  <Plane className="text-muted-foreground" />
+                  <span>Add Trip</span>
+                </CommandItem>
+                <CommandItem onSelect={() => runAction(onOpenInsights)}>
+                  <Sparkles className="text-muted-foreground" />
+                  <span>Network Insights</span>
+                  <CommandShortcut>⌘I</CommandShortcut>
+                </CommandItem>
+              </CommandGroup>
 
-            <CommandGroup heading="Navigate">
-              <CommandItem onSelect={() => runAction(() => onDashboardTabChange('connections'))}>
-                <Users className="text-muted-foreground" />
-                <span>Connections</span>
-                {dashboardTab === 'connections' && (
-                  <span className="text-xs text-muted-foreground ml-auto">Active</span>
-                )}
-              </CommandItem>
-              <CommandItem onSelect={() => runAction(() => onDashboardTabChange('travel'))}>
-                <Globe className="text-muted-foreground" />
-                <span>Travel Journey</span>
-                {dashboardTab === 'travel' && (
-                  <span className="text-xs text-muted-foreground ml-auto">Active</span>
-                )}
-              </CommandItem>
-              <CommandItem onSelect={() => runAction(onOpenSettings)}>
-                <Settings className="text-muted-foreground" />
-                <span>Settings</span>
-              </CommandItem>
-              <CommandItem onSelect={() => runAction(onOpenProfile)}>
-                <User className="text-muted-foreground" />
-                <span>Profile</span>
-              </CommandItem>
-            </CommandGroup>
+              <CommandSeparator />
 
-            <CommandSeparator />
+              {recentContacts.length > 0 && (
+                <>
+                  <CommandGroup heading="Recent Contacts">
+                    {recentContacts.map((contact) => (
+                      <CommandItem
+                        key={contact.id}
+                        value={`recent-${contact.id}-${contact.name}-${contact.company || ''}`}
+                        onSelect={() => runAction(() => onContactClick(contact))}
+                      >
+                        <User className="text-muted-foreground" />
+                        <span className="truncate">{countryFlag(contact.country)} {contact.name}</span>
+                        {contact.company && (
+                          <span className="text-xs text-muted-foreground ml-auto truncate max-w-32">{contact.company}</span>
+                        )}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                  <CommandSeparator />
+                </>
+              )}
 
-            <CommandGroup heading="Data">
-              <CommandItem onSelect={() => runAction(onOpenImport)}>
-                <Upload className="text-muted-foreground" />
-                <span>Import Contacts</span>
-              </CommandItem>
-              <CommandItem onSelect={() => runAction(onOpenTripImport)}>
-                <Upload className="text-muted-foreground" />
-                <span>Import Trips</span>
-              </CommandItem>
-              <CommandItem onSelect={() => runAction(onOpenExport)}>
-                <Download className="text-muted-foreground" />
-                <span>Export Data</span>
-              </CommandItem>
-              <CommandItem onSelect={() => runAction(onOpenDuplicates)}>
-                <Copy className="text-muted-foreground" />
-                <span>Find Duplicates</span>
-              </CommandItem>
-            </CommandGroup>
+              {upcomingTrips.length > 0 && (
+                <>
+                  <CommandGroup heading="Upcoming Trips">
+                    {upcomingTrips.map((trip) => (
+                      <CommandItem
+                        key={trip.id}
+                        value={`upcoming-${trip.id}-${trip.city}-${trip.country}`}
+                        onSelect={() => runAction(() => handleTripSelect(trip))}
+                      >
+                        <MapPin className="text-muted-foreground" />
+                        <span className="truncate">{countryFlag(trip.country)} {trip.city}, {trip.country}</span>
+                        <span className="text-xs text-muted-foreground ml-auto">
+                          {new Date(trip.arrivalDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </span>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                  <CommandSeparator />
+                </>
+              )}
 
-            <CommandSeparator />
+              {recentTrips.length > 0 && upcomingTrips.length === 0 && (
+                <>
+                  <CommandGroup heading="Recent Trips">
+                    {recentTrips.map((trip) => (
+                      <CommandItem
+                        key={trip.id}
+                        value={`past-${trip.id}-${trip.city}-${trip.country}`}
+                        onSelect={() => runAction(() => handleTripSelect(trip))}
+                      >
+                        <MapPin className="text-muted-foreground" />
+                        <span className="truncate">{countryFlag(trip.country)} {trip.city}, {trip.country}</span>
+                        <span className="text-xs text-muted-foreground ml-auto">
+                          {new Date(trip.arrivalDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </span>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                  <CommandSeparator />
+                </>
+              )}
 
-            <CommandGroup heading="Theme">
-              <CommandItem onSelect={() => runAction(() => setTheme('light'))}>
-                <Sun className="text-muted-foreground" />
-                <span>Light Mode</span>
-                {theme === 'light' && (
-                  <span className="text-xs text-muted-foreground ml-auto">Active</span>
-                )}
-              </CommandItem>
-              <CommandItem onSelect={() => runAction(() => setTheme('dark'))}>
-                <Moon className="text-muted-foreground" />
-                <span>Dark Mode</span>
-                {theme === 'dark' && (
-                  <span className="text-xs text-muted-foreground ml-auto">Active</span>
-                )}
-              </CommandItem>
-              <CommandItem onSelect={() => runAction(() => setTheme('system'))}>
-                <Monitor className="text-muted-foreground" />
-                <span>System Theme</span>
-                {theme === 'system' && (
-                  <span className="text-xs text-muted-foreground ml-auto">Active</span>
-                )}
-              </CommandItem>
-            </CommandGroup>
+              <CommandGroup heading="Navigate">
+                <CommandItem onSelect={() => runAction(() => onDashboardTabChange('connections'))}>
+                  <Users className="text-muted-foreground" />
+                  <span>Connections</span>
+                  {dashboardTab === 'connections' && (
+                    <span className="text-xs text-muted-foreground ml-auto">Active</span>
+                  )}
+                </CommandItem>
+                <CommandItem onSelect={() => runAction(() => onDashboardTabChange('travel'))}>
+                  <Globe className="text-muted-foreground" />
+                  <span>Travel Journey</span>
+                  {dashboardTab === 'travel' && (
+                    <span className="text-xs text-muted-foreground ml-auto">Active</span>
+                  )}
+                </CommandItem>
+                <CommandItem onSelect={() => runAction(onOpenSettings)}>
+                  <Settings className="text-muted-foreground" />
+                  <span>Settings</span>
+                </CommandItem>
+                <CommandItem onSelect={() => runAction(onOpenProfile)}>
+                  <User className="text-muted-foreground" />
+                  <span>Profile</span>
+                </CommandItem>
+              </CommandGroup>
 
-            <CommandSeparator />
+              <CommandSeparator />
 
-            <CommandGroup heading="Account">
-              <CommandItem onSelect={() => runAction(() => signOut({ callbackUrl: '/login' }))}>
-                <LogOut className="text-muted-foreground" />
-                <span>Sign Out</span>
-              </CommandItem>
-            </CommandGroup>
-          </>
-        )}
-      </CommandList>
-    </CommandDialog>
+              <CommandGroup heading="Data">
+                <CommandItem onSelect={() => runAction(onOpenImport)}>
+                  <Upload className="text-muted-foreground" />
+                  <span>Import Contacts</span>
+                </CommandItem>
+                <CommandItem onSelect={() => runAction(onOpenTripImport)}>
+                  <Upload className="text-muted-foreground" />
+                  <span>Import Trips</span>
+                </CommandItem>
+                <CommandItem onSelect={() => runAction(onOpenExport)}>
+                  <Download className="text-muted-foreground" />
+                  <span>Export Data</span>
+                </CommandItem>
+                <CommandItem onSelect={() => runAction(onOpenDuplicates)}>
+                  <Copy className="text-muted-foreground" />
+                  <span>Find Duplicates</span>
+                </CommandItem>
+              </CommandGroup>
+
+              <CommandSeparator />
+
+              <CommandGroup heading="Theme">
+                <CommandItem onSelect={() => runAction(() => setTheme('light'))}>
+                  <Sun className="text-muted-foreground" />
+                  <span>Light Mode</span>
+                  {theme === 'light' && (
+                    <span className="text-xs text-muted-foreground ml-auto">Active</span>
+                  )}
+                </CommandItem>
+                <CommandItem onSelect={() => runAction(() => setTheme('dark'))}>
+                  <Moon className="text-muted-foreground" />
+                  <span>Dark Mode</span>
+                  {theme === 'dark' && (
+                    <span className="text-xs text-muted-foreground ml-auto">Active</span>
+                  )}
+                </CommandItem>
+                <CommandItem onSelect={() => runAction(() => setTheme('system'))}>
+                  <Monitor className="text-muted-foreground" />
+                  <span>System Theme</span>
+                  {theme === 'system' && (
+                    <span className="text-xs text-muted-foreground ml-auto">Active</span>
+                  )}
+                </CommandItem>
+              </CommandGroup>
+
+              <CommandSeparator />
+
+              <CommandGroup heading="Account">
+                <CommandItem onSelect={() => runAction(() => signOut({ callbackUrl: '/login' }))}>
+                  <LogOut className="text-muted-foreground" />
+                  <span>Sign Out</span>
+                </CommandItem>
+              </CommandGroup>
+            </>
+          )}
+        </CommandList>
+      </CommandDialog>
+    </>
   )
 }

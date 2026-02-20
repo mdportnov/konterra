@@ -52,7 +52,7 @@ function getTripTense(trip: Trip, now: Date): TripTense {
 export default function TripCountryPopup({ country, trips, allTrips, x, y, open, onTripClick, onClose }: TripCountryPopupProps) {
   const ref = useRef<HTMLDivElement>(null)
   useClickOutside(ref, onClose, open)
-  useHotkey('Escape', onClose, { enabled: open })
+  useHotkey('Escape', onClose, { enabled: open, priority: Z.overlay })
 
   const now = useMemo(() => new Date(), [])
 
@@ -125,6 +125,7 @@ export default function TripCountryPopup({ country, trips, allTrips, x, y, open,
   return (
     <div
       ref={ref}
+      data-globe-popup
       className={`${GLASS.heavy} fixed rounded-xl shadow-2xl overflow-hidden flex flex-col`}
       style={{
         left: pos.left,

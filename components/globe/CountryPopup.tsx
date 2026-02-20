@@ -100,7 +100,7 @@ function IndirectContactRow({ contact, onSelect }: { contact: Contact; onSelect:
 export default function CountryPopup({ country, contacts, x, y, open, onSelect, onClose, visited, onToggleVisited, onAddContact, indirectContacts = [] }: CountryPopupProps) {
   const ref = useRef<HTMLDivElement>(null)
   useClickOutside(ref, onClose, open)
-  useHotkey('Escape', onClose, { enabled: open })
+  useHotkey('Escape', onClose, { enabled: open, priority: Z.overlay })
 
   const hasContacts = contacts.length > 0
   const hasAny = hasContacts || indirectContacts.length > 0
@@ -150,6 +150,7 @@ export default function CountryPopup({ country, contacts, x, y, open, onSelect, 
   return (
     <div
       ref={ref}
+      data-globe-popup
       className={`${GLASS.heavy} fixed rounded-xl shadow-2xl overflow-hidden flex flex-col`}
       style={{
         left: pos.left,

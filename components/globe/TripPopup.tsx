@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import type { Trip } from '@/lib/db/schema'
-import { GLASS } from '@/lib/constants/ui'
+import { GLASS, Z } from '@/lib/constants/ui'
 import { TENSE_COLORS } from '@/lib/constants/globe-colors'
 import { countryFlag } from '@/lib/country-flags'
 import { ChevronLeft, ChevronRight, X, Calendar, Clock, MapPin, Plus } from 'lucide-react'
@@ -43,18 +43,28 @@ function gapDaysBetween(prev: Trip | null, next: Trip | null): number | null {
 
 export default function TripPopup({ trip, prevTrip, nextTrip, onNavigate, onClose, onAddTrip }: TripPopupProps) {
   const [visible, setVisible] = useState(false)
-  const [mounted, setMounted] = useState(false)
+  const [shouldRender, setShouldRender] = useState(false)
+
+  if (!!trip && !shouldRender) {
+    setShouldRender(true)
+  }
+  if (!trip && visible) {
+    setVisible(false)
+  }
 
   useEffect(() => {
     if (trip) {
-      setMounted(true)
-      requestAnimationFrame(() => requestAnimationFrame(() => setVisible(true)))
-    } else {
-      setVisible(false)
-      const timer = setTimeout(() => setMounted(false), 200)
-      return () => clearTimeout(timer)
+      let cancelled = false
+      const raf = requestAnimationFrame(() => {
+        if (!cancelled) setVisible(true)
+      })
+      return () => { cancelled = true; cancelAnimationFrame(raf) }
     }
+    const timer = setTimeout(() => setShouldRender(false), 200)
+    return () => clearTimeout(timer)
   }, [trip])
+
+  const mounted = shouldRender
 
   const gapToPrev = useMemo(() => gapDaysBetween(prevTrip, trip), [prevTrip, trip])
   const gapToNext = useMemo(() => gapDaysBetween(trip, nextTrip), [trip, nextTrip])
@@ -73,13 +83,15 @@ export default function TripPopup({ trip, prevTrip, nextTrip, onNavigate, onClos
 
   return (
     <div
-      className={`absolute right-6 z-20 ${GLASS.panel} rounded-xl shadow-lg p-3 w-[320px]`}
+      data-globe-popup
+      className={`absolute right-6 ${GLASS.panel} rounded-xl shadow-lg p-3 w-[320px]`}
       style={{
         bottom: 'calc(max(1.25rem, env(safe-area-inset-bottom, 0px)) + 60px)',
         opacity: visible ? 1 : 0,
         transform: visible ? 'translateY(0)' : 'translateY(8px)',
         transition: 'opacity 200ms cubic-bezier(0.32,0.72,0,1), transform 200ms cubic-bezier(0.32,0.72,0,1)',
         pointerEvents: visible ? 'auto' : 'none',
+        zIndex: Z.overlay,
       }}
     >
       <div className="flex items-center justify-between">

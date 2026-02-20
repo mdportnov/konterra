@@ -32,7 +32,11 @@ function CommandDialog({
     <DialogPrimitive.Root {...props}>
       <DialogPrimitive.Portal>
         <DialogOverlay />
-        <DialogPrimitive.Content className="data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[20%] left-[50%] z-50 w-full max-w-[calc(100%-2rem)] translate-x-[-50%] overflow-hidden rounded-xl border bg-popover shadow-2xl duration-200 outline-none sm:max-w-lg">
+        <DialogPrimitive.Content
+          data-cmdk-dialog
+          onEscapeKeyDown={(e) => e.stopPropagation()}
+          className="data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[20%] left-[50%] z-50 w-full max-w-[calc(100%-2rem)] translate-x-[-50%] overflow-hidden rounded-xl border bg-popover shadow-2xl duration-200 outline-none sm:max-w-lg"
+        >
           <Command className="[&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group]]:px-2 [&_[cmdk-input-wrapper]_svg]:h-5 [&_[cmdk-input-wrapper]_svg]:w-5 [&_[cmdk-input]]:h-12 [&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-2">
             <DialogPrimitive.Title className="sr-only">Command palette</DialogPrimitive.Title>
             <DialogPrimitive.Description className="sr-only">Search contacts, trips, and navigate the app</DialogPrimitive.Description>

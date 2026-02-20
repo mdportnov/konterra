@@ -34,7 +34,9 @@ export function useClickOutside(
       if (ref.current?.contains(e.target as Node)) return
       const target = e.target as HTMLElement
       if (target.closest?.('[data-globe-panel]')) return
+      if (target.closest?.('[data-globe-popup]')) return
       if (target.closest?.('[role="dialog"], [data-slot="dialog-overlay"]')) return
+      if (target.closest?.('[data-cmdk-dialog]')) return
       if (target.closest?.('[data-radix-popper-content-wrapper]')) return
       if (target.closest?.('[data-radix-select-content]')) return
       if (target.closest?.('[role="listbox"]')) return

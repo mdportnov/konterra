@@ -37,7 +37,7 @@ export async function getUserProfile(id: string) {
 
 export async function getUserByUsername(username: string) {
   return db.query.users.findFirst({
-    where: eq(users.username, username),
+    where: sql`lower(${users.username}) = ${username.toLowerCase()}`,
     columns: { id: true, name: true, image: true, username: true, profileVisibility: true, profilePrivacyLevel: true, createdAt: true },
   })
 }
@@ -56,7 +56,7 @@ export async function getUserGlobeSettings(userId: string) {
 
 export async function getPublicProfileData(userId: string, privacyLevel: 'countries_only' | 'full_travel') {
   const countries = await getVisitedCountries(userId)
-  const tripsData = privacyLevel === 'full_travel' ? await getTripsByUserId(userId) : undefined
+  const tripsData = privacyLevel === 'full_travel' ? await getTripsByUserId(userId) : []
   return { countries, trips: tripsData }
 }
 

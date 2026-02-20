@@ -33,7 +33,7 @@ import { usePopupState } from '@/hooks/use-popup-state'
 import { useDashboardRouting } from '@/hooks/use-dashboard-routing'
 import { ChevronRight } from 'lucide-react'
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
-import { useHotkey } from '@/hooks/use-hotkey'
+
 import { useSession } from 'next-auth/react'
 
 const GlobeCanvas = dynamic(() => import('@/components/globe/GlobeCanvas'), { ssr: false })
@@ -105,8 +105,6 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
 
   const addContactCb = useCallback(() => nav.handleAddContact(), [nav.handleAddContact])
   const openInsightsCb = useCallback(() => nav.handleOpenInsights(), [nav.handleOpenInsights])
-  useHotkey('n', addContactCb, { meta: true })
-  useHotkey('i', openInsightsCb, { meta: true })
 
   const handleAddTrip = useCallback((prefill?: { arrivalDate?: string; departureDate?: string; city?: string; country?: string }) => {
     setEditingTrip(null)
@@ -384,6 +382,10 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
       onOpenTripImport={() => setTripImportDialogOpen(true)}
       onOpenExport={() => setExportDialogOpen(true)}
       onOpenDuplicates={() => setDupDialogOpen(true)}
+      onTripClick={(trip) => {
+        setDashboardTab('travel')
+        tripSelection.handleTripPointClick(trip.id)
+      }}
     />
   )
 
