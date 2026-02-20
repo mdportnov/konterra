@@ -204,6 +204,10 @@ export default function TravelJourney({ trips, loading, onImport, onTripClick, o
         </div>
       )}
 
+      {search && groupedByYear.length === 0 && (
+        <p className="text-xs text-muted-foreground/60 text-center py-6">No trips matching &ldquo;{search}&rdquo;</p>
+      )}
+
       <div className="relative ml-4">
         <div className="absolute left-0 top-2 bottom-2 w-0.5 bg-blue-400/30 rounded-full" />
         {groupedByYear.map(([year, yearTrips]) => (

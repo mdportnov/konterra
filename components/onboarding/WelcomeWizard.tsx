@@ -357,7 +357,7 @@ export default function WelcomeWizard({ onAddContact, onOpenImport, onComplete }
   const current = steps[step]
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) finish() }}>
+    <Dialog open={open} onOpenChange={(v) => { if (!v) { if (step >= 2) finish(); else setOpen(false) } }}>
       <DialogContent
         showCloseButton={false}
         className="sm:max-w-md"

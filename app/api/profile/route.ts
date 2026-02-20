@@ -57,7 +57,19 @@ export async function PATCH(req: Request) {
       data.name = body.name.trim()
     }
     if (body.image !== undefined) {
-      data.image = typeof body.image === 'string' ? body.image : null
+      if (typeof body.image === 'string') {
+        try {
+          const url = new URL(body.image)
+          if (url.protocol !== 'https:' && url.protocol !== 'http:') {
+            return badRequest('Image URL must use http or https')
+          }
+          data.image = body.image
+        } catch {
+          return badRequest('Invalid image URL')
+        }
+      } else {
+        data.image = null
+      }
     }
 
     if (body.username !== undefined) {

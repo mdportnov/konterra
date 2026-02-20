@@ -18,7 +18,7 @@ interface PublicProfilePageProps {
     username: string | null
     createdAt: string | null
   }
-  privacyLevel: string
+  privacyLevel: 'countries_only' | 'full_travel'
   countries: string[]
   trips?: Trip[]
   globeAutoRotate?: boolean

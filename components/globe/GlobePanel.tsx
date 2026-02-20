@@ -61,7 +61,13 @@ export default function GlobePanel({
         open ? 'translate-x-0 opacity-100' : `${translateClosed} opacity-0`,
         className
       )}
-      style={{ width: panelWidth, zIndex: z, pointerEvents: open ? 'auto' : 'none' }}
+      aria-hidden={!open}
+      style={{
+        width: panelWidth,
+        zIndex: z,
+        pointerEvents: open ? 'auto' : 'none',
+        paddingBottom: isMobile ? 'env(safe-area-inset-bottom, 0px)' : undefined,
+      }}
     >
       <div
         className={cn(

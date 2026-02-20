@@ -57,6 +57,8 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
   const [savingHomebase, setSavingHomebase] = useState(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  const [profileError, setProfileError] = useState(false)
+
   const [editingUsername, setEditingUsername] = useState(false)
   const [usernameValue, setUsernameValue] = useState('')
   const [savingUsername, setSavingUsername] = useState(false)
@@ -68,10 +70,11 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
     }
     if (fetched.current) return
     fetched.current = true
+    setProfileError(false)
     fetch('/api/profile')
       .then((r) => r.json())
       .then((data) => setUser(data))
-      .catch(() => toast.error('Failed to load profile'))
+      .catch(() => { setProfileError(true); toast.error('Failed to load profile') })
 
     setHomebaseLoading(true)
     fetch('/api/me/location')
@@ -261,10 +264,14 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
     }
   }
 
-  const handleCopyLink = () => {
+  const handleCopyLink = async () => {
     const url = `${window.location.origin}/u/${user?.username}`
-    navigator.clipboard.writeText(url)
-    toast.success('Profile link copied')
+    try {
+      await navigator.clipboard.writeText(url)
+      toast.success('Profile link copied')
+    } catch {
+      toast.error('Failed to copy link')
+    }
   }
 
   const memberSince = user?.createdAt
@@ -291,11 +298,20 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
         <div className="p-6 space-y-6">
           <div className="flex flex-col items-center gap-3 pt-2">
             {!user ? (
-              <>
-                <Skeleton className="h-20 w-20 rounded-full" />
-                <Skeleton className="h-5 w-32" />
-                <Skeleton className="h-4 w-40" />
-              </>
+              profileError ? (
+                <div className="text-center space-y-2 py-4">
+                  <p className="text-sm text-muted-foreground">Failed to load profile</p>
+                  <Button variant="outline" size="sm" onClick={() => { fetched.current = false; setProfileError(false); setUser(null) }}>
+                    Retry
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <Skeleton className="h-20 w-20 rounded-full" />
+                  <Skeleton className="h-5 w-32" />
+                  <Skeleton className="h-4 w-40" />
+                </>
+              )
             ) : (
               <>
                 <Avatar className="h-20 w-20 border-2 border-border">

@@ -142,7 +142,8 @@ export function usePanelNavigation(
       setSidebarView('detail')
       pushUrl(stateToUrl(null, 'detail', selectedContact.id))
     } else {
-      pushUrl('/app')
+      const fallback = window.location.pathname.includes('/travel') ? '/app/travel' : '/app'
+      pushUrl(fallback)
     }
     if (isMobile) setMobileView('dashboard')
   }, [selectedContact, isMobile, setMobileView])

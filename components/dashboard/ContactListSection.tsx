@@ -141,7 +141,7 @@ export default function ContactListSection({
       .finally(() => setFavorsLoading(false))
   }, [])
 
-  useHotkey('k', () => searchRef.current?.focus(), { meta: true })
+  useHotkey('/', () => searchRef.current?.focus())
 
   const allTags = useMemo(() => {
     const tags = new Set<string>()
@@ -306,7 +306,7 @@ export default function ContactListSection({
     try {
       const result = await bulkTagContacts(ids, 'addTag', bulkTagInput.trim())
       toast.success(`Tagged ${result.updated} contact${result.updated !== 1 ? 's' : ''}`)
-      onBulkDelete?.([] as string[])
+      onReloadContacts?.()
       setShowBulkTagInput(false)
       setBulkTagInput('')
     } catch {
@@ -314,7 +314,7 @@ export default function ContactListSection({
     } finally {
       setBulkActionLoading(false)
     }
-  }, [selectedIds, bulkTagInput, onBulkDelete])
+  }, [selectedIds, bulkTagInput, onReloadContacts])
 
   const handleBulkRemoveTag = useCallback(async (tag: string) => {
     if (selectedIds.size === 0) return
@@ -323,13 +323,13 @@ export default function ContactListSection({
     try {
       const result = await bulkTagContacts(ids, 'removeTag', tag)
       toast.success(`Removed tag from ${result.updated} contact${result.updated !== 1 ? 's' : ''}`)
-      onBulkDelete?.([] as string[])
+      onReloadContacts?.()
     } catch {
       toast.error('Failed to remove tag')
     } finally {
       setBulkActionLoading(false)
     }
-  }, [selectedIds, onBulkDelete])
+  }, [selectedIds, onReloadContacts])
 
   const handleContactClickWithSelect = useCallback((contact: Contact) => {
     if (selectMode) {
@@ -443,7 +443,7 @@ export default function ContactListSection({
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             ref={searchRef}
-            placeholder={`Search contacts... (\u2318K)`}
+            placeholder="Search contacts... (/)"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9 bg-muted/50 border-border text-foreground placeholder:text-muted-foreground/60 focus:border-ring"
@@ -646,6 +646,7 @@ export default function ContactListSection({
                   <select
                     value={sortKey}
                     onChange={(e) => setSortKey(e.target.value as SortKey)}
+                    aria-label="Sort contacts by"
                     className="text-[10px] text-muted-foreground/60 bg-transparent border-none outline-none cursor-pointer hover:text-muted-foreground"
                   >
                     {SORT_OPTIONS.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
@@ -1030,12 +1031,16 @@ function PaginationRow({ current, total, onChange }: { current: number; total: n
   )
 }
 
-const NOW_MS = typeof window !== 'undefined' ? Date.now() : 0
+function useNowMs() {
+  const [now] = useState(() => Date.now())
+  return now
+}
 
 function FollowUpBadge({ contact }: { contact: Contact }) {
+  const nowMs = useNowMs()
   if (!contact.nextFollowUp) return null
   const followUp = new Date(contact.nextFollowUp).getTime()
-  const daysUntil = Math.ceil((followUp - NOW_MS) / 86400000)
+  const daysUntil = Math.ceil((followUp - nowMs) / 86400000)
   if (daysUntil > 3) return null
   const isOverdue = daysUntil <= 0
   return (

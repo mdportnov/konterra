@@ -97,8 +97,10 @@ export default function DashboardHeader({
       </div>
 
       <div className="px-4 md:px-5 pt-3 pb-1">
-        <div className="flex gap-1 bg-muted/40 rounded-lg p-0.5">
+        <div role="tablist" className="flex gap-1 bg-muted/40 rounded-lg p-0.5">
           <button
+            role="tab"
+            aria-selected={dashboardTab === 'connections'}
             onClick={() => onDashboardTabChange('connections')}
             className={`flex-1 text-xs font-semibold px-3 py-1.5 rounded-md transition-colors ${
               dashboardTab === 'connections'
@@ -109,6 +111,8 @@ export default function DashboardHeader({
             Connections
           </button>
           <button
+            role="tab"
+            aria-selected={dashboardTab === 'travel'}
             onClick={() => onDashboardTabChange('travel')}
             className={`flex-1 text-xs font-semibold px-3 py-1.5 rounded-md transition-colors ${
               dashboardTab === 'travel'

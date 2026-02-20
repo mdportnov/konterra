@@ -4,11 +4,6 @@ export const GLASS = {
   heavy: 'bg-card/90 backdrop-blur-2xl border border-border',
 } as const
 
-export const GLASS_DARK = {
-  panel: 'bg-black/50 backdrop-blur-xl border border-white/10',
-  control: 'bg-black/40 backdrop-blur-xl border border-white/10',
-  heavy: 'bg-black/60 backdrop-blur-2xl border border-white/10',
-} as const
 
 export const Z = {
   globe: 0,
