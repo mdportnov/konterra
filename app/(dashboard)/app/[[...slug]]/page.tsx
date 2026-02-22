@@ -193,6 +193,8 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
     onOpenProfile: nav.handleOpenProfile,
     isMobile,
     contactsLoading: data.loading,
+    visitedCount: data.visitedCountries.size,
+    wishlistCount: data.wishlistCountries.size,
     onSelectionChange: handleSelectionChange,
     onBulkDelete: handleBulkDelete,
     trips: data.trips,

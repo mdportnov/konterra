@@ -47,6 +47,8 @@ interface ContactListSectionProps {
   onOpenInsights?: () => void
   onOpenProfile?: () => void
   contactsLoading: boolean
+  visitedCount?: number
+  wishlistCount?: number
   onSelectionChange?: (ids: Set<string>) => void
   onBulkDelete?: (ids: string[]) => void
   onReloadContacts?: () => void
@@ -61,6 +63,8 @@ export default function ContactListSection({
   onOpenInsights,
   onOpenProfile,
   contactsLoading,
+  visitedCount,
+  wishlistCount,
   onSelectionChange,
   onBulkDelete,
   onReloadContacts,
@@ -366,7 +370,7 @@ export default function ContactListSection({
           onOpenProfile={onOpenProfile || (() => {})}
         />
       )}
-      <StatsRow contacts={contacts} loading={contactsLoading} />
+      <StatsRow contacts={contacts} loading={contactsLoading} visitedCount={visitedCount} wishlistCount={wishlistCount} />
       {nonSelfContacts.length > 0 && (
         <NetworkHealth contacts={contacts} interactions={recentInteractions} loading={contactsLoading || interactionsLoading} />
       )}
