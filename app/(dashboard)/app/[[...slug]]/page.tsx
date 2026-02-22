@@ -8,6 +8,7 @@ import GlobeControls from '@/components/globe/GlobeControls'
 import GlobeFilters from '@/components/globe/GlobeFilters'
 import ContactEditPanel from '@/components/globe/ContactEditPanel'
 import SettingsPanel from '@/components/globe/SettingsPanel'
+import WishlistDetailPanel from '@/components/globe/WishlistDetailPanel'
 import ImportDialog from '@/components/import/ImportDialog'
 import TripImportDialog from '@/components/import/TripImportDialog'
 import CommandMenu from '@/components/command-menu'
@@ -22,6 +23,7 @@ import TripCountryPopup from '@/components/globe/TripCountryPopup'
 import { PANEL_WIDTH, GLASS, Z, TRANSITION } from '@/lib/constants/ui'
 import { displayDefaults } from '@/types/display'
 import GlobeViewToggle from '@/components/globe/GlobeViewToggle'
+import { normalizeToGlobeName } from '@/components/globe/data/country-centroids'
 import type { DisplayOptions } from '@/types/display'
 import type { Contact, Trip } from '@/lib/db/schema'
 import { useIsMobile } from '@/hooks/use-mobile'
@@ -53,6 +55,8 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
   const [tripEditDialogOpen, setTripEditDialogOpen] = useState(false)
   const [editingTrip, setEditingTrip] = useState<Trip | null>(null)
   const [tripEditPrefill, setTripEditPrefill] = useState<{ arrivalDate?: string; departureDate?: string; city?: string; country?: string } | undefined>()
+  const [wishlistDetailCountry, setWishlistDetailCountry] = useState<string | null>(null)
+  const [wishlistDetailOpen, setWishlistDetailOpen] = useState(false)
 
   const data = useGlobeData()
   const filters = useContactFilters(data.contacts, data.userTags)
@@ -132,6 +136,36 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
     ).size
   }, [data.trips])
 
+  const handleOpenWishlistDetail = useCallback((country: string) => {
+    setWishlistDetailCountry(country)
+    setWishlistDetailOpen(true)
+  }, [])
+
+  const handleCloseWishlistDetail = useCallback(() => {
+    setWishlistDetailOpen(false)
+  }, [])
+
+  const wishlistDetailEntry = useMemo(() => {
+    if (!wishlistDetailCountry) return null
+    return data.wishlistCountries.get(wishlistDetailCountry) ?? null
+  }, [wishlistDetailCountry, data.wishlistCountries])
+
+  const wishlistDetailContacts = useMemo(() => {
+    if (!wishlistDetailCountry) return []
+    return data.contacts.filter((c) => c.country && normalizeToGlobeName(c.country) === wishlistDetailCountry)
+  }, [wishlistDetailCountry, data.contacts])
+
+  const wishlistDetailIndirectContacts = useMemo(() => {
+    if (!wishlistDetailCountry) return []
+    const indirectContactIds = new Set(
+      data.countryConnections
+        .filter((cc) => normalizeToGlobeName(cc.country) === wishlistDetailCountry)
+        .map((cc) => cc.contactId)
+    )
+    const directContactIds = new Set(wishlistDetailContacts.map((c) => c.id))
+    return data.contacts.filter((c) => indirectContactIds.has(c.id) && !directContactIds.has(c.id))
+  }, [wishlistDetailCountry, data.countryConnections, data.contacts, wishlistDetailContacts])
+
   useEffect(() => {
     if (!data.loading) nav.resolveInitialContact(data.contacts)
   }, [data.loading, data.contacts, nav.resolveInitialContact])
@@ -181,6 +215,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
         onTripPointClick={tripSelection.handleTripPointClick}
         display={displayOptions}
         visitedCountries={data.visitedCountries}
+        wishlistCountries={data.wishlistCountries}
         connections={data.connections}
         countryConnections={data.countryConnections}
         highlightedContactIds={highlightedContactIds}
@@ -229,6 +264,9 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
         onDefaultTabChange={setDashboardTab}
         visitedCountries={data.visitedCountries}
         onToggleVisitedCountry={data.handleCountryVisitToggle}
+        wishlistCountries={data.wishlistCountries}
+        onToggleWishlistCountry={data.handleWishlistToggle}
+        onOpenWishlistDetail={handleOpenWishlistDetail}
         onOpenImport={() => setImportDialogOpen(true)}
         onOpenExport={() => setExportDialogOpen(true)}
         onOpenDuplicates={() => setDupDialogOpen(true)}
@@ -238,6 +276,18 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
         visitedCountryCount={data.visitedCountries.size}
         visitedCityCount={visitedCityCount}
         contactCountsByCountry={popups.contactCountsByCountry}
+      />
+
+      <WishlistDetailPanel
+        open={wishlistDetailOpen}
+        country={wishlistDetailCountry}
+        entry={wishlistDetailEntry}
+        contacts={wishlistDetailContacts}
+        indirectContacts={wishlistDetailIndirectContacts}
+        onClose={handleCloseWishlistDetail}
+        onUpdate={data.handleWishlistUpdate}
+        onRemove={data.handleWishlistToggle}
+        onContactClick={nav.handleContactClick}
       />
 
       <ImportDialog
@@ -337,6 +387,13 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
           onClose={popups.closeCountryPopup}
           visited={data.visitedCountries.has(popups.countryPopup.country)}
           onToggleVisited={() => data.handleCountryVisitToggle(popups.countryPopup!.country)}
+          wishlisted={data.wishlistCountries.has(popups.countryPopup.country)}
+          wishlistEntry={data.wishlistCountries.get(popups.countryPopup.country)}
+          onToggleWishlist={() => data.handleWishlistToggle(popups.countryPopup!.country)}
+          onOpenWishlistDetail={() => {
+            popups.closeCountryPopup()
+            handleOpenWishlistDetail(popups.countryPopup!.country)
+          }}
           onAddContact={popups.handleAddContactToCountry}
           indirectContacts={popups.indirectPopupContacts}
         />

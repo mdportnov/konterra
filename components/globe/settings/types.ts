@@ -35,5 +35,8 @@ export interface SettingsTabProps {
 export interface CountriesTabProps {
   visitedCountries?: Set<string>
   onToggleVisitedCountry?: (country: string) => void
+  wishlistCountries?: Map<string, import('@/lib/db/schema').CountryWishlistEntry>
+  onToggleWishlistCountry?: (country: string) => void
+  onOpenWishlistDetail?: (country: string) => void
   contactCountsByCountry: Map<string, number>
 }

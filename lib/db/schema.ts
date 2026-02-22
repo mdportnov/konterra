@@ -294,6 +294,27 @@ export type NewFavor = typeof favors.$inferInsert
 export type Trip = typeof trips.$inferSelect
 export type NewTrip = typeof trips.$inferInsert
 
+export const wishlistPriorityEnum = pgEnum('wishlist_priority', ['dream', 'high', 'medium', 'low'])
+
+export const wishlistStatusEnum = pgEnum('wishlist_status', ['idea', 'researching', 'planning', 'ready'])
+
+export const countryWishlist = pgTable('country_wishlist', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: text('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  country: text('country').notNull(),
+  priority: wishlistPriorityEnum('priority').notNull().default('medium'),
+  status: wishlistStatusEnum('status').notNull().default('idea'),
+  notes: text('notes'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (t) => [
+  index('country_wishlist_user_id_idx').on(t.userId),
+  uniqueIndex('country_wishlist_user_country_idx').on(t.userId, t.country),
+])
+
+export type CountryWishlistEntry = typeof countryWishlist.$inferSelect
+export type NewCountryWishlistEntry = typeof countryWishlist.$inferInsert
+
 export const waitlistStatusEnum = pgEnum('waitlist_status', ['pending', 'approved', 'rejected'])
 
 export const waitlist = pgTable('waitlist', {
