@@ -1,16 +1,17 @@
 'use client'
 
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { toast } from 'sonner'
-import { fetchContacts, fetchConnections, fetchVisitedCountries, fetchTags, fetchRecentInteractions, fetchAllFavors, fetchAllCountryConnections, fetchTrips } from '@/lib/api'
+import { fetchContacts, fetchConnections, fetchVisitedCountries, fetchTags, fetchRecentInteractions, fetchAllFavors, fetchAllCountryConnections, fetchTrips, fetchWishlistCountries } from '@/lib/api'
 import { normalizeToGlobeName } from '@/components/globe/data/country-centroids'
-import type { Contact, ContactConnection, ContactCountryConnection, Tag, Interaction, Favor, Trip } from '@/lib/db/schema'
+import type { Contact, ContactConnection, ContactCountryConnection, CountryWishlistEntry, Tag, Interaction, Favor, Trip } from '@/lib/db/schema'
 
 export function useGlobeData() {
   const [contacts, setContacts] = useState<Contact[]>([])
   const [connections, setConnections] = useState<ContactConnection[]>([])
   const [countryConnections, setCountryConnections] = useState<ContactCountryConnection[]>([])
   const [visitedCountries, setVisitedCountries] = useState<Set<string>>(new Set())
+  const [wishlistCountries, setWishlistCountries] = useState<Map<string, CountryWishlistEntry>>(new Map())
   const [userTags, setUserTags] = useState<Tag[]>([])
   const [allInteractions, setAllInteractions] = useState<(Interaction & { contactName: string })[]>([])
   const [allFavors, setAllFavors] = useState<Favor[]>([])
@@ -51,15 +52,25 @@ export function useGlobeData() {
 
     fetchVisitedCountries(signal)
       .then((data) => { if (Array.isArray(data)) setVisitedCountries(new Set(data.map(normalizeToGlobeName))) })
-      .catch((e) => { if (!signal.aborted) toast.error('Failed to load visited countries') })
+      .catch(() => { if (!signal.aborted) toast.error('Failed to load visited countries') })
+
+    fetchWishlistCountries(signal)
+      .then((data) => {
+        if (Array.isArray(data)) {
+          const map = new Map<string, CountryWishlistEntry>()
+          for (const entry of data) map.set(normalizeToGlobeName(entry.country), entry)
+          setWishlistCountries(map)
+        }
+      })
+      .catch(() => { if (!signal.aborted) toast.error('Failed to load wishlist') })
 
     fetchConnections(signal)
       .then((data) => { if (Array.isArray(data)) setConnections(data) })
-      .catch((e) => { if (!signal.aborted) toast.error('Failed to load connections') })
+      .catch(() => { if (!signal.aborted) toast.error('Failed to load connections') })
 
     fetchAllCountryConnections(signal)
       .then((data) => { if (Array.isArray(data)) setCountryConnections(data) })
-      .catch((e) => { if (!signal.aborted) toast.error('Failed to load country connections') })
+      .catch(() => { if (!signal.aborted) toast.error('Failed to load country connections') })
 
     fetchTags(signal)
       .then((data) => { if (Array.isArray(data)) setUserTags(data) })
@@ -86,6 +97,16 @@ export function useGlobeData() {
 
   const reloadVisitedCountries = useCallback(() => {
     return fetchVisitedCountries().then((data) => { if (Array.isArray(data)) setVisitedCountries(new Set(data.map(normalizeToGlobeName))) }).catch(() => {})
+  }, [])
+
+  const reloadWishlistCountries = useCallback(() => {
+    return fetchWishlistCountries().then((data) => {
+      if (Array.isArray(data)) {
+        const map = new Map<string, CountryWishlistEntry>()
+        for (const entry of data) map.set(normalizeToGlobeName(entry.country), entry)
+        setWishlistCountries(map)
+      }
+    }).catch(() => {})
   }, [])
 
   const geocodingRef = useRef(false)
@@ -182,6 +203,135 @@ export function useGlobeData() {
       })
   }, [])
 
+  const wishlistToggleInFlight = useRef(new Set<string>())
+  const wishlistRef = useRef(wishlistCountries)
+  wishlistRef.current = wishlistCountries
+
+  const handleWishlistToggle = useCallback((country: string) => {
+    if (wishlistToggleInFlight.current.has(country)) return
+    wishlistToggleInFlight.current.add(country)
+
+    const currentEntry = wishlistRef.current.get(country)
+    const wasWishlisted = !!currentEntry
+
+    setWishlistCountries((prev) => {
+      const next = new Map(prev)
+      if (wasWishlisted) {
+        next.delete(country)
+      } else {
+        next.set(country, {
+          id: '',
+          userId: '',
+          country,
+          priority: 'medium',
+          status: 'idea',
+          notes: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        })
+      }
+      return next
+    })
+
+    if (wasWishlisted) {
+      const url = currentEntry?.id ? `/api/wishlist-countries/${currentEntry.id}` : '/api/wishlist-countries'
+      const body = currentEntry?.id ? undefined : JSON.stringify({ country })
+      fetch(url, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        ...(body ? { body } : {}),
+      })
+        .then((res) => { if (!res.ok) throw new Error() })
+        .catch(() => {
+          setWishlistCountries((prev) => {
+            const rollback = new Map(prev)
+            if (currentEntry) rollback.set(country, currentEntry)
+            return rollback
+          })
+          toast.error('Failed to update wishlist')
+        })
+        .finally(() => { wishlistToggleInFlight.current.delete(country) })
+    } else {
+      fetch('/api/wishlist-countries', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ country }),
+      })
+        .then((res) => {
+          if (!res.ok) throw new Error()
+          return res.json()
+        })
+        .then((entry: CountryWishlistEntry) => {
+          setWishlistCountries((prev) => {
+            const next = new Map(prev)
+            next.set(normalizeToGlobeName(entry.country), entry)
+            return next
+          })
+        })
+        .catch(() => {
+          setWishlistCountries((prev) => {
+            const rollback = new Map(prev)
+            rollback.delete(country)
+            return rollback
+          })
+          toast.error('Failed to update wishlist')
+        })
+        .finally(() => { wishlistToggleInFlight.current.delete(country) })
+    }
+  }, [])
+
+  const handleWishlistUpdate = useCallback((country: string, patch: { priority?: string; status?: string; notes?: string | null }) => {
+    const entry = wishlistRef.current.get(country)
+    if (!entry) return
+    if (!entry.id) {
+      setWishlistCountries((prev) => {
+        const next = new Map(prev)
+        const current = next.get(country)
+        if (current) {
+          next.set(country, { ...current, ...patch, updatedAt: new Date() } as CountryWishlistEntry)
+        }
+        return next
+      })
+      return
+    }
+
+    const snapshotEntry = { ...entry }
+
+    setWishlistCountries((prev) => {
+      const next = new Map(prev)
+      const current = next.get(country)
+      if (current) {
+        next.set(country, { ...current, ...patch, updatedAt: new Date() } as CountryWishlistEntry)
+      }
+      return next
+    })
+
+    fetch(`/api/wishlist-countries/${entry.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(patch),
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error()
+        return res.json()
+      })
+      .then((updated: CountryWishlistEntry) => {
+        setWishlistCountries((prev) => {
+          const next = new Map(prev)
+          next.set(normalizeToGlobeName(updated.country), updated)
+          return next
+        })
+      })
+      .catch(() => {
+        setWishlistCountries((prev) => {
+          const next = new Map(prev)
+          next.set(country, snapshotEntry)
+          return next
+        })
+        toast.error('Failed to update wishlist entry')
+      })
+  }, [])
+
   const handleTagCreated = useCallback((tag: Tag) => {
     setUserTags((prev) => {
       if (prev.some((t) => t.id === tag.id)) return prev
@@ -212,6 +362,7 @@ export function useGlobeData() {
     connections, setConnections,
     countryConnections, setCountryConnections,
     visitedCountries, setVisitedCountries,
+    wishlistCountries, setWishlistCountries,
     userTags, setUserTags,
     allInteractions,
     allFavors,
@@ -222,8 +373,11 @@ export function useGlobeData() {
     reloadConnections,
     reloadTrips,
     reloadVisitedCountries,
+    reloadWishlistCountries,
     runBatchGeocode,
     handleCountryVisitToggle,
+    handleWishlistToggle,
+    handleWishlistUpdate,
     handleCountryConnectionsChange,
     handleTagCreated,
     handleTagDeleted,

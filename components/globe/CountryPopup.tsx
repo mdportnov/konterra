@@ -3,14 +3,15 @@
 import { useRef, useMemo, useCallback } from 'react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Switch } from '@/components/ui/switch'
-import { X, UserPlus } from 'lucide-react'
+import { X, UserPlus, Heart, ArrowRight } from 'lucide-react'
 import { useClickOutside } from '@/hooks/use-click-outside'
 import { useHotkey } from '@/hooks/use-hotkey'
 import { GLASS, Z } from '@/lib/constants/ui'
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
 import { countryFlag } from '@/lib/country-flags'
 import { PerplexityIcon } from '@/components/icons/perplexity'
-import type { Contact } from '@/lib/db/schema'
+import { PRIORITY_LABELS, STATUS_LABELS } from '@/lib/constants/wishlist'
+import type { Contact, CountryWishlistEntry } from '@/lib/db/schema'
 
 function buildPerplexityCountryUrl(country: string): string {
   const query = `Best hidden gems, specialty coffee shops, cocktail bars, popular local spots, and networking-friendly places in ${country}`
@@ -27,6 +28,10 @@ interface CountryPopupProps {
   onClose: () => void
   visited?: boolean
   onToggleVisited?: () => void
+  wishlisted?: boolean
+  wishlistEntry?: CountryWishlistEntry
+  onToggleWishlist?: () => void
+  onOpenWishlistDetail?: () => void
   onAddContact?: () => void
   indirectContacts?: Contact[]
 }
@@ -97,7 +102,7 @@ function IndirectContactRow({ contact, onSelect }: { contact: Contact; onSelect:
   )
 }
 
-export default function CountryPopup({ country, contacts, x, y, open, onSelect, onClose, visited, onToggleVisited, onAddContact, indirectContacts = [] }: CountryPopupProps) {
+export default function CountryPopup({ country, contacts, x, y, open, onSelect, onClose, visited, onToggleVisited, wishlisted, wishlistEntry, onToggleWishlist, onOpenWishlistDetail, onAddContact, indirectContacts = [] }: CountryPopupProps) {
   const ref = useRef<HTMLDivElement>(null)
   useClickOutside(ref, onClose, open)
   useHotkey('Escape', onClose, { enabled: open, priority: Z.overlay })
@@ -189,17 +194,58 @@ export default function CountryPopup({ country, contacts, x, y, open, onSelect, 
               <TooltipContent>Explore on Perplexity</TooltipContent>
             </Tooltip>
           </TooltipProvider>
-          <button onClick={onClose} className="text-muted-foreground/60 hover:text-muted-foreground shrink-0 cursor-pointer">
+          <button onClick={onClose} aria-label="Close" className="text-muted-foreground/60 hover:text-muted-foreground shrink-0 cursor-pointer">
             <X className="h-3.5 w-3.5" />
           </button>
         </div>
       </div>
 
-      {onToggleVisited && (
-        <div className="flex items-center justify-between px-4 py-2.5 border-b border-border shrink-0">
-          <span className="text-xs text-muted-foreground">{visited ? 'Visited' : 'Mark as visited'}</span>
-          <Switch checked={!!visited} onCheckedChange={onToggleVisited} />
+      {(onToggleVisited || onToggleWishlist) && (
+        <div className="border-b border-border shrink-0">
+          {onToggleVisited && (
+            <div className="flex items-center justify-between px-4 py-2">
+              <span className="text-xs text-muted-foreground">{visited ? 'Visited' : 'Mark as visited'}</span>
+              <Switch checked={!!visited} onCheckedChange={onToggleVisited} />
+            </div>
+          )}
+          {onToggleWishlist && (
+            <div className="flex items-center justify-between px-4 py-2">
+              <div className="flex items-center gap-1.5">
+                <Heart className={`h-3 w-3 ${wishlisted ? 'fill-rose-500 text-rose-500' : 'text-muted-foreground/60'}`} />
+                <span className="text-xs text-muted-foreground">{wishlisted ? 'Wishlisted' : 'Want to visit'}</span>
+              </div>
+              <Switch checked={!!wishlisted} onCheckedChange={onToggleWishlist} />
+            </div>
+          )}
         </div>
+      )}
+
+      {wishlisted && wishlistEntry && onOpenWishlistDetail && (
+        <button
+          onClick={onOpenWishlistDetail}
+          className="flex items-center justify-between px-4 py-2.5 border-b border-border shrink-0 hover:bg-accent/40 transition-colors cursor-pointer text-left"
+        >
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="flex items-center gap-1.5">
+              {wishlistEntry.priority && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-500 font-medium">
+                  {PRIORITY_LABELS[wishlistEntry.priority] ?? wishlistEntry.priority}
+                </span>
+              )}
+              {wishlistEntry.status && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-accent text-muted-foreground font-medium">
+                  {STATUS_LABELS[wishlistEntry.status] ?? wishlistEntry.status}
+                </span>
+              )}
+            </div>
+            {wishlistEntry.notes && (
+              <span className="text-[10px] text-muted-foreground/50 truncate max-w-[120px]">
+                {wishlistEntry.notes}
+              </span>
+            )}
+          </div>
+          <ArrowRight className="h-3 w-3 text-muted-foreground/40 shrink-0" />
+        </button>
       )}
 
       {hasAny && (

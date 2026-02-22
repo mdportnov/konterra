@@ -32,6 +32,8 @@ interface DashboardPanelProps {
   onSwitchToGlobe?: () => void
   contactsLoading?: boolean
   onCollapse?: () => void
+  visitedCount?: number
+  wishlistCount?: number
   onSelectionChange?: (ids: Set<string>) => void
   onBulkDelete?: (ids: string[]) => void
   trips?: Trip[]
@@ -65,6 +67,8 @@ export default function DashboardPanel({
   onSwitchToGlobe,
   contactsLoading = false,
   onCollapse,
+  visitedCount,
+  wishlistCount,
   onSelectionChange,
   onBulkDelete,
   trips = [],
@@ -127,6 +131,8 @@ export default function DashboardPanel({
             onOpenInsights={onOpenInsights}
             onOpenProfile={onOpenProfile}
             contactsLoading={contactsLoading}
+            visitedCount={visitedCount}
+            wishlistCount={wishlistCount}
             onSelectionChange={onSelectionChange}
             onBulkDelete={onBulkDelete}
             onReloadContacts={onReloadContacts}

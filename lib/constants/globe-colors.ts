@@ -50,6 +50,10 @@ export const POLYGON_COLORS = {
   visitedContactHigh: { dark: 'rgba(200, 100, 20, 0.75)', light: 'rgba(200, 100, 20, 0.55)' },
   indirect: { dark: 'rgba(168, 85, 247, 0.2)', light: 'rgba(168, 85, 247, 0.12)' },
   indirectStroke: { dark: 'rgba(168, 85, 247, 0.5)', light: 'rgba(168, 85, 247, 0.35)' },
+  wishlist: { dark: 'rgba(244, 63, 94, 0.2)', light: 'rgba(244, 63, 94, 0.12)' },
+  wishlistStroke: { dark: 'rgba(244, 63, 94, 0.5)', light: 'rgba(244, 63, 94, 0.35)' },
+  wishlistVisited: { dark: 'rgba(220, 80, 80, 0.3)', light: 'rgba(220, 80, 80, 0.2)' },
+  wishlistVisitedStroke: { dark: 'rgba(220, 80, 80, 0.6)', light: 'rgba(220, 80, 80, 0.4)' },
   userCountry: { dark: 'rgba(34, 197, 94, 0.25)', light: 'rgba(34, 197, 94, 0.15)' },
   userCountryStroke: { dark: 'rgba(34, 197, 94, 0.6)', light: 'rgba(34, 197, 94, 0.45)' },
 } as const

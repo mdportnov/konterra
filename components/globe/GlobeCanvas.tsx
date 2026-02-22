@@ -54,6 +54,7 @@ interface GlobeCanvasProps {
   onTripPointClick?: (tripId: string) => void
   display: DisplayOptions
   visitedCountries?: Set<string>
+  wishlistCountries?: Map<string, { id: string }>
   connections?: ContactConnection[]
   countryConnections?: ContactCountryConnection[]
   highlightedContactIds?: Set<string>
@@ -74,6 +75,7 @@ export default memo(function GlobeCanvas({
   onTripPointClick,
   display,
   visitedCountries,
+  wishlistCountries,
   connections = [],
   countryConnections = [],
   highlightedContactIds,
@@ -609,6 +611,7 @@ export default memo(function GlobeCanvas({
       if (count > 0) parts.push(`${count} contact${count === 1 ? '' : 's'}`)
       if (indirectCount > 0) parts.push(`${indirectCount} indirect tie${indirectCount === 1 ? '' : 's'}`)
       if (isVisited) parts.push('Visited')
+      if (wishlistCountries?.has(name)) parts.push('Wishlist')
       if (userCountry && name === userCountry) parts.push('Your location')
     }
     if (showTravel) {
@@ -616,12 +619,13 @@ export default memo(function GlobeCanvas({
       if (tripCount > 0) parts.push(`${tripCount} trip${tripCount === 1 ? '' : 's'}`)
       if (futureTravelCountries.has(name)) parts.push('Upcoming')
     }
-    if (!showNetwork && !showTravel && visitedCountries?.has(name)) {
-      parts.push('Visited')
+    if (!showNetwork && !showTravel) {
+      if (visitedCountries?.has(name)) parts.push('Visited')
+      if (wishlistCountries?.has(name)) parts.push('Wishlist')
     }
     const label = parts.join(' <span style="opacity:0.4">&middot;</span> ')
     return `<div style="background:${bg};color:${textColor};padding:5px 10px;border-radius:6px;font-size:11px;backdrop-filter:blur(12px);border:1px solid ${border};font-family:system-ui,sans-serif;line-height:1.4;box-shadow:0 2px 8px rgba(0,0,0,${isDark ? '0.4' : '0.08'})">${label}</div>`
-  }, [isDark, countryContactCount, countryConnectionCountMap, visitedCountries, userCountry, showNetwork, showTravel, trips, futureTravelCountries])
+  }, [isDark, countryContactCount, countryConnectionCountMap, visitedCountries, wishlistCountries, userCountry, showNetwork, showTravel, trips, futureTravelCountries])
 
   const getPolygonCapColor = useCallback((feat: object) => {
     const f = feat as { id?: string }
@@ -630,6 +634,7 @@ export default memo(function GlobeCanvas({
       if (showNetwork) {
         const count = countryContactCount.get(name) || 0
         const isVisited = visitedCountries?.has(name)
+        const isWishlist = wishlistCountries?.has(name)
         const isIndirectOnly = indirectOnlyCountries.has(name)
         if (count > 0 && isVisited) {
           if (count > 5) return isDark ? POLYGON_COLORS.visitedContactHigh.dark : POLYGON_COLORS.visitedContactHigh.light
@@ -640,7 +645,9 @@ export default memo(function GlobeCanvas({
         if (count >= 3) return isDark ? POLYGON_COLORS.contactMed.dark : POLYGON_COLORS.contactMed.light
         if (count >= 1) return isDark ? POLYGON_COLORS.contactLow.dark : POLYGON_COLORS.contactLow.light
         if (isIndirectOnly) return isDark ? POLYGON_COLORS.indirect.dark : POLYGON_COLORS.indirect.light
+        if (isVisited && isWishlist) return isDark ? POLYGON_COLORS.wishlistVisited.dark : POLYGON_COLORS.wishlistVisited.light
         if (isVisited) return isDark ? POLYGON_COLORS.visitedOnly.dark : POLYGON_COLORS.visitedOnly.light
+        if (isWishlist) return isDark ? POLYGON_COLORS.wishlist.dark : POLYGON_COLORS.wishlist.light
         if (userCountry && name === userCountry) return isDark ? POLYGON_COLORS.userCountry.dark : POLYGON_COLORS.userCountry.light
       }
       if (showTravel && !showNetwork) {
@@ -651,12 +658,13 @@ export default memo(function GlobeCanvas({
         if (futureTravelCountries.has(name) && !(countryContactCount.get(name) || 0)) return isDark ? TRAVEL_COLORS.futureCountry.dark : TRAVEL_COLORS.futureCountry.light
         if (pastTravelCountries.has(name) && !(countryContactCount.get(name) || 0)) return isDark ? TRAVEL_COLORS.pastCountry.dark : TRAVEL_COLORS.pastCountry.light
       }
-      if (!showNetwork && !showTravel && visitedCountries?.has(name)) {
-        return isDark ? POLYGON_COLORS.visitedOnly.dark : POLYGON_COLORS.visitedOnly.light
+      if (!showNetwork && !showTravel) {
+        if (visitedCountries?.has(name)) return isDark ? POLYGON_COLORS.visitedOnly.dark : POLYGON_COLORS.visitedOnly.light
+        if (wishlistCountries?.has(name)) return isDark ? POLYGON_COLORS.wishlist.dark : POLYGON_COLORS.wishlist.light
       }
     }
     return isDark ? POLYGON_COLORS.defaultCap.dark : POLYGON_COLORS.defaultCap.light
-  }, [isDark, countryContactCount, visitedCountries, indirectOnlyCountries, userCountry, showNetwork, showTravel, pastTravelCountries, futureTravelCountries])
+  }, [isDark, countryContactCount, visitedCountries, wishlistCountries, indirectOnlyCountries, userCountry, showNetwork, showTravel, pastTravelCountries, futureTravelCountries])
 
   const getPolygonSideColor = useCallback(
     () => isDark ? POLYGON_COLORS.defaultSide.dark : POLYGON_COLORS.defaultSide.light,
@@ -670,12 +678,14 @@ export default memo(function GlobeCanvas({
       if (name) {
         if (showNetwork) {
           const isVisited = visitedCountries?.has(name)
+          const isWishlist = wishlistCountries?.has(name)
           const hasContacts = (countryContactCount.get(name) || 0) > 0
           const isIndirectOnly = indirectOnlyCountries.has(name)
           if (isVisited && hasContacts) return isDark ? POLYGON_COLORS.visitedContactsStroke.dark : POLYGON_COLORS.visitedContactsStroke.light
           if (isVisited) return isDark ? POLYGON_COLORS.visitedStroke.dark : POLYGON_COLORS.visitedStroke.light
           if (hasContacts) return isDark ? POLYGON_COLORS.contactStroke.dark : POLYGON_COLORS.contactStroke.light
           if (isIndirectOnly) return isDark ? POLYGON_COLORS.indirectStroke.dark : POLYGON_COLORS.indirectStroke.light
+          if (isWishlist) return isDark ? POLYGON_COLORS.wishlistStroke.dark : POLYGON_COLORS.wishlistStroke.light
           if (userCountry && name === userCountry) return isDark ? POLYGON_COLORS.userCountryStroke.dark : POLYGON_COLORS.userCountryStroke.light
         }
         if (showTravel && !showNetwork) {
@@ -686,13 +696,14 @@ export default memo(function GlobeCanvas({
           if (futureTravelCountries.has(name) && !(countryContactCount.get(name) || 0)) return isDark ? TRAVEL_COLORS.futureStroke.dark : TRAVEL_COLORS.futureStroke.light
           if (pastTravelCountries.has(name) && !(countryContactCount.get(name) || 0)) return isDark ? TRAVEL_COLORS.pastStroke.dark : TRAVEL_COLORS.pastStroke.light
         }
-        if (!showNetwork && !showTravel && visitedCountries?.has(name)) {
-          return isDark ? POLYGON_COLORS.visitedStroke.dark : POLYGON_COLORS.visitedStroke.light
+        if (!showNetwork && !showTravel) {
+          if (visitedCountries?.has(name)) return isDark ? POLYGON_COLORS.visitedStroke.dark : POLYGON_COLORS.visitedStroke.light
+          if (wishlistCountries?.has(name)) return isDark ? POLYGON_COLORS.wishlistStroke.dark : POLYGON_COLORS.wishlistStroke.light
         }
       }
       return isDark ? POLYGON_COLORS.defaultStroke.dark : POLYGON_COLORS.defaultStroke.light
     },
-    [isDark, visitedCountries, countryContactCount, indirectOnlyCountries, userCountry, showNetwork, showTravel, pastTravelCountries, futureTravelCountries]
+    [isDark, visitedCountries, wishlistCountries, countryContactCount, indirectOnlyCountries, userCountry, showNetwork, showTravel, pastTravelCountries, futureTravelCountries]
   )
 
   const getPointColor = useCallback((point: object) => (point as GlobePoint).color, [])
@@ -781,7 +792,7 @@ export default memo(function GlobeCanvas({
             </div>
           </div>
         )}
-        {showNetwork && (hasCountryContacts || (visitedCountries && visitedCountries.size > 0) || countryConnections.length > 0 || !!userCountry) && (
+        {showNetwork && (hasCountryContacts || (visitedCountries && visitedCountries.size > 0) || (wishlistCountries && wishlistCountries.size > 0) || countryConnections.length > 0 || !!userCountry) && (
           <div className={`${GLASS.control} rounded-lg px-2.5 py-2 flex flex-col gap-1`}>
             <div className="flex items-center gap-1.5">
               <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.contactLow.dark : POLYGON_COLORS.contactLow.light }} />
@@ -806,6 +817,12 @@ export default memo(function GlobeCanvas({
                   <span className="text-[10px] text-muted-foreground">Visited + contacts</span>
                 </div>
               </>
+            )}
+            {wishlistCountries && wishlistCountries.size > 0 && (
+              <div className="flex items-center gap-1.5">
+                <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.wishlist.dark : POLYGON_COLORS.wishlist.light, border: `1.5px solid ${isDark ? POLYGON_COLORS.wishlistStroke.dark : POLYGON_COLORS.wishlistStroke.light}` }} />
+                <span className="text-[10px] text-muted-foreground">Wishlist</span>
+              </div>
             )}
             {countryConnections.length > 0 && (
               <div className="flex items-center gap-1.5">

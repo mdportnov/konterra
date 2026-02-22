@@ -11,6 +11,7 @@ import { saveDefaultTab } from '@/hooks/use-dashboard-routing'
 import type { DashboardTab } from '@/hooks/use-dashboard-routing'
 import type { Tab } from '@/components/globe/settings'
 import type { DisplayOptions } from '@/types/display'
+import type { CountryWishlistEntry } from '@/lib/db/schema'
 
 const TAB_ICONS = { profile: User, settings: Settings, countries: Globe } as const
 
@@ -24,6 +25,9 @@ interface SettingsPanelProps {
   onDefaultTabChange: (tab: DashboardTab) => void
   visitedCountries?: Set<string>
   onToggleVisitedCountry?: (country: string) => void
+  wishlistCountries?: Map<string, CountryWishlistEntry>
+  onToggleWishlistCountry?: (country: string) => void
+  onOpenWishlistDetail?: (country: string) => void
   onOpenImport?: () => void
   onOpenExport?: () => void
   onOpenDuplicates?: () => void
@@ -45,6 +49,9 @@ export default function SettingsPanel({
   onDefaultTabChange,
   visitedCountries,
   onToggleVisitedCountry,
+  wishlistCountries,
+  onToggleWishlistCountry,
+  onOpenWishlistDetail,
   onOpenImport,
   onOpenExport,
   onOpenDuplicates,
@@ -129,6 +136,9 @@ export default function SettingsPanel({
             <CountriesTab
               visitedCountries={visitedCountries}
               onToggleVisitedCountry={onToggleVisitedCountry}
+              wishlistCountries={wishlistCountries}
+              onToggleWishlistCountry={onToggleWishlistCountry}
+              onOpenWishlistDetail={onOpenWishlistDetail}
               contactCountsByCountry={contactCountsByCountry}
             />
           )}

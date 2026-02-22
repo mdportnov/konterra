@@ -1,45 +1,60 @@
 'use client'
 
 import { useMemo } from 'react'
-import { Users, Globe, MapPin, Star } from 'lucide-react'
+import { Users, Globe, Heart, TrendingUp } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { GLASS } from '@/lib/constants/ui'
+import { countryNames } from '@/components/globe/data/country-centroids'
 import type { Contact } from '@/lib/db/schema'
+
+const TOTAL_COUNTRIES = new Set(Object.values(countryNames)).size
 
 interface StatsRowProps {
   contacts: Contact[]
   loading?: boolean
+  visitedCount?: number
+  wishlistCount?: number
 }
 
-export default function StatsRow({ contacts, loading }: StatsRowProps) {
-  const stats = useMemo(() => {
-    const countries = new Set<string>()
-    const cities = new Set<string>()
-    let ratingSum = 0
-    let ratingCount = 0
+function pct(n: number): string {
+  const p = (n / TOTAL_COUNTRIES) * 100
+  if (p === 0) return '0%'
+  if (p < 1) return '<1%'
+  return `${Math.round(p)}%`
+}
 
-    for (const c of contacts) {
-      if (c.country) countries.add(c.country)
-      if (c.city) cities.add(c.city)
-      if (c.rating) {
-        ratingSum += c.rating
-        ratingCount++
-      }
-    }
-
-    return {
-      total: contacts.length,
-      countries: countries.size,
-      cities: cities.size,
-      avgRating: ratingCount > 0 ? (ratingSum / ratingCount).toFixed(1) : '-',
-    }
-  }, [contacts])
+export default function StatsRow({ contacts, loading, visitedCount = 0, wishlistCount = 0 }: StatsRowProps) {
+  const contactCount = useMemo(() => contacts.length, [contacts])
+  const potential = visitedCount + wishlistCount
 
   const cards = [
-    { label: 'Contacts', value: stats.total, icon: Users },
-    { label: 'Countries', value: stats.countries, icon: Globe },
-    { label: 'Cities', value: stats.cities, icon: MapPin },
-    { label: 'Avg Rating', value: stats.avgRating, icon: Star },
+    {
+      label: 'Contacts',
+      value: String(contactCount),
+      icon: Users,
+      accent: 'bg-orange-500/10 text-orange-400',
+    },
+    {
+      label: 'Visited',
+      value: String(visitedCount),
+      sub: `${pct(visitedCount)} of ${TOTAL_COUNTRIES}`,
+      icon: Globe,
+      accent: 'bg-teal-500/10 text-teal-400',
+    },
+    {
+      label: 'Wishlist',
+      value: String(wishlistCount),
+      sub: wishlistCount > 0 ? `${wishlistCount} to explore` : undefined,
+      icon: Heart,
+      accent: 'bg-rose-500/10 text-rose-400',
+    },
+    {
+      label: 'With wishlist',
+      value: String(potential),
+      sub: potential > visitedCount ? pct(potential) : undefined,
+      icon: TrendingUp,
+      accent: potential > visitedCount ? 'bg-amber-500/10 text-amber-400' : 'bg-muted text-muted-foreground/40',
+    },
   ]
 
   if (loading) {
@@ -65,12 +80,18 @@ export default function StatsRow({ contacts, loading }: StatsRowProps) {
           key={card.label}
           className={`${GLASS.control} rounded-xl p-3 flex items-center gap-3 text-left`}
         >
-          <div className="rounded-lg bg-orange-500/10 p-2">
-            <card.icon className="h-4 w-4 text-orange-400" />
+          <div className={`rounded-lg p-2 ${card.accent}`}>
+            <card.icon className="h-4 w-4" />
           </div>
-          <div>
+          <div className="min-w-0">
             <p className="text-lg font-semibold text-foreground leading-tight">{card.value}</p>
-            <p className="text-[11px] text-muted-foreground">{card.label}</p>
+            <p className="text-[11px] text-muted-foreground truncate">
+              {card.sub ? (
+                <><span>{card.label}</span> <span className="text-muted-foreground/50">{card.sub}</span></>
+              ) : (
+                card.label
+              )}
+            </p>
           </div>
         </div>
       ))}

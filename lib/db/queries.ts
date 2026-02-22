@@ -1,7 +1,7 @@
 import { db } from './index'
-import { users, contacts, interactions, contactConnections, contactCountryConnections, introductions, favors, visitedCountries, waitlist, tags, trips } from './schema'
+import { users, contacts, interactions, contactConnections, contactCountryConnections, introductions, favors, visitedCountries, waitlist, tags, trips, countryWishlist } from './schema'
 import { eq, and, or, desc, sql, arrayContains, inArray } from 'drizzle-orm'
-import type { NewContact, NewContactConnection, NewContactCountryConnection, NewIntroduction, NewFavor, NewTrip } from './schema'
+import type { NewContact, NewContactConnection, NewContactCountryConnection, NewIntroduction, NewFavor, NewTrip, NewCountryWishlistEntry } from './schema'
 
 export async function deleteAllContactsByUserId(userId: string) {
   return db.delete(contacts).where(eq(contacts.userId, userId))
@@ -1007,4 +1007,63 @@ export async function deleteWaitlistEntry(id: string) {
     .where(eq(waitlist.id, id))
     .returning({ id: waitlist.id })
   return deleted
+}
+
+export async function getWishlistCountries(userId: string) {
+  return db.query.countryWishlist.findMany({
+    where: eq(countryWishlist.userId, userId),
+    orderBy: (cw, { desc }) => [desc(cw.updatedAt)],
+  })
+}
+
+export async function getWishlistCountryByCountry(userId: string, country: string) {
+  return db.query.countryWishlist.findFirst({
+    where: and(eq(countryWishlist.userId, userId), eq(countryWishlist.country, country)),
+  })
+}
+
+export async function addWishlistCountry(userId: string, country: string, data?: { priority?: string; notes?: string }) {
+  const values: NewCountryWishlistEntry = { userId, country }
+  if (data?.priority) values.priority = data.priority as 'dream' | 'high' | 'medium' | 'low'
+  if (data?.notes) values.notes = data.notes
+  const [entry] = await db
+    .insert(countryWishlist)
+    .values(values)
+    .onConflictDoNothing({ target: [countryWishlist.userId, countryWishlist.country] })
+    .returning()
+  if (!entry) {
+    return db.query.countryWishlist.findFirst({
+      where: and(eq(countryWishlist.userId, userId), eq(countryWishlist.country, country)),
+    })
+  }
+  return entry
+}
+
+export async function updateWishlistCountry(
+  id: string,
+  userId: string,
+  data: { priority?: string; status?: string; notes?: string | null },
+) {
+  const set: Record<string, unknown> = { updatedAt: new Date() }
+  if (data.priority !== undefined) set.priority = data.priority
+  if (data.status !== undefined) set.status = data.status
+  if (data.notes !== undefined) set.notes = data.notes
+  const [entry] = await db
+    .update(countryWishlist)
+    .set(set)
+    .where(and(eq(countryWishlist.id, id), eq(countryWishlist.userId, userId)))
+    .returning()
+  return entry
+}
+
+export async function removeWishlistCountry(id: string, userId: string) {
+  await db.delete(countryWishlist).where(
+    and(eq(countryWishlist.id, id), eq(countryWishlist.userId, userId)),
+  )
+}
+
+export async function removeWishlistCountryByName(userId: string, country: string) {
+  await db.delete(countryWishlist).where(
+    and(eq(countryWishlist.userId, userId), eq(countryWishlist.country, country)),
+  )
 }
