@@ -12,6 +12,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { countryNames } from '@/components/globe/data/country-centroids'
 import { COUNTRY_REGIONS } from '@/lib/constants/country-regions'
 import { countryFlag } from '@/lib/country-flags'
+import { PRIORITY_LABELS, STATUS_LABELS } from '@/lib/constants/wishlist'
 import type { CountriesTabProps } from './types'
 
 const allCountryNames = Array.from(new Set(Object.values(countryNames))).sort()
@@ -19,20 +20,6 @@ const allCountryNames = Array.from(new Set(Object.values(countryNames))).sort()
 const CONTINENT_ORDER = ['Europe', 'Asia', 'North America', 'South America', 'Africa', 'Oceania', 'Other']
 
 type ViewMode = 'visited' | 'wishlist' | 'all'
-
-const PRIORITY_LABELS: Record<string, string> = {
-  dream: 'Dream',
-  high: 'High',
-  medium: 'Medium',
-  low: 'Low',
-}
-
-const STATUS_LABELS: Record<string, string> = {
-  idea: 'Idea',
-  researching: 'Researching',
-  planning: 'Planning',
-  ready: 'Ready',
-}
 
 function getContinent(country: string): string {
   return COUNTRY_REGIONS[country] || 'Other'
@@ -230,6 +217,7 @@ export function CountriesTab({ visitedCountries, onToggleVisitedCountry, wishlis
                           <div key={name} className="flex items-center gap-2 px-1 py-1 rounded hover:bg-accent group">
                             <button
                               onClick={() => onToggleWishlistCountry?.(name)}
+                              aria-label={isWishlisted ? `Remove ${name} from wishlist` : `Add ${name} to wishlist`}
                               className="cursor-pointer"
                             >
                               <Heart className={`h-3.5 w-3.5 ${isWishlisted ? 'fill-rose-500 text-rose-500' : 'text-muted-foreground/40'}`} />
@@ -248,7 +236,8 @@ export function CountriesTab({ visitedCountries, onToggleVisitedCountry, wishlis
                             {onOpenWishlistDetail && (
                               <button
                                 onClick={() => onOpenWishlistDetail(name)}
-                                className="opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                                aria-label={`Open ${name} details`}
+                                className="opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity cursor-pointer"
                               >
                                 <ArrowRight className="h-3 w-3 text-muted-foreground/40" />
                               </button>
@@ -266,6 +255,7 @@ export function CountriesTab({ visitedCountries, onToggleVisitedCountry, wishlis
                           <span className="text-sm text-foreground flex-1">{countryFlag(name)} {name}</span>
                           <button
                             onClick={() => onToggleWishlistCountry?.(name)}
+                            aria-label={isWishlisted ? `Remove ${name} from wishlist` : `Add ${name} to wishlist`}
                             className="cursor-pointer"
                           >
                             <Heart className={`h-3 w-3 transition-colors ${isWishlisted ? 'fill-rose-500 text-rose-500' : 'text-muted-foreground/30 hover:text-rose-400'}`} />

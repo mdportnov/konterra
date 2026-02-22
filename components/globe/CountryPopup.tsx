@@ -10,25 +10,12 @@ import { GLASS, Z } from '@/lib/constants/ui'
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
 import { countryFlag } from '@/lib/country-flags'
 import { PerplexityIcon } from '@/components/icons/perplexity'
+import { PRIORITY_LABELS, STATUS_LABELS } from '@/lib/constants/wishlist'
 import type { Contact, CountryWishlistEntry } from '@/lib/db/schema'
 
 function buildPerplexityCountryUrl(country: string): string {
   const query = `Best hidden gems, specialty coffee shops, cocktail bars, popular local spots, and networking-friendly places in ${country}`
   return `https://www.perplexity.ai/search?q=${encodeURIComponent(query)}`
-}
-
-const PRIORITY_LABELS: Record<string, string> = {
-  dream: 'Dream',
-  high: 'High',
-  medium: 'Medium',
-  low: 'Low',
-}
-
-const STATUS_LABELS: Record<string, string> = {
-  idea: 'Idea',
-  researching: 'Researching',
-  planning: 'Planning',
-  ready: 'Ready',
 }
 
 interface CountryPopupProps {
@@ -207,7 +194,7 @@ export default function CountryPopup({ country, contacts, x, y, open, onSelect, 
               <TooltipContent>Explore on Perplexity</TooltipContent>
             </Tooltip>
           </TooltipProvider>
-          <button onClick={onClose} className="text-muted-foreground/60 hover:text-muted-foreground shrink-0 cursor-pointer">
+          <button onClick={onClose} aria-label="Close" className="text-muted-foreground/60 hover:text-muted-foreground shrink-0 cursor-pointer">
             <X className="h-3.5 w-3.5" />
           </button>
         </div>

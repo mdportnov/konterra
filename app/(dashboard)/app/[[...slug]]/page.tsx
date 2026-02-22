@@ -166,6 +166,8 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
     return data.contacts.filter((c) => indirectContactIds.has(c.id) && !directContactIds.has(c.id))
   }, [wishlistDetailCountry, data.countryConnections, data.contacts, wishlistDetailContacts])
 
+  const wishlistDetailEffectiveOpen = wishlistDetailOpen && !!wishlistDetailCountry && data.wishlistCountries.has(wishlistDetailCountry)
+
   useEffect(() => {
     if (!data.loading) nav.resolveInitialContact(data.contacts)
   }, [data.loading, data.contacts, nav.resolveInitialContact])
@@ -281,7 +283,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
       />
 
       <WishlistDetailPanel
-        open={wishlistDetailOpen}
+        open={wishlistDetailEffectiveOpen}
         country={wishlistDetailCountry}
         entry={wishlistDetailEntry}
         contacts={wishlistDetailContacts}

@@ -54,7 +54,7 @@ interface GlobeCanvasProps {
   onTripPointClick?: (tripId: string) => void
   display: DisplayOptions
   visitedCountries?: Set<string>
-  wishlistCountries?: Map<string, unknown>
+  wishlistCountries?: Map<string, { id: string }>
   connections?: ContactConnection[]
   countryConnections?: ContactCountryConnection[]
   highlightedContactIds?: Set<string>

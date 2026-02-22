@@ -52,7 +52,7 @@ export function useGlobeData() {
 
     fetchVisitedCountries(signal)
       .then((data) => { if (Array.isArray(data)) setVisitedCountries(new Set(data.map(normalizeToGlobeName))) })
-      .catch((e) => { if (!signal.aborted) toast.error('Failed to load visited countries') })
+      .catch(() => { if (!signal.aborted) toast.error('Failed to load visited countries') })
 
     fetchWishlistCountries(signal)
       .then((data) => {
@@ -66,11 +66,11 @@ export function useGlobeData() {
 
     fetchConnections(signal)
       .then((data) => { if (Array.isArray(data)) setConnections(data) })
-      .catch((e) => { if (!signal.aborted) toast.error('Failed to load connections') })
+      .catch(() => { if (!signal.aborted) toast.error('Failed to load connections') })
 
     fetchAllCountryConnections(signal)
       .then((data) => { if (Array.isArray(data)) setCountryConnections(data) })
-      .catch((e) => { if (!signal.aborted) toast.error('Failed to load country connections') })
+      .catch(() => { if (!signal.aborted) toast.error('Failed to load country connections') })
 
     fetchTags(signal)
       .then((data) => { if (Array.isArray(data)) setUserTags(data) })
@@ -204,14 +204,17 @@ export function useGlobeData() {
   }, [])
 
   const wishlistToggleInFlight = useRef(new Set<string>())
+  const wishlistRef = useRef(wishlistCountries)
+  wishlistRef.current = wishlistCountries
 
   const handleWishlistToggle = useCallback((country: string) => {
     if (wishlistToggleInFlight.current.has(country)) return
     wishlistToggleInFlight.current.add(country)
 
-    let wasWishlisted = false
+    const currentEntry = wishlistRef.current.get(country)
+    const wasWishlisted = !!currentEntry
+
     setWishlistCountries((prev) => {
-      wasWishlisted = prev.has(country)
       const next = new Map(prev)
       if (wasWishlisted) {
         next.delete(country)
@@ -231,21 +234,18 @@ export function useGlobeData() {
     })
 
     if (wasWishlisted) {
-      const entry = wishlistCountries.get(country)
-      const url = entry?.id ? `/api/wishlist-countries/${entry.id}` : '/api/wishlist-countries'
-      const method = entry?.id ? 'DELETE' : 'DELETE'
-      const body = entry?.id ? undefined : JSON.stringify({ country })
+      const url = currentEntry?.id ? `/api/wishlist-countries/${currentEntry.id}` : '/api/wishlist-countries'
+      const body = currentEntry?.id ? undefined : JSON.stringify({ country })
       fetch(url, {
-        method,
+        method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         ...(body ? { body } : {}),
       })
         .then((res) => { if (!res.ok) throw new Error() })
-        .then(() => reloadWishlistCountries())
         .catch(() => {
           setWishlistCountries((prev) => {
             const rollback = new Map(prev)
-            if (entry) rollback.set(country, entry)
+            if (currentEntry) rollback.set(country, currentEntry)
             return rollback
           })
           toast.error('Failed to update wishlist')
@@ -278,11 +278,24 @@ export function useGlobeData() {
         })
         .finally(() => { wishlistToggleInFlight.current.delete(country) })
     }
-  }, [wishlistCountries, reloadWishlistCountries])
+  }, [])
 
   const handleWishlistUpdate = useCallback((country: string, patch: { priority?: string; status?: string; notes?: string | null }) => {
-    const entry = wishlistCountries.get(country)
-    if (!entry?.id) return
+    const entry = wishlistRef.current.get(country)
+    if (!entry) return
+    if (!entry.id) {
+      setWishlistCountries((prev) => {
+        const next = new Map(prev)
+        const current = next.get(country)
+        if (current) {
+          next.set(country, { ...current, ...patch, updatedAt: new Date() } as CountryWishlistEntry)
+        }
+        return next
+      })
+      return
+    }
+
+    const snapshotEntry = { ...entry }
 
     setWishlistCountries((prev) => {
       const next = new Map(prev)
@@ -312,12 +325,12 @@ export function useGlobeData() {
       .catch(() => {
         setWishlistCountries((prev) => {
           const next = new Map(prev)
-          next.set(country, entry)
+          next.set(country, snapshotEntry)
           return next
         })
         toast.error('Failed to update wishlist entry')
       })
-  }, [wishlistCountries])
+  }, [])
 
   const handleTagCreated = useCallback((tag: Tag) => {
     setUserTags((prev) => {

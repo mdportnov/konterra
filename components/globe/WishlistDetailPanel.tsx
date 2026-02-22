@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import GlobePanel from '@/components/globe/GlobePanel'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { Separator } from '@/components/ui/separator'
@@ -8,25 +8,9 @@ import { Textarea } from '@/components/ui/textarea'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Heart, Trash2 } from 'lucide-react'
 import { PANEL_WIDTH } from '@/lib/constants/ui'
+import { WISHLIST_PRIORITIES, WISHLIST_STATUSES, PRIORITY_LABELS, STATUS_LABELS } from '@/lib/constants/wishlist'
 import { countryFlag } from '@/lib/country-flags'
 import type { Contact, CountryWishlistEntry } from '@/lib/db/schema'
-
-const PRIORITIES = ['low', 'medium', 'high', 'dream'] as const
-const STATUSES = ['idea', 'researching', 'planning', 'ready'] as const
-
-const PRIORITY_LABELS: Record<string, string> = {
-  dream: 'Dream',
-  high: 'High',
-  medium: 'Medium',
-  low: 'Low',
-}
-
-const STATUS_LABELS: Record<string, string> = {
-  idea: 'Idea',
-  researching: 'Researching',
-  planning: 'Planning',
-  ready: 'Ready',
-}
 
 interface WishlistDetailPanelProps {
   open: boolean
@@ -59,6 +43,12 @@ export default function WishlistDetailPanel({
     setTrackedId(entry?.id)
     setNotes(entry?.notes ?? '')
   }
+
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+    }
+  }, [])
 
   const handlePriorityChange = useCallback((value: string) => {
     if (country && value) onUpdate(country, { priority: value })
@@ -115,7 +105,7 @@ export default function WishlistDetailPanel({
                 onValueChange={handlePriorityChange}
                 className="w-full"
               >
-                {PRIORITIES.map((p) => (
+                {WISHLIST_PRIORITIES.map((p) => (
                   <ToggleGroupItem
                     key={p}
                     value={p}
@@ -135,7 +125,7 @@ export default function WishlistDetailPanel({
                 onValueChange={handleStatusChange}
                 className="w-full"
               >
-                {STATUSES.map((s) => (
+                {WISHLIST_STATUSES.map((s) => (
                   <ToggleGroupItem
                     key={s}
                     value={s}
