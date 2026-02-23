@@ -15,28 +15,48 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://konterra.space'),
   title: {
-    default: 'Konterra',
+    default: 'Konterra — Private Intelligence Network',
     template: '%s | Konterra',
   },
-  description: 'Your personal network CRM with an interactive 3D globe. Map contacts, track relationships, and grow your social capital.',
-  keywords: ['CRM', 'network', 'globe', 'contacts', 'relationship management'],
+  description: 'Your most valuable asset isn\'t indexed by any search engine. Konterra maps, measures, and mobilizes the relationships that define your career.',
+  keywords: ['personal CRM', 'network intelligence', 'relationship management', '3D globe', 'contacts', 'social capital', 'networking tool', 'private CRM'],
   authors: [{ name: 'Konterra' }],
+  creator: 'Konterra',
+  publisher: 'Konterra',
   icons: {
     icon: '/icon.svg',
     apple: '/apple-icon.svg',
   },
+  alternates: {
+    canonical: '/',
+  },
   openGraph: {
-    title: 'Konterra',
-    description: 'Personal network CRM with an interactive 3D globe',
+    title: 'Konterra — Private Intelligence Network',
+    description: 'Map, measure, and mobilize the relationships that define your career. A private intelligence system for your most valuable asset — your network.',
     siteName: 'Konterra',
+    url: 'https://konterra.space',
     type: 'website',
+    locale: 'en_US',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Konterra',
-    description: 'Personal network CRM with an interactive 3D globe',
+    title: 'Konterra — Private Intelligence Network',
+    description: 'Map, measure, and mobilize the relationships that define your career.',
   },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+  verification: {},
 }
 
 export const viewport: Viewport = {

@@ -3,8 +3,11 @@ import type { Metadata } from 'next'
 import NetworkBackground from '@/components/auth/NetworkBackground'
 
 export const metadata: Metadata = {
-  title: 'Privacy Policy — Konterra',
+  title: 'Privacy Policy',
   description: 'How Konterra handles your data: what we collect, why, and your rights.',
+  alternates: {
+    canonical: '/privacy',
+  },
 }
 
 const SECTIONS = [

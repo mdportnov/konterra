@@ -3,9 +3,14 @@ import type { Metadata } from 'next'
 import NetworkBackground from '@/components/auth/NetworkBackground'
 
 export const metadata: Metadata = {
-  title: 'Konterra — Private Intelligence Network',
+  title: {
+    absolute: 'Konterra — Private Intelligence Network | Map, Measure & Mobilize Your Relationships',
+  },
   description:
-    'Your most valuable asset isn\'t indexed by any search engine. Konterra maps, measures, and mobilizes the relationships that define your career.',
+    'Your most valuable asset isn\'t indexed by any search engine. Konterra maps, measures, and mobilizes the relationships that define your career on an interactive 3D globe.',
+  alternates: {
+    canonical: 'https://konterra.space',
+  },
 }
 
 const STATS = [
@@ -62,9 +67,37 @@ const FEATURES = [
   { title: 'Private & Sovereign', description: 'Your data belongs to you. No ads. No data selling. Ever.' },
 ] as const
 
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'WebApplication',
+  name: 'Konterra',
+  url: 'https://konterra.space',
+  description: 'Private Intelligence Network — map, measure, and mobilize the relationships that define your career.',
+  applicationCategory: 'BusinessApplication',
+  operatingSystem: 'Web',
+  offers: {
+    '@type': 'Offer',
+    price: '0',
+    priceCurrency: 'USD',
+    availability: 'https://schema.org/InviteOnly',
+  },
+  featureList: [
+    '3D Globe Visualization',
+    'Relationship Intelligence',
+    'Connection Insights',
+    'Favor & Reciprocity Tracking',
+    'Travel Integration',
+    'Private & Sovereign Data',
+  ],
+}
+
 export default function LandingPage() {
   return (
     <div className="relative min-h-dvh overflow-x-hidden">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <NetworkBackground />
 
       <div className="relative z-10">

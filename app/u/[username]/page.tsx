@@ -23,11 +23,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title,
     description,
+    alternates: {
+      canonical: `/u/${username}`,
+    },
     openGraph: {
       title,
       description,
       type: 'profile',
-      url: `https://konterra.app/u/${username}`,
+      url: `https://konterra.space/u/${username}`,
       siteName: 'Konterra',
     },
     twitter: {
