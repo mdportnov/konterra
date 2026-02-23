@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1770445534723,
+      "tag": "0000_right_madame_hydra",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1770462383546,
+      "tag": "0001_optimal_human_fly",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1771819804606,
+      "tag": "0002_ordinary_tigra",
+      "breakpoints": true
+    }
+  ]
+}

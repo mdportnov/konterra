@@ -1,3 +1,5 @@
+import { env } from '@/lib/env'
+
 interface GeocodingResult {
   lat: number
   lng: number
@@ -7,7 +9,7 @@ interface GeocodingResult {
 const GEOCODE_TIMEOUT = 5000
 
 export async function geocode(query: string): Promise<GeocodingResult | null> {
-  const apiKey = process.env.OPENCAGE_API_KEY
+  const apiKey = env.OPENCAGE_API_KEY
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), GEOCODE_TIMEOUT)
 

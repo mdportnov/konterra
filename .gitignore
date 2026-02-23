@@ -33,8 +33,8 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
-# drizzle
-/drizzle
+# drizzle (track migration files, ignore only dev artifacts)
+/drizzle/meta/0*_snapshot.json
 
 # vercel
 .vercel

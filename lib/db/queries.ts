@@ -60,15 +60,6 @@ export async function getPublicProfileData(userId: string, privacyLevel: 'countr
   return { countries, trips: tripsData }
 }
 
-export async function upsertUser(id: string, email: string, name: string, password: string) {
-  const [row] = await db
-    .insert(users)
-    .values({ id, email, name, password })
-    .onConflictDoNothing({ target: users.id })
-    .returning()
-  return row ?? db.query.users.findFirst({ where: eq(users.id, id) })
-}
-
 export async function updateUserProfile(id: string, data: {
   name?: string
   image?: string | null
