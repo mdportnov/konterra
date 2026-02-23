@@ -8,8 +8,9 @@ import { ThemeToggle } from '@/components/theme-toggle'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Switch } from '@/components/ui/switch'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import { Loader2, Upload, Download, Trash2, Copy } from 'lucide-react'
+import { Loader2, Upload, Download, Trash2, Copy, UserX } from 'lucide-react'
 import { toast } from 'sonner'
+import { signOut } from 'next-auth/react'
 import type { ArcMode } from '@/types/display'
 import type { SettingsTabProps } from './types'
 import { saveDefaultTab } from '@/hooks/use-dashboard-routing'
@@ -36,6 +37,22 @@ export function SettingsTab({
 }: SettingsTabProps) {
   const [deleteConfirm, setDeleteConfirm] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [accountDeleteConfirm, setAccountDeleteConfirm] = useState(false)
+  const [accountDeleting, setAccountDeleting] = useState(false)
+
+  const handleDeleteAccount = async () => {
+    setAccountDeleting(true)
+    try {
+      const res = await fetch('/api/me', { method: 'DELETE' })
+      if (!res.ok) throw new Error('Failed to delete account')
+      await signOut({ callbackUrl: '/' })
+    } catch {
+      toast.error('Failed to delete account')
+      setAccountDeleteConfirm(false)
+    } finally {
+      setAccountDeleting(false)
+    }
+  }
 
   const handleDeleteAll = async () => {
     setDeleting(true)
@@ -153,6 +170,48 @@ export function SettingsTab({
                   size="sm"
                   onClick={() => setDeleteConfirm(false)}
                   disabled={deleting}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <Separator className="bg-border" />
+
+        <div className="space-y-3">
+          <span className="text-xs font-medium text-muted-foreground/60 uppercase tracking-wider">Account</span>
+          {!accountDeleteConfirm ? (
+            <Button
+              variant="outline"
+              className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/30"
+              onClick={() => setAccountDeleteConfirm(true)}
+            >
+              <UserX className="mr-2 h-4 w-4" />
+              Delete Account
+            </Button>
+          ) : (
+            <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 space-y-2">
+              <p className="text-sm text-destructive font-medium">
+                This will permanently delete your account and all data. This action cannot be undone.
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="flex-1"
+                  onClick={handleDeleteAccount}
+                  disabled={accountDeleting}
+                >
+                  {accountDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserX className="mr-2 h-4 w-4" />}
+                  Confirm Delete Account
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setAccountDeleteConfirm(false)}
+                  disabled={accountDeleting}
                 >
                   Cancel
                 </Button>

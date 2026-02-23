@@ -333,9 +333,14 @@ export default function LandingPage() {
                   Private Intelligence Network
                 </span>
               </div>
-              <p className="font-mono text-[10px] text-white/20">
-                All rights reserved.
-              </p>
+              <div className="flex items-center gap-4">
+                <Link href="/privacy" className="font-mono text-[10px] text-white/30 hover:text-white/50 transition-colors">
+                  Privacy Policy
+                </Link>
+                <p className="font-mono text-[10px] text-white/20">
+                  All rights reserved.
+                </p>
+              </div>
             </div>
           </footer>
         </main>

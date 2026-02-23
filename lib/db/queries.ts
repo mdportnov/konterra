@@ -7,6 +7,10 @@ export async function deleteAllContactsByUserId(userId: string) {
   return db.delete(contacts).where(eq(contacts.userId, userId))
 }
 
+export async function deleteUserAccount(userId: string) {
+  return db.delete(users).where(eq(users.id, userId))
+}
+
 export async function getUserByEmail(email: string) {
   return db.query.users.findFirst({
     where: eq(users.email, email),
