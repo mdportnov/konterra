@@ -366,6 +366,9 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
         countries={filters.allCountries}
         activeCountries={filters.activeCountries}
         onCountriesChange={filters.setActiveCountries}
+        importSources={filters.allImportSources}
+        activeImportSources={filters.activeImportSources}
+        onImportSourcesChange={filters.setActiveImportSources}
         userTags={data.userTags}
         onTagCreated={data.handleTagCreated}
         onTagDeleted={data.handleTagDeleted}

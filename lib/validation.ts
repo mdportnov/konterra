@@ -16,6 +16,16 @@ export const FAVOR_VALUES = ['low', 'medium', 'high', 'critical'] as const
 export const FAVOR_STATUSES = ['active', 'resolved', 'expired', 'repaid'] as const
 export const INTERACTION_TYPES = ['meeting', 'call', 'message', 'email', 'event', 'introduction', 'deal', 'note'] as const
 export const INTRODUCTION_STATUSES = ['planned', 'introduced', 'connected', 'failed', 'completed', 'made'] as const
+export const IMPORT_SOURCES = ['manual', 'konterra-json', 'google-csv', 'telegram-json', 'vcard', 'linkedin-csv'] as const
+
+export const IMPORT_SOURCE_LABELS: Record<string, string> = {
+  'manual': 'Manual',
+  'konterra-json': 'Konterra',
+  'google-csv': 'Google',
+  'telegram-json': 'Telegram',
+  'vcard': 'vCard',
+  'linkedin-csv': 'LinkedIn',
+}
 
 export function validateEnum(value: unknown, allowed: readonly string[], fieldName: string): string | null {
   if (!value) return null

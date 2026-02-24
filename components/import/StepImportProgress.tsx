@@ -1,13 +1,15 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { CheckCircle2, AlertCircle, Loader2 } from 'lucide-react'
 import type { ImportEntry, BulkImportItem } from '@/lib/import/types'
 import type { KonterraExport } from '@/lib/export/types'
+import type { ImportSource } from './StepSourceSelect'
 
 interface StepImportProgressProps {
   entries: ImportEntry[]
+  source: ImportSource | null
   konterraData?: KonterraExport | null
   onComplete: () => void
 }
@@ -34,7 +36,7 @@ const MERGE_FIELDS = [
   'secondaryLocations', 'rating', 'relationshipType',
 ] as const
 
-function entriesToBulkItems(entries: ImportEntry[]): BulkImportItem[] {
+function entriesToBulkItems(entries: ImportEntry[], importSource: string | null): BulkImportItem[] {
   return entries.map((e) => {
     if (e.action === 'skip') {
       return { action: 'skip' as const, contact: { name: e.parsed.name } }
@@ -46,8 +48,8 @@ function entriesToBulkItems(entries: ImportEntry[]): BulkImportItem[] {
       const choices = e.mergeFields || {}
 
       for (const field of MERGE_FIELDS) {
-        const source = choices[field] || 'existing'
-        if (source === 'imported') {
+        const src = choices[field] || 'existing'
+        if (src === 'imported') {
           merged[field] = (e.parsed as unknown as Record<string, unknown>)[field]
         } else {
           const existingVal = (existing as Record<string, unknown>)[field]
@@ -67,31 +69,32 @@ function entriesToBulkItems(entries: ImportEntry[]): BulkImportItem[] {
 
     return {
       action: 'create' as const,
-      contact: e.parsed as BulkImportItem['contact'],
+      contact: { ...e.parsed, importSource } as BulkImportItem['contact'],
     }
   })
 }
 
-export default function StepImportProgress({ entries, konterraData, onComplete }: StepImportProgressProps) {
+export default function StepImportProgress({ entries, source, konterraData, onComplete }: StepImportProgressProps) {
   const [progress, setProgress] = useState(0)
-  const [total, setTotal] = useState(0)
   const [statusText, setStatusText] = useState('')
   const [result, setResult] = useState<ImportResult | null>(null)
   const [resultVisible, setResultVisible] = useState(false)
   const started = useRef(false)
 
+  const items = useMemo(() => entriesToBulkItems(entries, source), [entries, source])
+  const batches = useMemo(() => {
+    const b: BulkImportItem[][] = []
+    for (let i = 0; i < items.length; i += BATCH_SIZE) {
+      b.push(items.slice(i, i + BATCH_SIZE))
+    }
+    return b
+  }, [items])
+  const hasRelations = !!konterraData
+  const total = batches.length + (hasRelations ? 1 : 0)
+
   useEffect(() => {
     if (started.current) return
     started.current = true
-
-    const items = entriesToBulkItems(entries)
-    const batches: BulkImportItem[][] = []
-    for (let i = 0; i < items.length; i += BATCH_SIZE) {
-      batches.push(items.slice(i, i + BATCH_SIZE))
-    }
-    const hasRelations = !!konterraData
-    const totalSteps = batches.length + (hasRelations ? 1 : 0)
-    setTotal(totalSteps)
 
     const agg: ImportResult = { created: 0, updated: 0, skipped: 0, errors: [] }
 
@@ -141,7 +144,7 @@ export default function StepImportProgress({ entries, konterraData, onComplete }
         } catch {
           agg.errors.push('Relations import network error')
         }
-        setProgress(totalSteps)
+        setProgress(total)
       }
 
       setResult(agg)
@@ -149,7 +152,7 @@ export default function StepImportProgress({ entries, konterraData, onComplete }
         requestAnimationFrame(() => setResultVisible(true))
       })
     })()
-  }, [entries, konterraData])
+  }, [batches, hasRelations, total, konterraData])
 
   const pct = total > 0 ? Math.round((progress / total) * 100) : 0
 
