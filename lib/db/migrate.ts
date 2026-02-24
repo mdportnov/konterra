@@ -6,7 +6,11 @@ import { Pool } from 'pg'
 config({ path: '.env.local' })
 
 async function main() {
-  const pool = new Pool({ connectionString: process.env.DATABASE_URL! })
+  if (!process.env.DATABASE_URL) {
+    console.log('DATABASE_URL not set, skipping migrations')
+    return
+  }
+  const pool = new Pool({ connectionString: process.env.DATABASE_URL })
   const db = drizzle(pool)
   await migrate(db, { migrationsFolder: './drizzle' })
   await pool.end()
