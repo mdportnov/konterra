@@ -85,6 +85,7 @@ export async function POST(req: Request) {
     lastContactedAt: toDateOrNull(body.lastContactedAt),
     nextFollowUp: toDateOrNull(body.nextFollowUp),
     timezone: toStringOrNull(body.timezone),
+    importSource: 'manual',
     isSelf,
   })
 

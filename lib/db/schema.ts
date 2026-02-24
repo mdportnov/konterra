@@ -145,6 +145,7 @@ export const contacts = pgTable('contacts', {
   loyaltyIndicator: loyaltyIndicatorEnum('loyalty_indicator'),
   financialCapacity: financialCapacityEnum('financial_capacity'),
   motivations: text('motivations').array(),
+  importSource: text('import_source'),
   createdAt: timestamp('created_at').defaultNow(),
   isSelf: boolean('is_self').default(false),
   updatedAt: timestamp('updated_at').defaultNow(),

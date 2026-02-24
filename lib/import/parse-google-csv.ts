@@ -45,7 +45,7 @@ function parseCSVRows(text: string): string[][] {
   return rows
 }
 
-function parseCSV(text: string): Record<string, string>[] {
+export function parseCSV(text: string): Record<string, string>[] {
   const allRows = parseCSVRows(text)
   if (allRows.length < 2) return []
 

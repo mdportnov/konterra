@@ -1,8 +1,8 @@
 'use client'
 
-import { FileSpreadsheet, MessageCircle, Contact, Globe } from 'lucide-react'
+import { FileSpreadsheet, MessageCircle, Contact, Globe, Linkedin } from 'lucide-react'
 
-export type ImportSource = 'konterra-json' | 'google-csv' | 'telegram-json' | 'vcard'
+export type ImportSource = 'konterra-json' | 'google-csv' | 'telegram-json' | 'vcard' | 'linkedin-csv'
 
 interface StepSourceSelectProps {
   onSelect: (source: ImportSource) => void
@@ -26,6 +26,12 @@ const sources = [
     label: 'Telegram',
     description: 'JSON export from Telegram',
     icon: MessageCircle,
+  },
+  {
+    id: 'linkedin-csv' as ImportSource,
+    label: 'LinkedIn',
+    description: 'Connections CSV from LinkedIn data export',
+    icon: Linkedin,
   },
   {
     id: 'vcard' as ImportSource,

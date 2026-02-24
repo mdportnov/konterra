@@ -23,6 +23,7 @@ import NetworkHealth from './widgets/NetworkHealth'
 import FavorLedger from './widgets/FavorLedger'
 import ConnectionInsightsSummary from './widgets/ConnectionInsightsSummary'
 import { fetchRecentInteractions, fetchAllFavors, bulkDeleteContacts, bulkTagContacts } from '@/lib/api'
+import { IMPORT_SOURCE_LABELS } from '@/lib/validation'
 import type { Contact, ContactConnection, Interaction, Favor } from '@/lib/db/schema'
 
 type SortKey = 'name' | 'rating' | 'lastContacted' | 'updatedAt'
@@ -74,6 +75,7 @@ export default function ContactListSection({
   const [selectedCountries, setSelectedCountries] = useState<string[]>([])
   const [selectedRatings, setSelectedRatings] = useState<Set<number>>(new Set())
   const [selectedRelTypes, setSelectedRelTypes] = useState<string[]>([])
+  const [selectedImportSources, setSelectedImportSources] = useState<string[]>([])
   const [tagsExpanded, setTagsExpanded] = useState(false)
   const [countriesExpanded, setCountriesExpanded] = useState(false)
   const [filtersOpen, setFiltersOpen] = useState(false)
@@ -165,7 +167,13 @@ export default function ContactListSection({
     return RELATIONSHIP_TYPES.filter((t) => types.has(t))
   }, [contacts])
 
-  const activeFilterCount = selectedTags.length + selectedRatings.size + selectedRelTypes.length + selectedCountries.length
+  const allImportSources = useMemo(() => {
+    const sources = new Set<string>()
+    contacts.forEach((c) => c.importSource && sources.add(c.importSource))
+    return Array.from(sources).sort()
+  }, [contacts])
+
+  const activeFilterCount = selectedTags.length + selectedRatings.size + selectedRelTypes.length + selectedCountries.length + selectedImportSources.length
 
   const filteredContacts = useMemo(() => {
     const filtered = contacts.filter((c) => {
@@ -185,7 +193,9 @@ export default function ContactListSection({
         selectedRatings.size === 0 || (c.rating != null && selectedRatings.has(c.rating))
       const matchesRelType =
         selectedRelTypes.length === 0 || (c.relationshipType != null && selectedRelTypes.includes(c.relationshipType))
-      return matchesSearch && matchesTags && matchesCountry && matchesRating && matchesRelType
+      const matchesSource =
+        selectedImportSources.length === 0 || (c.importSource != null && selectedImportSources.includes(c.importSource))
+      return matchesSearch && matchesTags && matchesCountry && matchesRating && matchesRelType && matchesSource
     })
     const sorted = [...filtered]
     switch (sortKey) {
@@ -211,9 +221,9 @@ export default function ContactListSection({
         break
     }
     return sorted
-  }, [contacts, search, selectedTags, selectedCountries, selectedRatings, selectedRelTypes, sortKey])
+  }, [contacts, search, selectedTags, selectedCountries, selectedRatings, selectedRelTypes, selectedImportSources, sortKey])
 
-  useEffect(() => { setCurrentPage(1) }, [search, selectedTags, selectedCountries, selectedRatings, selectedRelTypes])
+  useEffect(() => { setCurrentPage(1) }, [search, selectedTags, selectedCountries, selectedRatings, selectedRelTypes, selectedImportSources])
 
   const totalPages = Math.ceil(filteredContacts.length / PAGE_SIZE)
   const pagedContacts = useMemo(() => {
@@ -240,16 +250,22 @@ export default function ContactListSection({
       prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]
     )
 
+  const toggleImportSource = (s: string) =>
+    setSelectedImportSources((prev) =>
+      prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]
+    )
+
   const clearFilters = () => {
     setSelectedTags([])
     setSelectedCountries([])
     setSelectedRatings(new Set())
     setSelectedRelTypes([])
+    setSelectedImportSources([])
     setSearch('')
     setCurrentPage(1)
   }
 
-  const hasFilters = search || selectedTags.length > 0 || selectedCountries.length > 0 || selectedRatings.size > 0 || selectedRelTypes.length > 0
+  const hasFilters = search || selectedTags.length > 0 || selectedCountries.length > 0 || selectedRatings.size > 0 || selectedRelTypes.length > 0 || selectedImportSources.length > 0
 
   const toggleSelectContact = useCallback((id: string) => {
     setSelectedIds((prev) => {
@@ -623,6 +639,25 @@ export default function ContactListSection({
                         onClick={() => toggleRelType(t)}
                       >
                         {t}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+
+                {allImportSources.length > 0 && (
+                  <div className="flex gap-1 overflow-x-auto pb-0.5 scrollbar-none">
+                    {allImportSources.map((s) => (
+                      <Badge
+                        key={s}
+                        variant={selectedImportSources.includes(s) ? 'default' : 'outline'}
+                        className={`cursor-pointer text-[10px] shrink-0 ${
+                          selectedImportSources.includes(s)
+                            ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/30'
+                            : 'border-border text-muted-foreground hover:bg-muted hover:text-foreground/80'
+                        }`}
+                        onClick={() => toggleImportSource(s)}
+                      >
+                        {IMPORT_SOURCE_LABELS[s] || s}
                       </Badge>
                     ))}
                   </div>

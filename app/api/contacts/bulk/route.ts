@@ -61,6 +61,7 @@ function buildNewContactData(userId: string, c: Record<string, unknown>): NewCon
     loyaltyIndicator: toStringOrNull(c.loyaltyIndicator) as NewContact['loyaltyIndicator'],
     financialCapacity: toStringOrNull(c.financialCapacity) as NewContact['financialCapacity'],
     motivations: toArrayOrNull(c.motivations),
+    importSource: toStringOrNull(c.importSource),
   }
 }
 

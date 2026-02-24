@@ -10,6 +10,7 @@ import { parseGoogleCSV } from '@/lib/import/parse-google-csv'
 import { parseTelegramJSON } from '@/lib/import/parse-telegram'
 import { parseVCards } from '@/lib/import/parse-vcard'
 import { parseKonterraJSON } from '@/lib/import/parse-konterra'
+import { parseLinkedInCSV } from '@/lib/import/parse-linkedin'
 import { enrichLocationFields } from '@/lib/import/parse-address'
 import type { KonterraExport } from '@/lib/export/types'
 
@@ -24,6 +25,7 @@ const acceptMap: Record<ImportSource, string> = {
   'google-csv': '.csv',
   'telegram-json': '.json',
   'vcard': '.vcf,.vcard',
+  'linkedin-csv': '.csv',
 }
 
 const labelMap: Record<ImportSource, string> = {
@@ -31,6 +33,7 @@ const labelMap: Record<ImportSource, string> = {
   'google-csv': 'Google Contacts CSV',
   'telegram-json': 'Telegram JSON',
   'vcard': 'vCard file (.vcf)',
+  'linkedin-csv': 'LinkedIn Connections CSV',
 }
 
 const instructions: Record<ImportSource, { steps: string[] }> = {
@@ -64,6 +67,14 @@ const instructions: Record<ImportSource, { steps: string[] }> = {
       'Select the contacts you want to export',
       'Choose File \u2192 Export \u2192 Export vCard',
       'Save the .vcf file to your computer',
+    ],
+  },
+  'linkedin-csv': {
+    steps: [
+      'Go to linkedin.com/mypreferences/d/download-my-data',
+      'Select "Connections" and click "Request archive"',
+      'Wait for the email from LinkedIn (usually a few minutes)',
+      'Download the ZIP, extract it, and upload Connections.csv',
     ],
   },
 }
@@ -143,6 +154,9 @@ export default function StepFileParse({ source, onParsed, onBack }: StepFilePars
             break
           case 'vcard':
             result = parseVCards(text)
+            break
+          case 'linkedin-csv':
+            result = parseLinkedInCSV(text)
             break
         }
 

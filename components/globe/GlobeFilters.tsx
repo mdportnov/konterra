@@ -14,6 +14,7 @@ import { useClickOutside } from '@/hooks/use-click-outside'
 import { useHotkey } from '@/hooks/use-hotkey'
 import { toast } from 'sonner'
 import type { Tag } from '@/lib/db/schema'
+import { IMPORT_SOURCE_LABELS } from '@/lib/validation'
 
 const RATING_LEVELS = [5, 4, 3, 2, 1] as const
 
@@ -29,6 +30,9 @@ interface GlobeFiltersProps {
   countries: string[]
   activeCountries: Set<string>
   onCountriesChange: (countries: Set<string>) => void
+  importSources: string[]
+  activeImportSources: Set<string>
+  onImportSourcesChange: (sources: Set<string>) => void
   userTags?: Tag[]
   onTagCreated?: (tag: Tag) => void
   onTagDeleted?: (tagId: string, tagName: string) => void
@@ -46,6 +50,9 @@ export default function GlobeFilters({
   countries,
   activeCountries,
   onCountriesChange,
+  importSources,
+  activeImportSources,
+  onImportSourcesChange,
   userTags = [],
   onTagCreated,
   onTagDeleted,
@@ -120,14 +127,25 @@ export default function GlobeFilters({
     [activeCountries, onCountriesChange]
   )
 
+  const toggleImportSource = useCallback(
+    (s: string) => {
+      const next = new Set(activeImportSources)
+      if (next.has(s)) next.delete(s)
+      else next.add(s)
+      onImportSourcesChange(next)
+    },
+    [activeImportSources, onImportSourcesChange]
+  )
+
   const activeFilterCount = useMemo(() => {
     let count = 0
     if (ratings.size < 5) count += 5 - ratings.size
     count += activeTags.size
     count += activeRelTypes.size
     count += activeCountries.size
+    count += activeImportSources.size
     return count
-  }, [ratings, activeTags, activeRelTypes, activeCountries])
+  }, [ratings, activeTags, activeRelTypes, activeCountries, activeImportSources])
 
   const handleCreateTag = useCallback(async () => {
     const name = newTagName.trim()
@@ -177,7 +195,8 @@ export default function GlobeFilters({
     onTagsChange(new Set())
     onRelTypesChange(new Set())
     onCountriesChange(new Set())
-  }, [onRatingsChange, onTagsChange, onRelTypesChange, onCountriesChange])
+    onImportSourcesChange(new Set())
+  }, [onRatingsChange, onTagsChange, onRelTypesChange, onCountriesChange, onImportSourcesChange])
 
   const noneActive = ratings.size === 0
 
@@ -414,6 +433,38 @@ export default function GlobeFilters({
                     ))}
                   </div>
                 </ScrollArea>
+              </div>
+            )}
+
+            {importSources.length > 0 && (
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[10px] text-muted-foreground">Source</span>
+                  {activeImportSources.size > 0 && (
+                    <button
+                      onClick={() => onImportSourcesChange(new Set())}
+                      className="text-[10px] text-muted-foreground/60 hover:text-muted-foreground transition-colors"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {importSources.map((s) => (
+                    <Badge
+                      key={s}
+                      variant={activeImportSources.has(s) ? 'default' : 'outline'}
+                      className={`cursor-pointer text-[10px] ${
+                        activeImportSources.has(s)
+                          ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/30'
+                          : 'border-border text-muted-foreground/50 hover:bg-muted hover:text-muted-foreground'
+                      }`}
+                      onClick={() => toggleImportSource(s)}
+                    >
+                      {IMPORT_SOURCE_LABELS[s] || s}
+                    </Badge>
+                  ))}
+                </div>
               </div>
             )}
           </div>

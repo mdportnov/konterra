@@ -147,6 +147,7 @@ export default function ImportDialog({ open, onOpenChange, existingContacts, onI
           <AnimatedStep active={step === 'importing'}>
             <StepImportProgress
               entries={entries}
+              source={source}
               konterraData={konterraData}
               onComplete={handleComplete}
             />
