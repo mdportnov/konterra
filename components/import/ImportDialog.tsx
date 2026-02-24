@@ -41,6 +41,7 @@ function AnimatedStep({ active, children }: { active: boolean; children: React.R
 
   useEffect(() => {
     if (active) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setMounted(true)
       requestAnimationFrame(() => {
         requestAnimationFrame(() => setVisible(true))

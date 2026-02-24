@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { CheckCircle2, AlertCircle, Loader2 } from 'lucide-react'
 import type { ImportEntry, BulkImportItem } from '@/lib/import/types'
@@ -76,24 +76,25 @@ function entriesToBulkItems(entries: ImportEntry[], importSource: string | null)
 
 export default function StepImportProgress({ entries, source, konterraData, onComplete }: StepImportProgressProps) {
   const [progress, setProgress] = useState(0)
-  const [total, setTotal] = useState(0)
   const [statusText, setStatusText] = useState('')
   const [result, setResult] = useState<ImportResult | null>(null)
   const [resultVisible, setResultVisible] = useState(false)
   const started = useRef(false)
 
+  const items = useMemo(() => entriesToBulkItems(entries, source), [entries, source])
+  const batches = useMemo(() => {
+    const b: BulkImportItem[][] = []
+    for (let i = 0; i < items.length; i += BATCH_SIZE) {
+      b.push(items.slice(i, i + BATCH_SIZE))
+    }
+    return b
+  }, [items])
+  const hasRelations = !!konterraData
+  const total = batches.length + (hasRelations ? 1 : 0)
+
   useEffect(() => {
     if (started.current) return
     started.current = true
-
-    const items = entriesToBulkItems(entries, source)
-    const batches: BulkImportItem[][] = []
-    for (let i = 0; i < items.length; i += BATCH_SIZE) {
-      batches.push(items.slice(i, i + BATCH_SIZE))
-    }
-    const hasRelations = !!konterraData
-    const totalSteps = batches.length + (hasRelations ? 1 : 0)
-    setTotal(totalSteps)
 
     const agg: ImportResult = { created: 0, updated: 0, skipped: 0, errors: [] }
 
@@ -143,7 +144,7 @@ export default function StepImportProgress({ entries, source, konterraData, onCo
         } catch {
           agg.errors.push('Relations import network error')
         }
-        setProgress(totalSteps)
+        setProgress(total)
       }
 
       setResult(agg)
@@ -151,7 +152,7 @@ export default function StepImportProgress({ entries, source, konterraData, onCo
         requestAnimationFrame(() => setResultVisible(true))
       })
     })()
-  }, [entries, source, konterraData])
+  }, [batches, hasRelations, total, konterraData])
 
   const pct = total > 0 ? Math.round((progress / total) * 100) : 0
 

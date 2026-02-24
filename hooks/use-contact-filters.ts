@@ -75,6 +75,7 @@ export function useContactFilters(contacts: Contact[], userTags: Tag[]) {
     const relSet = new Set(allRelTypes)
     const countrySet = new Set(allCountries)
     const sourceSet = new Set(allImportSources)
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setActiveTags((prev) => { const n = new Set([...prev].filter((t) => tagSet.has(t))); return n.size === prev.size ? prev : n })
     setActiveRelTypes((prev) => { const n = new Set([...prev].filter((t) => relSet.has(t))); return n.size === prev.size ? prev : n })
     setActiveCountries((prev) => { const n = new Set([...prev].filter((c) => countrySet.has(c))); return n.size === prev.size ? prev : n })
