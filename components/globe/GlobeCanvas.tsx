@@ -607,22 +607,17 @@ export default memo(function GlobeCanvas({
     if (showNetwork) {
       const count = countryContactCount.get(name) || 0
       const indirectCount = countryConnectionCountMap.get(name) || 0
-      const isVisited = visitedCountries?.has(name)
       if (count > 0) parts.push(`${count} contact${count === 1 ? '' : 's'}`)
       if (indirectCount > 0) parts.push(`${indirectCount} indirect tie${indirectCount === 1 ? '' : 's'}`)
-      if (isVisited) parts.push('Visited')
-      if (wishlistCountries?.has(name)) parts.push('Wishlist')
-      if (userCountry && name === userCountry) parts.push('Your location')
     }
     if (showTravel) {
       const tripCount = trips.filter((t) => normalizeToGlobeName(t.country) === name).length
       if (tripCount > 0) parts.push(`${tripCount} trip${tripCount === 1 ? '' : 's'}`)
       if (futureTravelCountries.has(name)) parts.push('Upcoming')
     }
-    if (!showNetwork && !showTravel) {
-      if (visitedCountries?.has(name)) parts.push('Visited')
-      if (wishlistCountries?.has(name)) parts.push('Wishlist')
-    }
+    if (visitedCountries?.has(name)) parts.push('Visited')
+    if (wishlistCountries?.has(name)) parts.push('Wishlist')
+    if (userCountry && name === userCountry) parts.push('Your location')
     const label = parts.join(' <span style="opacity:0.4">&middot;</span> ')
     return `<div style="background:${bg};color:${textColor};padding:5px 10px;border-radius:6px;font-size:11px;backdrop-filter:blur(12px);border:1px solid ${border};font-family:system-ui,sans-serif;line-height:1.4;box-shadow:0 2px 8px rgba(0,0,0,${isDark ? '0.4' : '0.08'})">${label}</div>`
   }, [isDark, countryContactCount, countryConnectionCountMap, visitedCountries, wishlistCountries, userCountry, showNetwork, showTravel, trips, futureTravelCountries])
@@ -634,7 +629,6 @@ export default memo(function GlobeCanvas({
       if (showNetwork) {
         const count = countryContactCount.get(name) || 0
         const isVisited = visitedCountries?.has(name)
-        const isWishlist = wishlistCountries?.has(name)
         const isIndirectOnly = indirectOnlyCountries.has(name)
         if (count > 0 && isVisited) {
           if (count > 5) return isDark ? POLYGON_COLORS.visitedContactHigh.dark : POLYGON_COLORS.visitedContactHigh.light
@@ -645,23 +639,18 @@ export default memo(function GlobeCanvas({
         if (count >= 3) return isDark ? POLYGON_COLORS.contactMed.dark : POLYGON_COLORS.contactMed.light
         if (count >= 1) return isDark ? POLYGON_COLORS.contactLow.dark : POLYGON_COLORS.contactLow.light
         if (isIndirectOnly) return isDark ? POLYGON_COLORS.indirect.dark : POLYGON_COLORS.indirect.light
-        if (isVisited && isWishlist) return isDark ? POLYGON_COLORS.wishlistVisited.dark : POLYGON_COLORS.wishlistVisited.light
-        if (isVisited) return isDark ? POLYGON_COLORS.visitedOnly.dark : POLYGON_COLORS.visitedOnly.light
-        if (isWishlist) return isDark ? POLYGON_COLORS.wishlist.dark : POLYGON_COLORS.wishlist.light
-        if (userCountry && name === userCountry) return isDark ? POLYGON_COLORS.userCountry.dark : POLYGON_COLORS.userCountry.light
       }
-      if (showTravel && !showNetwork) {
-        if (futureTravelCountries.has(name)) return isDark ? TRAVEL_COLORS.futureCountry.dark : TRAVEL_COLORS.futureCountry.light
-        if (pastTravelCountries.has(name)) return isDark ? TRAVEL_COLORS.pastCountry.dark : TRAVEL_COLORS.pastCountry.light
+      if (showTravel) {
+        const hasContactFill = showNetwork && (countryContactCount.get(name) || 0) > 0
+        if (!hasContactFill) {
+          if (futureTravelCountries.has(name)) return isDark ? TRAVEL_COLORS.futureCountry.dark : TRAVEL_COLORS.futureCountry.light
+          if (pastTravelCountries.has(name)) return isDark ? TRAVEL_COLORS.pastCountry.dark : TRAVEL_COLORS.pastCountry.light
+        }
       }
-      if (showTravel && showNetwork) {
-        if (futureTravelCountries.has(name) && !(countryContactCount.get(name) || 0)) return isDark ? TRAVEL_COLORS.futureCountry.dark : TRAVEL_COLORS.futureCountry.light
-        if (pastTravelCountries.has(name) && !(countryContactCount.get(name) || 0)) return isDark ? TRAVEL_COLORS.pastCountry.dark : TRAVEL_COLORS.pastCountry.light
-      }
-      if (!showNetwork && !showTravel) {
-        if (visitedCountries?.has(name)) return isDark ? POLYGON_COLORS.visitedOnly.dark : POLYGON_COLORS.visitedOnly.light
-        if (wishlistCountries?.has(name)) return isDark ? POLYGON_COLORS.wishlist.dark : POLYGON_COLORS.wishlist.light
-      }
+      if (visitedCountries?.has(name) && wishlistCountries?.has(name)) return isDark ? POLYGON_COLORS.wishlistVisited.dark : POLYGON_COLORS.wishlistVisited.light
+      if (visitedCountries?.has(name)) return isDark ? POLYGON_COLORS.visitedOnly.dark : POLYGON_COLORS.visitedOnly.light
+      if (wishlistCountries?.has(name)) return isDark ? POLYGON_COLORS.wishlist.dark : POLYGON_COLORS.wishlist.light
+      if (userCountry && name === userCountry) return isDark ? POLYGON_COLORS.userCountry.dark : POLYGON_COLORS.userCountry.light
     }
     return isDark ? POLYGON_COLORS.defaultCap.dark : POLYGON_COLORS.defaultCap.light
   }, [isDark, countryContactCount, visitedCountries, wishlistCountries, indirectOnlyCountries, userCountry, showNetwork, showTravel, pastTravelCountries, futureTravelCountries])
@@ -676,30 +665,28 @@ export default memo(function GlobeCanvas({
       const f = feat as { id?: string }
       const name = countryNames[String(f.id)]
       if (name) {
+        const isVisited = visitedCountries?.has(name)
+        const isWishlist = wishlistCountries?.has(name)
         if (showNetwork) {
-          const isVisited = visitedCountries?.has(name)
-          const isWishlist = wishlistCountries?.has(name)
-          const hasContacts = (countryContactCount.get(name) || 0) > 0
+          const count = countryContactCount.get(name) || 0
           const isIndirectOnly = indirectOnlyCountries.has(name)
-          if (isVisited && hasContacts) return isDark ? POLYGON_COLORS.visitedContactsStroke.dark : POLYGON_COLORS.visitedContactsStroke.light
-          if (isVisited) return isDark ? POLYGON_COLORS.visitedStroke.dark : POLYGON_COLORS.visitedStroke.light
-          if (hasContacts) return isDark ? POLYGON_COLORS.contactStroke.dark : POLYGON_COLORS.contactStroke.light
+          if (count > 0 && isWishlist) return isDark ? POLYGON_COLORS.wishlistStroke.dark : POLYGON_COLORS.wishlistStroke.light
+          if (isVisited && count > 0) return isDark ? POLYGON_COLORS.visitedContactsStroke.dark : POLYGON_COLORS.visitedContactsStroke.light
+          if (count > 0) return isDark ? POLYGON_COLORS.contactStroke.dark : POLYGON_COLORS.contactStroke.light
           if (isIndirectOnly) return isDark ? POLYGON_COLORS.indirectStroke.dark : POLYGON_COLORS.indirectStroke.light
-          if (isWishlist) return isDark ? POLYGON_COLORS.wishlistStroke.dark : POLYGON_COLORS.wishlistStroke.light
-          if (userCountry && name === userCountry) return isDark ? POLYGON_COLORS.userCountryStroke.dark : POLYGON_COLORS.userCountryStroke.light
         }
-        if (showTravel && !showNetwork) {
-          if (futureTravelCountries.has(name)) return isDark ? TRAVEL_COLORS.futureStroke.dark : TRAVEL_COLORS.futureStroke.light
-          if (pastTravelCountries.has(name)) return isDark ? TRAVEL_COLORS.pastStroke.dark : TRAVEL_COLORS.pastStroke.light
+        if (showTravel) {
+          const hasContactStroke = showNetwork && (countryContactCount.get(name) || 0) > 0
+          if (!hasContactStroke) {
+            if (isWishlist && (futureTravelCountries.has(name) || pastTravelCountries.has(name))) return isDark ? POLYGON_COLORS.wishlistStroke.dark : POLYGON_COLORS.wishlistStroke.light
+            if (futureTravelCountries.has(name)) return isDark ? TRAVEL_COLORS.futureStroke.dark : TRAVEL_COLORS.futureStroke.light
+            if (pastTravelCountries.has(name)) return isDark ? TRAVEL_COLORS.pastStroke.dark : TRAVEL_COLORS.pastStroke.light
+          }
         }
-        if (showTravel && showNetwork) {
-          if (futureTravelCountries.has(name) && !(countryContactCount.get(name) || 0)) return isDark ? TRAVEL_COLORS.futureStroke.dark : TRAVEL_COLORS.futureStroke.light
-          if (pastTravelCountries.has(name) && !(countryContactCount.get(name) || 0)) return isDark ? TRAVEL_COLORS.pastStroke.dark : TRAVEL_COLORS.pastStroke.light
-        }
-        if (!showNetwork && !showTravel) {
-          if (visitedCountries?.has(name)) return isDark ? POLYGON_COLORS.visitedStroke.dark : POLYGON_COLORS.visitedStroke.light
-          if (wishlistCountries?.has(name)) return isDark ? POLYGON_COLORS.wishlistStroke.dark : POLYGON_COLORS.wishlistStroke.light
-        }
+        if (isVisited && isWishlist) return isDark ? POLYGON_COLORS.wishlistVisitedStroke.dark : POLYGON_COLORS.wishlistVisitedStroke.light
+        if (isVisited) return isDark ? POLYGON_COLORS.visitedStroke.dark : POLYGON_COLORS.visitedStroke.light
+        if (isWishlist) return isDark ? POLYGON_COLORS.wishlistStroke.dark : POLYGON_COLORS.wishlistStroke.light
+        if (userCountry && name === userCountry) return isDark ? POLYGON_COLORS.userCountryStroke.dark : POLYGON_COLORS.userCountryStroke.light
       }
       return isDark ? POLYGON_COLORS.defaultStroke.dark : POLYGON_COLORS.defaultStroke.light
     },
@@ -792,7 +779,7 @@ export default memo(function GlobeCanvas({
             </div>
           </div>
         )}
-        {showNetwork && (hasCountryContacts || (visitedCountries && visitedCountries.size > 0) || (wishlistCountries && wishlistCountries.size > 0) || countryConnections.length > 0 || !!userCountry) && (
+        {showNetwork && (hasCountryContacts || countryConnections.length > 0) && (
           <div className={`${GLASS.control} rounded-lg px-2.5 py-2 flex flex-col gap-1`}>
             <div className="flex items-center gap-1.5">
               <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.contactLow.dark : POLYGON_COLORS.contactLow.light }} />
@@ -807,27 +794,37 @@ export default memo(function GlobeCanvas({
               <span className="text-[10px] text-muted-foreground">5+ contacts</span>
             </div>
             {visitedCountries && visitedCountries.size > 0 && (
-              <>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.visitedOnly.dark : POLYGON_COLORS.visitedOnly.light, border: `1.5px solid ${isDark ? POLYGON_COLORS.visitedStroke.dark : POLYGON_COLORS.visitedStroke.light}` }} />
-                  <span className="text-[10px] text-muted-foreground">Visited only</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.visitedContactLow.dark : POLYGON_COLORS.visitedContactLow.light, border: `1.5px solid ${isDark ? POLYGON_COLORS.visitedContactsStroke.dark : POLYGON_COLORS.visitedContactsStroke.light}` }} />
-                  <span className="text-[10px] text-muted-foreground">Visited + contacts</span>
-                </div>
-              </>
-            )}
-            {wishlistCountries && wishlistCountries.size > 0 && (
               <div className="flex items-center gap-1.5">
-                <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.wishlist.dark : POLYGON_COLORS.wishlist.light, border: `1.5px solid ${isDark ? POLYGON_COLORS.wishlistStroke.dark : POLYGON_COLORS.wishlistStroke.light}` }} />
-                <span className="text-[10px] text-muted-foreground">Wishlist</span>
+                <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.visitedContactLow.dark : POLYGON_COLORS.visitedContactLow.light, border: `1.5px solid ${isDark ? POLYGON_COLORS.visitedContactsStroke.dark : POLYGON_COLORS.visitedContactsStroke.light}` }} />
+                <span className="text-[10px] text-muted-foreground">Visited + contacts</span>
+              </div>
+            )}
+            {wishlistCountries && wishlistCountries.size > 0 && hasCountryContacts && (
+              <div className="flex items-center gap-1.5">
+                <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.contactLow.dark : POLYGON_COLORS.contactLow.light, border: `1.5px solid ${isDark ? POLYGON_COLORS.wishlistStroke.dark : POLYGON_COLORS.wishlistStroke.light}` }} />
+                <span className="text-[10px] text-muted-foreground">Contacts + wishlist</span>
               </div>
             )}
             {countryConnections.length > 0 && (
               <div className="flex items-center gap-1.5">
                 <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.indirect.dark : POLYGON_COLORS.indirect.light, border: `1.5px solid ${isDark ? POLYGON_COLORS.indirectStroke.dark : POLYGON_COLORS.indirectStroke.light}` }} />
                 <span className="text-[10px] text-muted-foreground">Indirect ties</span>
+              </div>
+            )}
+          </div>
+        )}
+        {((visitedCountries && visitedCountries.size > 0) || (wishlistCountries && wishlistCountries.size > 0) || !!userCountry) && (
+          <div className={`${GLASS.control} rounded-lg px-2.5 py-2 flex flex-col gap-1`}>
+            {visitedCountries && visitedCountries.size > 0 && (
+              <div className="flex items-center gap-1.5">
+                <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.visitedOnly.dark : POLYGON_COLORS.visitedOnly.light, border: `1.5px solid ${isDark ? POLYGON_COLORS.visitedStroke.dark : POLYGON_COLORS.visitedStroke.light}` }} />
+                <span className="text-[10px] text-muted-foreground">Visited</span>
+              </div>
+            )}
+            {wishlistCountries && wishlistCountries.size > 0 && (
+              <div className="flex items-center gap-1.5">
+                <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.wishlist.dark : POLYGON_COLORS.wishlist.light, border: `1.5px solid ${isDark ? POLYGON_COLORS.wishlistStroke.dark : POLYGON_COLORS.wishlistStroke.light}` }} />
+                <span className="text-[10px] text-muted-foreground">Wishlist</span>
               </div>
             )}
             {!!userCountry && (
