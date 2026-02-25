@@ -14,8 +14,9 @@ export default auth((req) => {
   const isPublicProfile = pathname.startsWith('/u/')
   const isPublicApi = pathname.startsWith('/api/public/')
   const isPrivacyPage = pathname === '/privacy'
+  const isOfflinePage = pathname === '/offline'
 
-  if (isApiAuth || isApiWaitlist || isLandingPage || isPublicProfile || isPublicApi || isPrivacyPage) {
+  if (isApiAuth || isApiWaitlist || isLandingPage || isPublicProfile || isPublicApi || isPrivacyPage || isOfflinePage) {
     return NextResponse.next()
   }
 
