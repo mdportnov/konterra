@@ -402,6 +402,11 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
             handleOpenWishlistDetail(popups.countryPopup!.country)
           }}
           onAddContact={popups.handleAddContactToCountry}
+          onPlanTrip={() => {
+            const country = popups.countryPopup!.country
+            popups.closeCountryPopup()
+            handleAddTrip({ country })
+          }}
           indirectContacts={popups.indirectPopupContacts}
         />
       )}

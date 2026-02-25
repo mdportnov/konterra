@@ -22,7 +22,7 @@ async function fetchAllPages<T>(baseUrl: string, signal?: AbortSignal): Promise<
   const first = await apiFetch<PaginatedResponse<T>>(`${baseUrl}?page=1&limit=100`, signal)
   if (first.total <= first.data.length) return first.data
 
-  const totalPages = Math.min(Math.ceil(first.total / 100), 50)
+  const totalPages = Math.min(Math.ceil(first.total / 100), 20)
   const remaining = await Promise.all(
     Array.from({ length: totalPages - 1 }, (_, i) =>
       apiFetch<PaginatedResponse<T>>(`${baseUrl}?page=${i + 2}&limit=100`, signal)

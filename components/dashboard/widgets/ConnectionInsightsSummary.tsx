@@ -1,12 +1,13 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState, useEffect, useRef } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { GLASS } from '@/lib/constants/ui'
 import { Network, ChevronRight, TrendingUp, TrendingDown, Minus } from 'lucide-react'
 import { computeInsightsSummary } from '@/lib/connection-insights'
 import type { Contact, ContactConnection, Interaction, Favor } from '@/lib/db/schema'
+import type { InsightsSummary } from '@/lib/connection-insights'
 
 interface ConnectionInsightsSummaryProps {
   contacts: Contact[]
@@ -17,6 +18,13 @@ interface ConnectionInsightsSummaryProps {
   loading?: boolean
 }
 
+const DEFAULT_SUMMARY: InsightsSummary = {
+  metrics: { totalConnections: 0, networkDensity: 0, averageStrength: 0, bidirectionalRatio: 0, connectedContactsRatio: 0 },
+  topInsight: 'Analyzing your network...',
+  actionableCount: 0,
+  healthTrend: 'stable',
+}
+
 export default function ConnectionInsightsSummary({
   contacts,
   connections,
@@ -25,12 +33,22 @@ export default function ConnectionInsightsSummary({
   onOpenInsights,
   loading,
 }: ConnectionInsightsSummaryProps) {
-  const summary = useMemo(
-    () => computeInsightsSummary(contacts, connections, interactions, favors),
-    [contacts, connections, interactions, favors]
-  )
+  const [summary, setSummary] = useState<InsightsSummary>(DEFAULT_SUMMARY)
+  const [computed, setComputed] = useState(false)
+  const depsKey = useMemo(() => `${contacts.length}:${connections.length}:${interactions.length}:${favors.length}`, [contacts.length, connections.length, interactions.length, favors.length])
+  const prevKey = useRef('')
 
-  if (loading) {
+  useEffect(() => {
+    if (depsKey === prevKey.current) return
+    prevKey.current = depsKey
+    const timer = setTimeout(() => {
+      setSummary(computeInsightsSummary(contacts, connections, interactions, favors))
+      setComputed(true)
+    }, 1500)
+    return () => clearTimeout(timer)
+  }, [depsKey, contacts, connections, interactions, favors])
+
+  if (loading || !computed) {
     return (
       <div className="space-y-2">
         <div className="flex items-center gap-2">

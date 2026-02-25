@@ -3,7 +3,7 @@
 import { useRef, useMemo, useCallback } from 'react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Switch } from '@/components/ui/switch'
-import { X, UserPlus, Heart, ArrowRight } from 'lucide-react'
+import { X, UserPlus, Heart, ArrowRight, MapPinCheck, Plane } from 'lucide-react'
 import { useClickOutside } from '@/hooks/use-click-outside'
 import { useHotkey } from '@/hooks/use-hotkey'
 import { GLASS, Z } from '@/lib/constants/ui'
@@ -33,6 +33,7 @@ interface CountryPopupProps {
   onToggleWishlist?: () => void
   onOpenWishlistDetail?: () => void
   onAddContact?: () => void
+  onPlanTrip?: () => void
   indirectContacts?: Contact[]
 }
 
@@ -102,7 +103,7 @@ function IndirectContactRow({ contact, onSelect }: { contact: Contact; onSelect:
   )
 }
 
-export default function CountryPopup({ country, contacts, x, y, open, onSelect, onClose, visited, onToggleVisited, wishlisted, wishlistEntry, onToggleWishlist, onOpenWishlistDetail, onAddContact, indirectContacts = [] }: CountryPopupProps) {
+export default function CountryPopup({ country, contacts, x, y, open, onSelect, onClose, visited, onToggleVisited, wishlisted, wishlistEntry, onToggleWishlist, onOpenWishlistDetail, onAddContact, onPlanTrip, indirectContacts = [] }: CountryPopupProps) {
   const ref = useRef<HTMLDivElement>(null)
   useClickOutside(ref, onClose, open)
   useHotkey('Escape', onClose, { enabled: open, priority: Z.overlay })
@@ -204,7 +205,10 @@ export default function CountryPopup({ country, contacts, x, y, open, onSelect, 
         <div className="border-b border-border shrink-0">
           {onToggleVisited && (
             <div className="flex items-center justify-between px-4 py-2">
-              <span className="text-xs text-muted-foreground">{visited ? 'Visited' : 'Mark as visited'}</span>
+              <div className="flex items-center gap-1.5">
+                <MapPinCheck className={`h-3 w-3 ${visited ? 'text-emerald-500' : 'text-muted-foreground/60'}`} />
+                <span className="text-xs text-muted-foreground">{visited ? 'Visited' : 'Mark as visited'}</span>
+              </div>
               <Switch checked={!!visited} onCheckedChange={onToggleVisited} />
             </div>
           )}
@@ -281,15 +285,26 @@ export default function CountryPopup({ country, contacts, x, y, open, onSelect, 
         </div>
       )}
 
-      {onAddContact && (
-        <div className="border-t border-border px-3 py-2 shrink-0">
-          <button
-            onClick={onAddContact}
-            className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium bg-orange-500 hover:bg-orange-600 text-white transition-colors cursor-pointer"
-          >
-            <UserPlus className="h-3.5 w-3.5" />
-            Add contact
-          </button>
+      {(onAddContact || onPlanTrip) && (
+        <div className="border-t border-border px-3 py-2 shrink-0 flex gap-2">
+          {onAddContact && (
+            <button
+              onClick={onAddContact}
+              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium bg-orange-500 hover:bg-orange-600 text-white transition-colors cursor-pointer"
+            >
+              <UserPlus className="h-3.5 w-3.5" />
+              Add contact
+            </button>
+          )}
+          {onPlanTrip && (
+            <button
+              onClick={onPlanTrip}
+              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium bg-blue-500 hover:bg-blue-600 text-white transition-colors cursor-pointer"
+            >
+              <Plane className="h-3.5 w-3.5" />
+              Plan trip
+            </button>
+          )}
         </div>
       )}
     </div>

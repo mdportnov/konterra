@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, memo } from 'react'
 import { Skeleton } from '@/components/ui/skeleton'
 import type { Contact } from '@/lib/db/schema'
 
@@ -10,7 +10,7 @@ interface TopCountriesChartProps {
   loading?: boolean
 }
 
-export default function TopCountriesChart({ contacts, limit = 8, loading }: TopCountriesChartProps) {
+export default memo(function TopCountriesChart({ contacts, limit = 8, loading }: TopCountriesChartProps) {
   const data = useMemo(() => {
     const counts = new Map<string, number>()
     for (const c of contacts) {
@@ -71,4 +71,4 @@ export default function TopCountriesChart({ contacts, limit = 8, loading }: TopC
       )}
     </div>
   )
-}
+})

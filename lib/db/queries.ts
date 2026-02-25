@@ -468,6 +468,7 @@ export async function getCountryConnectionsByContactId(contactId: string, userId
 export async function getAllCountryConnections(userId: string) {
   return db.query.contactCountryConnections.findMany({
     where: eq(contactCountryConnections.userId, userId),
+    limit: 2000,
   })
 }
 
@@ -823,6 +824,7 @@ export async function getTripsByUserId(userId: string) {
   return db.query.trips.findMany({
     where: eq(trips.userId, userId),
     orderBy: (trips, { desc }) => [desc(trips.arrivalDate)],
+    limit: 1000,
   })
 }
 

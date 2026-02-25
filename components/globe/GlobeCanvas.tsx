@@ -155,6 +155,11 @@ export default memo(function GlobeCanvas({
 
   useEffect(() => {
     if (readOnly) return
+    const fetchSaved = () => {
+      fetch('/api/me/location').then((r) => r.json()).then((d) => {
+        if (d.lat != null && d.lng != null) setUserLocation({ lat: d.lat, lng: d.lng })
+      }).catch(() => {})
+    }
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
@@ -166,9 +171,11 @@ export default memo(function GlobeCanvas({
             body: JSON.stringify(loc),
           }).catch(() => {})
         },
-        () => {},
+        fetchSaved,
         { enableHighAccuracy: false, timeout: 10000 }
       )
+    } else {
+      fetchSaved()
     }
   }, [readOnly])
 
@@ -289,20 +296,8 @@ export default memo(function GlobeCanvas({
       }
     })
 
-    if (userLocation) {
-      pts.unshift({
-        id: 'user',
-        lat: userLocation.lat,
-        lng: userLocation.lng,
-        name: 'You',
-        city: null,
-        color: NETWORK_COLORS.userPoint,
-        size: 0.55,
-        isUser: true,
-      })
-    }
     return pts
-  }, [contacts, userLocation, hasHighlights, highlightedContactIds])
+  }, [contacts, hasHighlights, highlightedContactIds])
 
   const arcs: GlobeArc[] = useMemo(() => {
     const noMainArcs = display.arcMode === 'off'
@@ -373,6 +368,15 @@ export default memo(function GlobeCanvas({
     }
     return map
   }, [countryConnections])
+
+  const tripCountsByCountry = useMemo(() => {
+    const map = new Map<string, number>()
+    for (const t of trips) {
+      const name = normalizeToGlobeName(t.country)
+      map.set(name, (map.get(name) || 0) + 1)
+    }
+    return map
+  }, [trips])
 
   const countryArcs: GlobeArc[] = useMemo(() => {
     if (countryConnections.length === 0) return EMPTY_ARCS
@@ -500,11 +504,28 @@ export default memo(function GlobeCanvas({
     return future
   }, [showTravel, trips, now, pastTravelCountries])
 
+  const userPoint = useMemo(() => {
+    if (!userLocation) return null
+    return {
+      id: 'user',
+      lat: userLocation.lat,
+      lng: userLocation.lng,
+      name: 'You',
+      city: null,
+      color: NETWORK_COLORS.userPoint,
+      size: 0.55,
+      isUser: true,
+    } as GlobePoint
+  }, [userLocation])
+
   const activePoints = useMemo(() => {
-    if (showNetwork && showTravel) return [...points, ...travelPoints]
-    if (showTravel) return travelPoints
-    return points
-  }, [showNetwork, showTravel, points, travelPoints])
+    let pts: GlobePoint[]
+    if (showNetwork && showTravel) pts = [...points, ...travelPoints]
+    else if (showTravel) pts = [...travelPoints]
+    else pts = [...points]
+    if (userPoint && !pts.some((p) => p.id === 'user')) pts.unshift(userPoint)
+    return pts
+  }, [showNetwork, showTravel, points, travelPoints, userPoint])
 
   const allArcs = useMemo(() => {
     const result: GlobeArc[] = []
@@ -611,7 +632,7 @@ export default memo(function GlobeCanvas({
       if (indirectCount > 0) parts.push(`${indirectCount} indirect tie${indirectCount === 1 ? '' : 's'}`)
     }
     if (showTravel) {
-      const tripCount = trips.filter((t) => normalizeToGlobeName(t.country) === name).length
+      const tripCount = tripCountsByCountry.get(name) || 0
       if (tripCount > 0) parts.push(`${tripCount} trip${tripCount === 1 ? '' : 's'}`)
       if (futureTravelCountries.has(name)) parts.push('Upcoming')
     }
@@ -620,7 +641,7 @@ export default memo(function GlobeCanvas({
     if (userCountry && name === userCountry) parts.push('Your location')
     const label = parts.join(' <span style="opacity:0.4">&middot;</span> ')
     return `<div style="background:${bg};color:${textColor};padding:5px 10px;border-radius:6px;font-size:11px;backdrop-filter:blur(12px);border:1px solid ${border};font-family:system-ui,sans-serif;line-height:1.4;box-shadow:0 2px 8px rgba(0,0,0,${isDark ? '0.4' : '0.08'})">${label}</div>`
-  }, [isDark, countryContactCount, countryConnectionCountMap, visitedCountries, wishlistCountries, userCountry, showNetwork, showTravel, trips, futureTravelCountries])
+  }, [isDark, countryContactCount, countryConnectionCountMap, visitedCountries, wishlistCountries, userCountry, showNetwork, showTravel, tripCountsByCountry, futureTravelCountries])
 
   const getPolygonCapColor = useCallback((feat: object) => {
     const f = feat as { id?: string }
@@ -693,8 +714,36 @@ export default memo(function GlobeCanvas({
     [isDark, visitedCountries, wishlistCountries, countryContactCount, indirectOnlyCountries, userCountry, showNetwork, showTravel, pastTravelCountries, futureTravelCountries]
   )
 
-  const getPointColor = useCallback((point: object) => (point as GlobePoint).color, [])
-  const getPointRadius = useCallback((point: object) => (point as GlobePoint).size, [])
+  const getPointColor = useCallback((point: object) => {
+    const p = point as GlobePoint
+    if (p.isUser) return 'rgba(0,0,0,0)'
+    return p.color
+  }, [])
+  const getPointRadius = useCallback((point: object) => {
+    const p = point as GlobePoint
+    if (p.isUser) return 0
+    return p.size
+  }, [])
+
+  const htmlElements = useMemo(() => {
+    if (!userLocation) return []
+    return [{ lat: userLocation.lat, lng: userLocation.lng }]
+  }, [userLocation])
+
+  const getHtmlElement = useCallback(() => {
+    const wrapper = document.createElement('div')
+    wrapper.style.cssText = 'position:relative;width:0;height:0;pointer-events:none'
+    const ring = document.createElement('div')
+    ring.style.cssText = 'position:absolute;left:-16px;top:-16px;width:32px;height:32px;border-radius:50%;border:2px solid #22c55e;animation:user-ping 2s cubic-bezier(0,0,0.2,1) infinite;opacity:0'
+    wrapper.appendChild(ring)
+    const ring2 = document.createElement('div')
+    ring2.style.cssText = 'position:absolute;left:-12px;top:-12px;width:24px;height:24px;border-radius:50%;background:rgba(34,197,94,0.15);border:1.5px solid rgba(34,197,94,0.4)'
+    wrapper.appendChild(ring2)
+    const dot = document.createElement('div')
+    dot.style.cssText = 'position:absolute;left:-6px;top:-6px;width:12px;height:12px;border-radius:50%;background:#22c55e;box-shadow:0 0 8px rgba(34,197,94,0.6),0 0 2px rgba(34,197,94,0.8);border:2px solid white'
+    wrapper.appendChild(dot)
+    return wrapper
+  }, [])
 
   const getArcColor = useCallback((arc: object) => (arc as GlobeArc).color, [])
   const getArcAnimateTime = useCallback((arc: object) => {
@@ -739,6 +788,11 @@ export default memo(function GlobeCanvas({
         arcDashAnimateTime={getArcAnimateTime}
         arcStroke={getArcStroke}
         arcsTransitionDuration={0}
+        htmlElementsData={htmlElements}
+        htmlLat="lat"
+        htmlLng="lng"
+        htmlAltitude={0.02}
+        htmlElement={getHtmlElement}
       />
       <div className="absolute top-14 right-4 flex flex-col gap-2">
         {showTravel && trips.length > 0 && (
@@ -828,10 +882,16 @@ export default memo(function GlobeCanvas({
               </div>
             )}
             {!!userCountry && (
-              <div className="flex items-center gap-1.5">
-                <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.userCountry.dark : POLYGON_COLORS.userCountry.light, border: `1.5px solid ${isDark ? POLYGON_COLORS.userCountryStroke.dark : POLYGON_COLORS.userCountryStroke.light}` }} />
-                <span className="text-[10px] text-muted-foreground">Your location</span>
-              </div>
+              <>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.userCountry.dark : POLYGON_COLORS.userCountry.light, border: `1.5px solid ${isDark ? POLYGON_COLORS.userCountryStroke.dark : POLYGON_COLORS.userCountryStroke.light}` }} />
+                  <span className="text-[10px] text-muted-foreground">Your country</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#22c55e', border: '1.5px solid white', boxShadow: '0 0 4px rgba(34,197,94,0.5)' }} />
+                  <span className="text-[10px] text-muted-foreground">You are here</span>
+                </div>
+              </>
             )}
           </div>
         )}

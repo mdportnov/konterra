@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, memo } from 'react'
 import { networkHealthScore, overdueFollowUps } from '@/lib/metrics'
 import { Skeleton } from '@/components/ui/skeleton'
 import { GLASS } from '@/lib/constants/ui'
@@ -42,7 +42,7 @@ function scoreLabel(score: number): string {
 
 const NOW = typeof window !== 'undefined' ? Date.now() : Date.now()
 
-export default function NetworkHealth({ contacts, interactions, loading }: NetworkHealthProps) {
+export default memo(function NetworkHealth({ contacts, interactions, loading }: NetworkHealthProps) {
   const score = useMemo(() => networkHealthScore(contacts, interactions), [contacts, interactions])
   const activeIn90 = useMemo(() => {
     const cutoff = NOW - 90 * 86400000
@@ -142,4 +142,4 @@ export default function NetworkHealth({ contacts, interactions, loading }: Netwo
       </div>
     </div>
   )
-}
+})

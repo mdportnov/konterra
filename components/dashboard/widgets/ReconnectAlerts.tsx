@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState, useCallback } from 'react'
+import { useMemo, useState, useCallback, memo } from 'react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -47,7 +47,7 @@ function daysUntilBirthday(birthday: Date | string): number {
   return Math.ceil((thisYear.getTime() - now.getTime()) / 86400000)
 }
 
-export default function ReconnectAlerts({ contacts, onContactClick, onInteractionLogged, onContactUpdated, loading }: ReconnectAlertsProps) {
+export default memo(function ReconnectAlerts({ contacts, onContactClick, onInteractionLogged, onContactUpdated, loading }: ReconnectAlertsProps) {
   const stale = useMemo(() => staleContacts(contacts, 90).slice(0, 8), [contacts])
   const overdue = useMemo(() => overdueFollowUps(contacts), [contacts])
   const birthdays = useMemo(() => upcomingBirthdays(contacts, 7), [contacts])
@@ -277,4 +277,4 @@ export default function ReconnectAlerts({ contacts, onContactClick, onInteractio
       )}
     </div>
   )
-}
+})

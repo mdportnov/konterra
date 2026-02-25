@@ -44,12 +44,13 @@ export function usePopupState({
 
   const handleCountryClick = useCallback((country: string, event: { x: number; y: number }) => {
     if (displayOptions.showTravel && !displayOptions.showNetwork) {
-      if (tripCountryClosingTimer.current) clearTimeout(tripCountryClosingTimer.current)
       const hasTrips = trips.some((t) => t.country === country)
-      if (!hasTrips) return
-      setTripCountryPopup({ country, x: event.x, y: event.y })
-      requestAnimationFrame(() => setTripCountryPopupOpen(true))
-      return
+      if (hasTrips) {
+        if (tripCountryClosingTimer.current) clearTimeout(tripCountryClosingTimer.current)
+        setTripCountryPopup({ country, x: event.x, y: event.y })
+        requestAnimationFrame(() => setTripCountryPopupOpen(true))
+        return
+      }
     }
     if (countryClosingTimer.current) clearTimeout(countryClosingTimer.current)
     const matched = filteredContacts.filter((c) => c.country === country)

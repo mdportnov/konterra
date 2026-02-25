@@ -76,11 +76,15 @@ export function useGlobeData() {
       .then((data) => { if (Array.isArray(data)) setUserTags(data) })
       .catch(() => {})
 
-    fetchRecentInteractions(signal).then(setAllInteractions).catch(() => {})
-    fetchAllFavors(signal).then(setAllFavors).catch(() => {})
     fetchTrips(signal).then(setTrips).catch(() => {}).finally(() => setTripsLoading(false))
 
-    return () => controller.abort()
+    const deferTimer = setTimeout(() => {
+      if (signal.aborted) return
+      fetchRecentInteractions(signal).then(setAllInteractions).catch(() => {})
+      fetchAllFavors(signal).then(setAllFavors).catch(() => {})
+    }, 3000)
+
+    return () => { clearTimeout(deferTimer); controller.abort() }
   }, [load])
 
   const reloadContacts = useCallback(() => {

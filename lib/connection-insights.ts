@@ -335,6 +335,8 @@ export function findBridgeContacts(contacts: Contact[], connections: ContactConn
     .sort((a, b) => b.clustersConnected - a.clustersConnected || b.degree - a.degree)
 }
 
+const INTRO_SAMPLE_LIMIT = 200
+
 export function suggestIntroductions(
   contacts: Contact[],
   connections: ContactConnection[],
@@ -347,12 +349,18 @@ export function suggestIntroductions(
   }
 
   const adj = buildAdjacencyMap(connections)
+  const degrees = buildDegreeMap(connections)
+
+  const sample = contacts.length > INTRO_SAMPLE_LIMIT
+    ? [...contacts].sort((a, b) => (degrees.get(b.id) || 0) - (degrees.get(a.id) || 0)).slice(0, INTRO_SAMPLE_LIMIT)
+    : contacts
+
   const suggestions: IntroductionSuggestion[] = []
 
-  for (let i = 0; i < contacts.length; i++) {
-    for (let j = i + 1; j < contacts.length; j++) {
-      const a = contacts[i]
-      const b = contacts[j]
+  for (let i = 0; i < sample.length; i++) {
+    for (let j = i + 1; j < sample.length; j++) {
+      const a = sample[i]
+      const b = sample[j]
 
       if (existingPairs.has(`${a.id}:${b.id}`)) continue
 
@@ -379,7 +387,7 @@ export function suggestIntroductions(
       }
 
       const sharedInterests = a.personalInterests?.filter(
-        (i) => b.personalInterests?.includes(i)
+        (ii) => b.personalInterests?.includes(ii)
       ) || []
       if (sharedInterests.length > 0) {
         reasons.push(`Shared interests: ${sharedInterests.join(', ')}`)

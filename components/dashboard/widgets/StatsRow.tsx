@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, memo } from 'react'
 import { Users, Globe, Heart, TrendingUp } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { GLASS } from '@/lib/constants/ui'
@@ -23,7 +23,7 @@ function pct(n: number): string {
   return `${Math.round(p)}%`
 }
 
-export default function StatsRow({ contacts, loading, visitedCount = 0, wishlistCount = 0 }: StatsRowProps) {
+export default memo(function StatsRow({ contacts, loading, visitedCount = 0, wishlistCount = 0 }: StatsRowProps) {
   const contactCount = useMemo(() => contacts.length, [contacts])
   const potential = visitedCount + wishlistCount
 
@@ -97,4 +97,4 @@ export default function StatsRow({ contacts, loading, visitedCount = 0, wishlist
       ))}
     </div>
   )
-}
+})

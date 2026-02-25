@@ -35,7 +35,7 @@ const SORT_OPTIONS: { key: SortKey; label: string }[] = [
   { key: 'lastContacted', label: 'Last contacted' },
   { key: 'updatedAt', label: 'Recently updated' },
 ]
-const PAGE_SIZE = 50
+const PAGE_SIZE = 10
 const RELATIONSHIP_TYPES = ['friend', 'business', 'investor', 'conference', 'mentor', 'colleague', 'family', 'dating'] as const
 const VIEW_MODE_KEY = 'konterra-view-mode'
 
@@ -70,7 +70,15 @@ export default function ContactListSection({
   onBulkDelete,
   onReloadContacts,
 }: ContactListSectionProps) {
+  const [searchInput, setSearchInput] = useState('')
   const [search, setSearch] = useState('')
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const handleSearchChange = useCallback((value: string) => {
+    setSearchInput(value)
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => setSearch(value), 200)
+  }, [])
+  useEffect(() => () => { if (debounceRef.current) clearTimeout(debounceRef.current) }, [])
   const [selectedTags, setSelectedTags] = useState<string[]>([])
   const [selectedCountries, setSelectedCountries] = useState<string[]>([])
   const [selectedRatings, setSelectedRatings] = useState<Set<number>>(new Set())
@@ -205,20 +213,18 @@ export default function ContactListSection({
       case 'rating':
         sorted.sort((a, b) => (b.rating || 0) - (a.rating || 0))
         break
-      case 'lastContacted':
-        sorted.sort((a, b) => {
-          const da = a.lastContactedAt ? new Date(a.lastContactedAt).getTime() : 0
-          const db = b.lastContactedAt ? new Date(b.lastContactedAt).getTime() : 0
-          return db - da
-        })
+      case 'lastContacted': {
+        const cache = new Map<string, number>()
+        for (const c of sorted) cache.set(c.id, c.lastContactedAt ? new Date(c.lastContactedAt).getTime() : 0)
+        sorted.sort((a, b) => cache.get(b.id)! - cache.get(a.id)!)
         break
-      case 'updatedAt':
-        sorted.sort((a, b) => {
-          const da = a.updatedAt ? new Date(a.updatedAt).getTime() : 0
-          const db = b.updatedAt ? new Date(b.updatedAt).getTime() : 0
-          return db - da
-        })
+      }
+      case 'updatedAt': {
+        const cache = new Map<string, number>()
+        for (const c of sorted) cache.set(c.id, c.updatedAt ? new Date(c.updatedAt).getTime() : 0)
+        sorted.sort((a, b) => cache.get(b.id)! - cache.get(a.id)!)
         break
+      }
     }
     return sorted
   }, [contacts, search, selectedTags, selectedCountries, selectedRatings, selectedRelTypes, selectedImportSources, sortKey])
@@ -464,8 +470,8 @@ export default function ContactListSection({
           <Input
             ref={searchRef}
             placeholder="Search contacts... (/)"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            value={searchInput}
+            onChange={(e) => handleSearchChange(e.target.value)}
             className="pl-9 bg-muted/50 border-border text-foreground placeholder:text-muted-foreground/60 focus:border-ring"
           />
         </div>
