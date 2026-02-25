@@ -28,9 +28,21 @@ function stateToUrl(panel: ActivePanel, sidebarView: SidebarView, contactId?: st
   return '/app'
 }
 
+function preserveSearch(url: string): string {
+  return url + window.location.search
+}
+
 function pushUrl(url: string) {
-  if (window.location.pathname !== url) {
-    window.history.pushState(null, '', url)
+  const full = preserveSearch(url)
+  if (window.location.pathname + window.location.search !== full) {
+    window.history.pushState(null, '', full)
+  }
+}
+
+function replaceUrl(url: string) {
+  const full = preserveSearch(url)
+  if (window.location.pathname + window.location.search !== full) {
+    window.history.replaceState(null, '', full)
   }
 }
 
@@ -114,7 +126,7 @@ export function usePanelNavigation(
   const handleBackToList = useCallback(() => {
     setSidebarView('list')
     setSelectedContact(null)
-    pushUrl('/app')
+    replaceUrl('/app')
     if (isMobile) setMobileView('dashboard')
   }, [isMobile, setMobileView])
 
@@ -140,10 +152,10 @@ export function usePanelNavigation(
     setEditingContact(null)
     if (selectedContact) {
       setSidebarView('detail')
-      pushUrl(stateToUrl(null, 'detail', selectedContact.id))
+      replaceUrl(stateToUrl(null, 'detail', selectedContact.id))
     } else {
       const fallback = window.location.pathname.includes('/travel') ? '/app/travel' : '/app'
-      pushUrl(fallback)
+      replaceUrl(fallback)
     }
     if (isMobile) setMobileView('dashboard')
   }, [selectedContact, isMobile, setMobileView])
@@ -162,7 +174,7 @@ export function usePanelNavigation(
     setSidebarView('detail')
     setActivePanel(null)
     setEditingContact(null)
-    pushUrl(stateToUrl(null, 'detail', saved.id))
+    replaceUrl(stateToUrl(null, 'detail', saved.id))
     if (isMobile) setMobileView('dashboard')
   }, [isMobile, setMobileView])
 
@@ -173,7 +185,7 @@ export function usePanelNavigation(
     setSelectedContact(null)
     setSidebarView('list')
     setActivePanel(null)
-    pushUrl('/app')
+    replaceUrl('/app')
     if (isMobile) setMobileView('dashboard')
   }, [isMobile, setMobileView])
 
@@ -196,9 +208,9 @@ export function usePanelNavigation(
   const handleCloseSettings = useCallback(() => {
     setActivePanel(null)
     if (selectedContact && sidebarView === 'detail') {
-      pushUrl(stateToUrl(null, 'detail', selectedContact.id))
+      replaceUrl(stateToUrl(null, 'detail', selectedContact.id))
     } else {
-      pushUrl('/app')
+      replaceUrl('/app')
     }
     if (isMobile) setMobileView('dashboard')
   }, [selectedContact, sidebarView, isMobile, setMobileView])
@@ -212,9 +224,9 @@ export function usePanelNavigation(
   const handleCloseInsights = useCallback(() => {
     setActivePanel(null)
     if (selectedContact && sidebarView === 'detail') {
-      pushUrl(stateToUrl(null, 'detail', selectedContact.id))
+      replaceUrl(stateToUrl(null, 'detail', selectedContact.id))
     } else {
-      pushUrl('/app')
+      replaceUrl('/app')
     }
     if (isMobile) setMobileView('dashboard')
   }, [selectedContact, sidebarView, isMobile, setMobileView])

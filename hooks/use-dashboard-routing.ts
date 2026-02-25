@@ -114,6 +114,7 @@ export function useDashboardRouting({ initialSlug, setDisplayOptions }: UseDashb
   useEffect(() => {
     const onPop = () => {
       const path = window.location.pathname
+      if (path.startsWith('/app/contact') || path === '/app/settings' || path === '/app/insights') return
       const parsed = parseViewParam(window.location.search)
       if (path === '/app/travel') {
         setDashboardTabRaw('travel')
