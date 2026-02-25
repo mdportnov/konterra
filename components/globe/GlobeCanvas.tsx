@@ -7,9 +7,10 @@ import { MeshPhongMaterial, Color } from 'three'
 import type { Contact, ContactConnection, ContactCountryConnection, Trip } from '@/lib/db/schema'
 import { countryNames, buildCountryLabels, normalizeToGlobeName } from './data/country-centroids'
 import type { DisplayOptions } from '@/types/display'
+import { Info, ChevronUp } from 'lucide-react'
 import ClusterPopup from './ClusterPopup'
 import { useTheme } from '@/components/providers'
-import { GLASS } from '@/lib/constants/ui'
+import { GLASS, Z } from '@/lib/constants/ui'
 import { TRAVEL_COLORS, NETWORK_COLORS, CONNECTION_COLORS, POLYGON_COLORS } from '@/lib/constants/globe-colors'
 
 const GlobeGL = dynamic(() => import('react-globe.gl'), { ssr: false })
@@ -97,6 +98,21 @@ export default memo(function GlobeCanvas({
   const closingTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const clusterMapRef = useRef<Map<string, Contact[]>>(new Map())
+
+  const [legendsOpen, setLegendsOpen] = useState(() => {
+    if (typeof window === 'undefined') return true
+    const saved = localStorage.getItem('globe-legends-open')
+    if (saved !== null) return saved === 'true'
+    return !window.matchMedia('(max-width: 767px)').matches
+  })
+
+  const toggleLegends = useCallback(() => {
+    setLegendsOpen((prev) => {
+      const next = !prev
+      localStorage.setItem('globe-legends-open', String(next))
+      return next
+    })
+  }, [])
 
   const { theme } = useTheme()
   const isDark = theme === 'dark' || (theme === 'system' && typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches)
@@ -794,104 +810,114 @@ export default memo(function GlobeCanvas({
         htmlAltitude={0.02}
         htmlElement={getHtmlElement}
       />
-      <div className="absolute top-14 right-4 flex flex-col gap-2">
-        {showTravel && trips.length > 0 && (
-          <div className={`${GLASS.control} rounded-lg px-2.5 py-2 flex flex-col gap-1`}>
-            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: TRAVEL_COLORS.currentPoint }} />
-              <span className="text-[10px] text-muted-foreground">Current trip</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: TRAVEL_COLORS.pastPoint }} />
-              <span className="text-[10px] text-muted-foreground">Past trip</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? TRAVEL_COLORS.pastCountry.dark : TRAVEL_COLORS.pastCountry.light }} />
-              <span className="text-[10px] text-muted-foreground">Visited country</span>
-            </div>
-            {futureTravelCountries.size > 0 && (
-              <>
+      <div className="absolute top-16 right-4 flex flex-col items-end gap-2" style={{ zIndex: Z.controls }}>
+        <button
+          onClick={toggleLegends}
+          className={`${GLASS.control} rounded-lg h-7 w-7 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors`}
+        >
+          {legendsOpen ? <ChevronUp className="h-3.5 w-3.5" /> : <Info className="h-3.5 w-3.5" />}
+        </button>
+        {legendsOpen && (
+          <div className="flex flex-col gap-2">
+            {showTravel && trips.length > 0 && (
+              <div className={`${GLASS.control} rounded-lg px-2.5 py-2 flex flex-col gap-1`}>
                 <div className="flex items-center gap-1.5">
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: TRAVEL_COLORS.futurePoint }} />
-                  <span className="text-[10px] text-muted-foreground">Upcoming trip</span>
+                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: TRAVEL_COLORS.currentPoint }} />
+                  <span className="text-[10px] text-muted-foreground">Current trip</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? TRAVEL_COLORS.futureCountry.dark : TRAVEL_COLORS.futureCountry.light }} />
-                  <span className="text-[10px] text-muted-foreground">Upcoming country</span>
-                </div>
-              </>
-            )}
-            {selectedTripId && (
-              <div className="flex items-center gap-1.5">
-                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: TRAVEL_COLORS.selectedPoint }} />
-                <span className="text-[10px] text-muted-foreground">Selected trip</span>
-              </div>
-            )}
-            <div className="text-[9px] text-muted-foreground/60 mt-0.5">
-              {trips.length} trips &middot; {pastTravelCountries.size} countries
-              {futureTravelCountries.size > 0 && ` \u00b7 ${futureTravelCountries.size} upcoming`}
-            </div>
-          </div>
-        )}
-        {showNetwork && (hasCountryContacts || countryConnections.length > 0) && (
-          <div className={`${GLASS.control} rounded-lg px-2.5 py-2 flex flex-col gap-1`}>
-            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.contactLow.dark : POLYGON_COLORS.contactLow.light }} />
-              <span className="text-[10px] text-muted-foreground">1-2 contacts</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.contactMed.dark : POLYGON_COLORS.contactMed.light }} />
-              <span className="text-[10px] text-muted-foreground">3-5 contacts</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.contactHigh.dark : POLYGON_COLORS.contactHigh.light }} />
-              <span className="text-[10px] text-muted-foreground">5+ contacts</span>
-            </div>
-            {visitedCountries && visitedCountries.size > 0 && (
-              <div className="flex items-center gap-1.5">
-                <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.visitedContactLow.dark : POLYGON_COLORS.visitedContactLow.light, border: `1.5px solid ${isDark ? POLYGON_COLORS.visitedContactsStroke.dark : POLYGON_COLORS.visitedContactsStroke.light}` }} />
-                <span className="text-[10px] text-muted-foreground">Visited + contacts</span>
-              </div>
-            )}
-            {wishlistCountries && wishlistCountries.size > 0 && hasCountryContacts && (
-              <div className="flex items-center gap-1.5">
-                <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.contactLow.dark : POLYGON_COLORS.contactLow.light, border: `1.5px solid ${isDark ? POLYGON_COLORS.wishlistStroke.dark : POLYGON_COLORS.wishlistStroke.light}` }} />
-                <span className="text-[10px] text-muted-foreground">Contacts + wishlist</span>
-              </div>
-            )}
-            {countryConnections.length > 0 && (
-              <div className="flex items-center gap-1.5">
-                <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.indirect.dark : POLYGON_COLORS.indirect.light, border: `1.5px solid ${isDark ? POLYGON_COLORS.indirectStroke.dark : POLYGON_COLORS.indirectStroke.light}` }} />
-                <span className="text-[10px] text-muted-foreground">Indirect ties</span>
-              </div>
-            )}
-          </div>
-        )}
-        {((visitedCountries && visitedCountries.size > 0) || (wishlistCountries && wishlistCountries.size > 0) || !!userCountry) && (
-          <div className={`${GLASS.control} rounded-lg px-2.5 py-2 flex flex-col gap-1`}>
-            {visitedCountries && visitedCountries.size > 0 && (
-              <div className="flex items-center gap-1.5">
-                <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.visitedOnly.dark : POLYGON_COLORS.visitedOnly.light, border: `1.5px solid ${isDark ? POLYGON_COLORS.visitedStroke.dark : POLYGON_COLORS.visitedStroke.light}` }} />
-                <span className="text-[10px] text-muted-foreground">Visited</span>
-              </div>
-            )}
-            {wishlistCountries && wishlistCountries.size > 0 && (
-              <div className="flex items-center gap-1.5">
-                <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.wishlist.dark : POLYGON_COLORS.wishlist.light, border: `1.5px solid ${isDark ? POLYGON_COLORS.wishlistStroke.dark : POLYGON_COLORS.wishlistStroke.light}` }} />
-                <span className="text-[10px] text-muted-foreground">Wishlist</span>
-              </div>
-            )}
-            {!!userCountry && (
-              <>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.userCountry.dark : POLYGON_COLORS.userCountry.light, border: `1.5px solid ${isDark ? POLYGON_COLORS.userCountryStroke.dark : POLYGON_COLORS.userCountryStroke.light}` }} />
-                  <span className="text-[10px] text-muted-foreground">Your country</span>
+                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: TRAVEL_COLORS.pastPoint }} />
+                  <span className="text-[10px] text-muted-foreground">Past trip</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#22c55e', border: '1.5px solid white', boxShadow: '0 0 4px rgba(34,197,94,0.5)' }} />
-                  <span className="text-[10px] text-muted-foreground">You are here</span>
+                  <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? TRAVEL_COLORS.pastCountry.dark : TRAVEL_COLORS.pastCountry.light }} />
+                  <span className="text-[10px] text-muted-foreground">Visited country</span>
                 </div>
-              </>
+                {futureTravelCountries.size > 0 && (
+                  <>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: TRAVEL_COLORS.futurePoint }} />
+                      <span className="text-[10px] text-muted-foreground">Upcoming trip</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? TRAVEL_COLORS.futureCountry.dark : TRAVEL_COLORS.futureCountry.light }} />
+                      <span className="text-[10px] text-muted-foreground">Upcoming country</span>
+                    </div>
+                  </>
+                )}
+                {selectedTripId && (
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: TRAVEL_COLORS.selectedPoint }} />
+                    <span className="text-[10px] text-muted-foreground">Selected trip</span>
+                  </div>
+                )}
+                <div className="text-[9px] text-muted-foreground/60 mt-0.5">
+                  {trips.length} trips &middot; {pastTravelCountries.size} countries
+                  {futureTravelCountries.size > 0 && ` \u00b7 ${futureTravelCountries.size} upcoming`}
+                </div>
+              </div>
+            )}
+            {showNetwork && (hasCountryContacts || countryConnections.length > 0) && (
+              <div className={`${GLASS.control} rounded-lg px-2.5 py-2 flex flex-col gap-1`}>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.contactLow.dark : POLYGON_COLORS.contactLow.light }} />
+                  <span className="text-[10px] text-muted-foreground">1-2 contacts</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.contactMed.dark : POLYGON_COLORS.contactMed.light }} />
+                  <span className="text-[10px] text-muted-foreground">3-5 contacts</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.contactHigh.dark : POLYGON_COLORS.contactHigh.light }} />
+                  <span className="text-[10px] text-muted-foreground">5+ contacts</span>
+                </div>
+                {visitedCountries && visitedCountries.size > 0 && (
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.visitedContactLow.dark : POLYGON_COLORS.visitedContactLow.light, border: `1.5px solid ${isDark ? POLYGON_COLORS.visitedContactsStroke.dark : POLYGON_COLORS.visitedContactsStroke.light}` }} />
+                    <span className="text-[10px] text-muted-foreground">Visited + contacts</span>
+                  </div>
+                )}
+                {wishlistCountries && wishlistCountries.size > 0 && hasCountryContacts && (
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.contactLow.dark : POLYGON_COLORS.contactLow.light, border: `1.5px solid ${isDark ? POLYGON_COLORS.wishlistStroke.dark : POLYGON_COLORS.wishlistStroke.light}` }} />
+                    <span className="text-[10px] text-muted-foreground">Contacts + wishlist</span>
+                  </div>
+                )}
+                {countryConnections.length > 0 && (
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.indirect.dark : POLYGON_COLORS.indirect.light, border: `1.5px solid ${isDark ? POLYGON_COLORS.indirectStroke.dark : POLYGON_COLORS.indirectStroke.light}` }} />
+                    <span className="text-[10px] text-muted-foreground">Indirect ties</span>
+                  </div>
+                )}
+              </div>
+            )}
+            {((visitedCountries && visitedCountries.size > 0) || (wishlistCountries && wishlistCountries.size > 0) || !!userCountry) && (
+              <div className={`${GLASS.control} rounded-lg px-2.5 py-2 flex flex-col gap-1`}>
+                {visitedCountries && visitedCountries.size > 0 && (
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.visitedOnly.dark : POLYGON_COLORS.visitedOnly.light, border: `1.5px solid ${isDark ? POLYGON_COLORS.visitedStroke.dark : POLYGON_COLORS.visitedStroke.light}` }} />
+                    <span className="text-[10px] text-muted-foreground">Visited</span>
+                  </div>
+                )}
+                {wishlistCountries && wishlistCountries.size > 0 && (
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.wishlist.dark : POLYGON_COLORS.wishlist.light, border: `1.5px solid ${isDark ? POLYGON_COLORS.wishlistStroke.dark : POLYGON_COLORS.wishlistStroke.light}` }} />
+                    <span className="text-[10px] text-muted-foreground">Wishlist</span>
+                  </div>
+                )}
+                {!!userCountry && (
+                  <>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.userCountry.dark : POLYGON_COLORS.userCountry.light, border: `1.5px solid ${isDark ? POLYGON_COLORS.userCountryStroke.dark : POLYGON_COLORS.userCountryStroke.light}` }} />
+                      <span className="text-[10px] text-muted-foreground">Your country</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#22c55e', border: '1.5px solid white', boxShadow: '0 0 4px rgba(34,197,94,0.5)' }} />
+                      <span className="text-[10px] text-muted-foreground">You are here</span>
+                    </div>
+                  </>
+                )}
+              </div>
             )}
           </div>
         )}

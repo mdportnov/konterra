@@ -3,10 +3,12 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Separator } from '@/components/ui/separator'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import { User, Settings, Globe } from 'lucide-react'
+import { User, Settings, Globe, ArrowLeft } from 'lucide-react'
 import GlobePanel from '@/components/globe/GlobePanel'
 import { PANEL_WIDTH } from '@/lib/constants/ui'
 import { ProfileTab, SettingsTab, CountriesTab, TABS, isTab } from '@/components/globe/settings'
+import { useIsMobile } from '@/hooks/use-mobile'
+import { Button } from '@/components/ui/button'
 import { saveDefaultTab } from '@/hooks/use-dashboard-routing'
 import type { DashboardTab } from '@/hooks/use-dashboard-routing'
 import type { Tab } from '@/components/globe/settings'
@@ -63,6 +65,7 @@ export default function SettingsPanel({
   contactCountsByCountry,
 }: SettingsPanelProps) {
   const [tab, setTab] = useState<Tab>(initialTab ?? 'settings')
+  const isMobile = useIsMobile()
 
   useEffect(() => {
     if (open && initialTab) setTab(initialTab)
@@ -85,7 +88,14 @@ export default function SettingsPanel({
     >
       <div className="flex flex-col h-full">
         <div className="px-6 pt-6 pb-3 space-y-4">
-          <h2 className="text-lg font-semibold text-foreground">{activeLabel}</h2>
+          <div className="flex items-center gap-2">
+            {isMobile && (
+              <Button size="icon" variant="ghost" className="h-8 w-8 -ml-2 text-muted-foreground" onClick={onClose}>
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+            )}
+            <h2 className="text-lg font-semibold text-foreground">{activeLabel}</h2>
+          </div>
           <ToggleGroup
             type="single"
             value={tab}

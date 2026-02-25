@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useCallback } from 'react'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { GLASS, Z, TRANSITION } from '@/lib/constants/ui'
 import { useClickOutside } from '@/hooks/use-click-outside'
@@ -79,6 +79,15 @@ export default function GlobePanel({
       >
         {children}
       </div>
+      {onClose && open && isMobile && (
+        <button
+          onClick={handleClose}
+          className="absolute top-3 right-3 h-8 w-8 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
+          style={{ zIndex: z + 1 }}
+        >
+          <X className="h-4 w-4" />
+        </button>
+      )}
       {onClose && !isMobile && open && (
         <TooltipProvider>
           <Tooltip>

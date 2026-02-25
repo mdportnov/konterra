@@ -28,7 +28,6 @@ import {
   LogOut,
   Globe,
   Users,
-  Search,
 } from 'lucide-react'
 import { useHotkey } from '@/hooks/use-hotkey'
 import { useTheme } from '@/components/providers'
@@ -52,6 +51,8 @@ interface CommandMenuProps {
   onOpenExport: () => void
   onOpenDuplicates: () => void
   onTripClick?: (trip: Trip) => void
+  externalOpen?: boolean
+  onExternalOpenChange?: (open: boolean) => void
 }
 
 export default function CommandMenu({
@@ -70,17 +71,24 @@ export default function CommandMenu({
   onOpenExport,
   onOpenDuplicates,
   onTripClick,
+  externalOpen,
+  onExternalOpenChange,
 }: CommandMenuProps) {
-  const [open, setOpen] = useState(false)
+  const [internalOpen, setInternalOpen] = useState(false)
   const [search, setSearch] = useState('')
   const { theme, setTheme } = useTheme()
 
+  const open = externalOpen ?? internalOpen
+  const setOpen = useCallback((v: boolean | ((prev: boolean) => boolean)) => {
+    const next = typeof v === 'function' ? v(externalOpen ?? internalOpen) : v
+    if (onExternalOpenChange) onExternalOpenChange(next)
+    else setInternalOpen(next)
+  }, [externalOpen, internalOpen, onExternalOpenChange])
+
   const toggleOpen = useCallback(() => {
-    setOpen((prev) => {
-      if (!prev) setSearch('')
-      return !prev
-    })
-  }, [])
+    setSearch('')
+    setOpen((prev) => !prev)
+  }, [setOpen])
 
   useHotkey('k', toggleOpen, { meta: true })
 
@@ -98,7 +106,7 @@ export default function CommandMenu({
   const runAction = useCallback((action: () => void) => {
     setOpen(false)
     action()
-  }, [])
+  }, [setOpen])
 
   const recentContacts = useMemo(() => {
     return [...contacts]
@@ -147,15 +155,6 @@ export default function CommandMenu({
 
   return (
     <>
-      <button
-        onClick={toggleOpen}
-        className="fixed bottom-5 right-5 h-12 w-12 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center sm:hidden"
-        style={{ zIndex: 45 }}
-        aria-label="Open command menu"
-      >
-        <Search className="h-5 w-5" />
-      </button>
-
       <CommandDialog open={open} onOpenChange={setOpen}>
         <CommandInput
           placeholder="Search contacts, trips, actions..."

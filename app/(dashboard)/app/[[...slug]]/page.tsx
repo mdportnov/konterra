@@ -57,6 +57,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
   const [tripEditPrefill, setTripEditPrefill] = useState<{ arrivalDate?: string; departureDate?: string; city?: string; country?: string } | undefined>()
   const [wishlistDetailCountry, setWishlistDetailCountry] = useState<string | null>(null)
   const [wishlistDetailOpen, setWishlistDetailOpen] = useState(false)
+  const [commandMenuOpen, setCommandMenuOpen] = useState(false)
 
   const data = useGlobeData()
   const filters = useContactFilters(data.contacts, data.userTags)
@@ -108,7 +109,6 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
   }, [nav.handleDeleteContact, data.setContacts, data.setConnections, data.setCountryConnections])
 
   const addContactCb = useCallback(() => nav.handleAddContact(), [nav.handleAddContact])
-  const openInsightsCb = useCallback(() => nav.handleOpenInsights(), [nav.handleOpenInsights])
 
   const handleAddTrip = useCallback((prefill?: { arrivalDate?: string; departureDate?: string; city?: string; country?: string }) => {
     setEditingTrip(null)
@@ -335,10 +335,9 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
 
       <GlobeControls
         onAddContact={nav.handleAddContact}
-        onImport={() => setImportDialogOpen(true)}
+        onSearch={() => setCommandMenuOpen(true)}
         onSettings={nav.handleOpenSettings}
         onProfile={nav.handleOpenProfile}
-        onInsights={nav.handleOpenInsights}
         isMobile={isMobile}
         onSwitchToDashboard={() => setMobileView('dashboard')}
         user={session?.user}
@@ -455,6 +454,8 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
         setDashboardTab('travel')
         tripSelection.handleTripPointClick(trip.id)
       }}
+      externalOpen={commandMenuOpen}
+      onExternalOpenChange={setCommandMenuOpen}
     />
   )
 
