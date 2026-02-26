@@ -24,7 +24,7 @@ import { PANEL_WIDTH, GLASS, Z, TRANSITION } from '@/lib/constants/ui'
 import { displayDefaults } from '@/types/display'
 import GlobeViewToggle from '@/components/globe/GlobeViewToggle'
 import { normalizeToGlobeName } from '@/components/globe/data/country-centroids'
-import type { DisplayOptions } from '@/types/display'
+import type { DisplayOptions, VisualizationMode } from '@/types/display'
 import type { Contact, Trip } from '@/lib/db/schema'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { useGlobeData } from '@/hooks/use-globe-data'
@@ -84,6 +84,15 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
     setFlyTarget: nav.setFlyTarget,
     onTripSelected: (tripId: string) => tripSelection.handleTripPointClick(tripId),
   })
+
+  const handleVisualizationToggle = useCallback((mode: VisualizationMode) => {
+    setDisplayOptions((prev) => {
+      if (mode === 'heatmap') {
+        return { ...prev, showHeatmap: !prev.showHeatmap, showHexBins: !prev.showHeatmap ? false : prev.showHexBins }
+      }
+      return { ...prev, showHexBins: !prev.showHexBins, showHeatmap: !prev.showHexBins ? false : prev.showHeatmap }
+    })
+  }, [])
 
   const handleSelectionChange = useCallback((ids: Set<string>) => {
     setHighlightedContactIds(ids)
@@ -362,7 +371,14 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
       />
 
       <div className="absolute top-4 right-4 flex items-center gap-2" style={{ zIndex: Z.controls }}>
-        <GlobeViewToggle showNetwork={displayOptions.showNetwork} showTravel={displayOptions.showTravel} onToggle={handleLayerToggle} />
+        <GlobeViewToggle
+          showNetwork={displayOptions.showNetwork}
+          showTravel={displayOptions.showTravel}
+          showHeatmap={displayOptions.showHeatmap}
+          showHexBins={displayOptions.showHexBins}
+          onToggle={handleLayerToggle}
+          onVisualizationToggle={handleVisualizationToggle}
+        />
       </div>
 
       <TripImportDialog

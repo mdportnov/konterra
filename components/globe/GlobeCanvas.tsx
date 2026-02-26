@@ -11,7 +11,7 @@ import { Info, ChevronUp } from 'lucide-react'
 import ClusterPopup from './ClusterPopup'
 import { useTheme } from '@/components/providers'
 import { GLASS, Z } from '@/lib/constants/ui'
-import { TRAVEL_COLORS, NETWORK_COLORS, CONNECTION_COLORS, POLYGON_COLORS } from '@/lib/constants/globe-colors'
+import { TRAVEL_COLORS, NETWORK_COLORS, CONNECTION_COLORS, POLYGON_COLORS, RING_COLORS, HEXBIN_COLORS } from '@/lib/constants/globe-colors'
 
 const GlobeGL = dynamic(() => import('react-globe.gl'), { ssr: false })
 
@@ -741,6 +741,71 @@ export default memo(function GlobeCanvas({
     return p.size
   }, [])
 
+  const ringsData = useMemo(() => {
+    const rings: { lat: number; lng: number; color: [string, string]; maxR: number; speed: number; repeat: number }[] = []
+    if (selectedContact?.lat != null && selectedContact?.lng != null) {
+      rings.push({
+        lat: selectedContact.lat,
+        lng: selectedContact.lng,
+        color: RING_COLORS.selected,
+        maxR: 3,
+        speed: 2,
+        repeat: 800,
+      })
+    }
+    if (userLocation) {
+      rings.push({
+        lat: userLocation.lat,
+        lng: userLocation.lng,
+        color: RING_COLORS.user,
+        maxR: 2.5,
+        speed: 1.5,
+        repeat: 1200,
+      })
+    }
+    return rings
+  }, [selectedContact, userLocation])
+
+  const heatmapData = useMemo(() => {
+    if (!display.showHeatmap) return []
+    const pts = contacts.filter((c) => c.lat != null && c.lng != null).map((c) => ({ lat: c.lat!, lng: c.lng! }))
+    if (pts.length === 0) return []
+    return [pts]
+  }, [contacts, display.showHeatmap])
+
+  const hexBinPoints = useMemo(() => {
+    if (!display.showHexBins) return []
+    return contacts.filter((c) => c.lat != null && c.lng != null).map((c) => ({ lat: c.lat!, lng: c.lng! }))
+  }, [contacts, display.showHexBins])
+
+  const getHexTopColor = useCallback((d: object) => {
+    const hex = d as { sumWeight: number }
+    if (hex.sumWeight >= 5) return HEXBIN_COLORS.high.top
+    if (hex.sumWeight >= 3) return HEXBIN_COLORS.med.top
+    return HEXBIN_COLORS.low.top
+  }, [])
+
+  const getHexSideColor = useCallback((d: object) => {
+    const hex = d as { sumWeight: number }
+    if (hex.sumWeight >= 5) return HEXBIN_COLORS.high.side
+    if (hex.sumWeight >= 3) return HEXBIN_COLORS.med.side
+    return HEXBIN_COLORS.low.side
+  }, [])
+
+  const getHexAltitude = useCallback((d: object) => {
+    const hex = d as { sumWeight: number }
+    return Math.min(hex.sumWeight * 0.04, 0.5)
+  }, [])
+
+  const getHexLabel = useCallback((d: object) => {
+    const hex = d as { sumWeight: number }
+    const count = Math.round(hex.sumWeight)
+    const bg = isDark ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.9)'
+    const textColor = isDark ? 'rgba(255,255,255,0.95)' : 'rgba(20,30,50,0.9)'
+    const border = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'
+    return `<div style="background:${bg};color:${textColor};padding:4px 8px;border-radius:6px;font-size:11px;backdrop-filter:blur(12px);border:1px solid ${border};font-family:system-ui,sans-serif"><b>${count}</b> contact${count === 1 ? '' : 's'}</div>`
+  }, [isDark])
+
   const htmlElements = useMemo(() => {
     if (!userLocation) return []
     return [{ lat: userLocation.lat, lng: userLocation.lng }]
@@ -778,6 +843,7 @@ export default memo(function GlobeCanvas({
         backgroundColor="rgba(0,0,0,0)"
         atmosphereColor={isDark ? '#1a3a7a' : '#6b8cc7'}
         atmosphereAltitude={0.18}
+        showGraticules={display.showGraticules}
         polygonsData={countries}
         polygonCapColor={getPolygonCapColor}
         polygonSideColor={getPolygonSideColor}
@@ -804,6 +870,33 @@ export default memo(function GlobeCanvas({
         arcDashAnimateTime={getArcAnimateTime}
         arcStroke={getArcStroke}
         arcsTransitionDuration={0}
+        ringsData={ringsData}
+        ringLat="lat"
+        ringLng="lng"
+        ringColor="color"
+        ringMaxRadius="maxR"
+        ringPropagationSpeed="speed"
+        ringRepeatPeriod="repeat"
+        ringResolution={48}
+        heatmapsData={heatmapData}
+        heatmapPointLat="lat"
+        heatmapPointLng="lng"
+        heatmapPointWeight={1}
+        heatmapBandwidth={3.5}
+        heatmapColorSaturation={1.8}
+        heatmapBaseAltitude={0.008}
+        heatmapTopAltitude={0.12}
+        hexBinPointsData={hexBinPoints}
+        hexBinPointLat="lat"
+        hexBinPointLng="lng"
+        hexBinResolution={3}
+        hexMargin={0.3}
+        hexAltitude={getHexAltitude}
+        hexTopColor={getHexTopColor}
+        hexSideColor={getHexSideColor}
+        hexLabel={getHexLabel}
+        hexTopCurvatureResolution={5}
+        hexTransitionDuration={600}
         htmlElementsData={htmlElements}
         htmlLat="lat"
         htmlLng="lng"
@@ -889,6 +982,36 @@ export default memo(function GlobeCanvas({
                     <span className="text-[10px] text-muted-foreground">Indirect ties</span>
                   </div>
                 )}
+              </div>
+            )}
+            {display.showHeatmap && (
+              <div className={`${GLASS.control} rounded-lg px-2.5 py-2 flex flex-col gap-1`}>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-3 h-3 rounded-sm" style={{ background: 'linear-gradient(90deg, rgba(0,0,255,0.3), rgba(0,255,0,0.5), rgba(255,255,0,0.7), rgba(255,0,0,0.9))' }} />
+                  <span className="text-[10px] text-muted-foreground">Network density</span>
+                </div>
+                <div className="text-[9px] text-muted-foreground/60 mt-0.5">
+                  Heatmap overlay
+                </div>
+              </div>
+            )}
+            {display.showHexBins && (
+              <div className={`${GLASS.control} rounded-lg px-2.5 py-2 flex flex-col gap-1`}>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: HEXBIN_COLORS.low.top }} />
+                  <span className="text-[10px] text-muted-foreground">1-2 contacts</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: HEXBIN_COLORS.med.top }} />
+                  <span className="text-[10px] text-muted-foreground">3-4 contacts</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: HEXBIN_COLORS.high.top }} />
+                  <span className="text-[10px] text-muted-foreground">5+ contacts</span>
+                </div>
+                <div className="text-[9px] text-muted-foreground/60 mt-0.5">
+                  Hex bin height = count
+                </div>
               </div>
             )}
             {((visitedCountries && visitedCountries.size > 0) || (wishlistCountries && wishlistCountries.size > 0) || !!userCountry) && (
