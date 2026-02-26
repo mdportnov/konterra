@@ -659,11 +659,13 @@ export default memo(function GlobeCanvas({
     return `<div style="background:${bg};color:${textColor};padding:5px 10px;border-radius:6px;font-size:11px;backdrop-filter:blur(12px);border:1px solid ${border};font-family:system-ui,sans-serif;line-height:1.4;box-shadow:0 2px 8px rgba(0,0,0,${isDark ? '0.4' : '0.08'})">${label}</div>`
   }, [isDark, countryContactCount, countryConnectionCountMap, visitedCountries, wishlistCountries, userCountry, showNetwork, showTravel, tripCountsByCountry, futureTravelCountries])
 
+  const hasDensityOverlay = display.showHeatmap || display.showHexBins
+
   const getPolygonCapColor = useCallback((feat: object) => {
     const f = feat as { id?: string }
     const name = countryNames[String(f.id)]
     if (name) {
-      if (showNetwork) {
+      if (showNetwork && !hasDensityOverlay) {
         const count = countryContactCount.get(name) || 0
         const isVisited = visitedCountries?.has(name)
         const isIndirectOnly = indirectOnlyCountries.has(name)
@@ -690,7 +692,7 @@ export default memo(function GlobeCanvas({
       if (userCountry && name === userCountry) return isDark ? POLYGON_COLORS.userCountry.dark : POLYGON_COLORS.userCountry.light
     }
     return isDark ? POLYGON_COLORS.defaultCap.dark : POLYGON_COLORS.defaultCap.light
-  }, [isDark, countryContactCount, visitedCountries, wishlistCountries, indirectOnlyCountries, userCountry, showNetwork, showTravel, pastTravelCountries, futureTravelCountries])
+  }, [isDark, countryContactCount, visitedCountries, wishlistCountries, indirectOnlyCountries, userCountry, showNetwork, showTravel, pastTravelCountries, futureTravelCountries, hasDensityOverlay])
 
   const getPolygonSideColor = useCallback(
     () => isDark ? POLYGON_COLORS.defaultSide.dark : POLYGON_COLORS.defaultSide.light,
@@ -704,7 +706,7 @@ export default memo(function GlobeCanvas({
       if (name) {
         const isVisited = visitedCountries?.has(name)
         const isWishlist = wishlistCountries?.has(name)
-        if (showNetwork) {
+        if (showNetwork && !hasDensityOverlay) {
           const count = countryContactCount.get(name) || 0
           const isIndirectOnly = indirectOnlyCountries.has(name)
           if (count > 0 && isWishlist) return isDark ? POLYGON_COLORS.wishlistStroke.dark : POLYGON_COLORS.wishlistStroke.light
@@ -727,7 +729,7 @@ export default memo(function GlobeCanvas({
       }
       return isDark ? POLYGON_COLORS.defaultStroke.dark : POLYGON_COLORS.defaultStroke.light
     },
-    [isDark, visitedCountries, wishlistCountries, countryContactCount, indirectOnlyCountries, userCountry, showNetwork, showTravel, pastTravelCountries, futureTravelCountries]
+    [isDark, visitedCountries, wishlistCountries, countryContactCount, indirectOnlyCountries, userCountry, showNetwork, showTravel, pastTravelCountries, futureTravelCountries, hasDensityOverlay]
   )
 
   const getPointColor = useCallback((point: object) => {
@@ -741,30 +743,20 @@ export default memo(function GlobeCanvas({
     return p.size
   }, [])
 
+  const selectedLat = selectedContact?.lat ?? null
+  const selectedLng = selectedContact?.lng ?? null
+
   const ringsData = useMemo(() => {
-    const rings: { lat: number; lng: number; color: [string, string]; maxR: number; speed: number; repeat: number }[] = []
-    if (selectedContact?.lat != null && selectedContact?.lng != null) {
-      rings.push({
-        lat: selectedContact.lat,
-        lng: selectedContact.lng,
-        color: RING_COLORS.selected,
-        maxR: 3,
-        speed: 2,
-        repeat: 800,
-      })
-    }
-    if (userLocation) {
-      rings.push({
-        lat: userLocation.lat,
-        lng: userLocation.lng,
-        color: RING_COLORS.user,
-        maxR: 2.5,
-        speed: 1.5,
-        repeat: 1200,
-      })
-    }
-    return rings
-  }, [selectedContact, userLocation])
+    if (selectedLat == null || selectedLng == null) return []
+    return [{
+      lat: selectedLat,
+      lng: selectedLng,
+      color: RING_COLORS.selected,
+      maxR: 3,
+      speed: 2,
+      repeat: 800,
+    }]
+  }, [selectedLat, selectedLng])
 
   const heatmapData = useMemo(() => {
     if (!display.showHeatmap) return []
@@ -889,7 +881,7 @@ export default memo(function GlobeCanvas({
         hexBinPointsData={hexBinPoints}
         hexBinPointLat="lat"
         hexBinPointLng="lng"
-        hexBinResolution={3}
+        hexBinResolution={4}
         hexMargin={0.3}
         hexAltitude={getHexAltitude}
         hexTopColor={getHexTopColor}
