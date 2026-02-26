@@ -107,6 +107,13 @@ export function SettingsTab({
             />
           </div>
           <div className="flex items-center justify-between">
+            <span className="text-sm text-muted-foreground">Grid lines</span>
+            <Switch
+              checked={displayOptions.showGraticules}
+              onCheckedChange={(v) => onDisplayChange({ ...displayOptions, showGraticules: v })}
+            />
+          </div>
+          <div className="flex items-center justify-between">
             <span className="text-sm text-muted-foreground">Default tab</span>
             <ToggleGroup
               type="single"

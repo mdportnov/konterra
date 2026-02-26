@@ -11,7 +11,7 @@ import { Info, ChevronUp } from 'lucide-react'
 import ClusterPopup from './ClusterPopup'
 import { useTheme } from '@/components/providers'
 import { GLASS, Z } from '@/lib/constants/ui'
-import { TRAVEL_COLORS, NETWORK_COLORS, CONNECTION_COLORS, POLYGON_COLORS } from '@/lib/constants/globe-colors'
+import { TRAVEL_COLORS, NETWORK_COLORS, CONNECTION_COLORS, POLYGON_COLORS, RING_COLORS, HEXBIN_COLORS } from '@/lib/constants/globe-colors'
 
 const GlobeGL = dynamic(() => import('react-globe.gl'), { ssr: false })
 
@@ -659,11 +659,13 @@ export default memo(function GlobeCanvas({
     return `<div style="background:${bg};color:${textColor};padding:5px 10px;border-radius:6px;font-size:11px;backdrop-filter:blur(12px);border:1px solid ${border};font-family:system-ui,sans-serif;line-height:1.4;box-shadow:0 2px 8px rgba(0,0,0,${isDark ? '0.4' : '0.08'})">${label}</div>`
   }, [isDark, countryContactCount, countryConnectionCountMap, visitedCountries, wishlistCountries, userCountry, showNetwork, showTravel, tripCountsByCountry, futureTravelCountries])
 
+  const hasDensityOverlay = display.showHeatmap || display.showHexBins
+
   const getPolygonCapColor = useCallback((feat: object) => {
     const f = feat as { id?: string }
     const name = countryNames[String(f.id)]
     if (name) {
-      if (showNetwork) {
+      if (showNetwork && !hasDensityOverlay) {
         const count = countryContactCount.get(name) || 0
         const isVisited = visitedCountries?.has(name)
         const isIndirectOnly = indirectOnlyCountries.has(name)
@@ -690,7 +692,7 @@ export default memo(function GlobeCanvas({
       if (userCountry && name === userCountry) return isDark ? POLYGON_COLORS.userCountry.dark : POLYGON_COLORS.userCountry.light
     }
     return isDark ? POLYGON_COLORS.defaultCap.dark : POLYGON_COLORS.defaultCap.light
-  }, [isDark, countryContactCount, visitedCountries, wishlistCountries, indirectOnlyCountries, userCountry, showNetwork, showTravel, pastTravelCountries, futureTravelCountries])
+  }, [isDark, countryContactCount, visitedCountries, wishlistCountries, indirectOnlyCountries, userCountry, showNetwork, showTravel, pastTravelCountries, futureTravelCountries, hasDensityOverlay])
 
   const getPolygonSideColor = useCallback(
     () => isDark ? POLYGON_COLORS.defaultSide.dark : POLYGON_COLORS.defaultSide.light,
@@ -704,7 +706,7 @@ export default memo(function GlobeCanvas({
       if (name) {
         const isVisited = visitedCountries?.has(name)
         const isWishlist = wishlistCountries?.has(name)
-        if (showNetwork) {
+        if (showNetwork && !hasDensityOverlay) {
           const count = countryContactCount.get(name) || 0
           const isIndirectOnly = indirectOnlyCountries.has(name)
           if (count > 0 && isWishlist) return isDark ? POLYGON_COLORS.wishlistStroke.dark : POLYGON_COLORS.wishlistStroke.light
@@ -727,7 +729,7 @@ export default memo(function GlobeCanvas({
       }
       return isDark ? POLYGON_COLORS.defaultStroke.dark : POLYGON_COLORS.defaultStroke.light
     },
-    [isDark, visitedCountries, wishlistCountries, countryContactCount, indirectOnlyCountries, userCountry, showNetwork, showTravel, pastTravelCountries, futureTravelCountries]
+    [isDark, visitedCountries, wishlistCountries, countryContactCount, indirectOnlyCountries, userCountry, showNetwork, showTravel, pastTravelCountries, futureTravelCountries, hasDensityOverlay]
   )
 
   const getPointColor = useCallback((point: object) => {
@@ -740,6 +742,61 @@ export default memo(function GlobeCanvas({
     if (p.isUser) return 0
     return p.size
   }, [])
+
+  const selectedLat = selectedContact?.lat ?? null
+  const selectedLng = selectedContact?.lng ?? null
+
+  const ringsData = useMemo(() => {
+    if (selectedLat == null || selectedLng == null) return []
+    return [{
+      lat: selectedLat,
+      lng: selectedLng,
+      color: RING_COLORS.selected,
+      maxR: 3,
+      speed: 2,
+      repeat: 800,
+    }]
+  }, [selectedLat, selectedLng])
+
+  const heatmapData = useMemo(() => {
+    if (!display.showHeatmap) return []
+    const pts = contacts.filter((c) => c.lat != null && c.lng != null).map((c) => ({ lat: c.lat!, lng: c.lng! }))
+    if (pts.length === 0) return []
+    return [pts]
+  }, [contacts, display.showHeatmap])
+
+  const hexBinPoints = useMemo(() => {
+    if (!display.showHexBins) return []
+    return contacts.filter((c) => c.lat != null && c.lng != null).map((c) => ({ lat: c.lat!, lng: c.lng! }))
+  }, [contacts, display.showHexBins])
+
+  const getHexTopColor = useCallback((d: object) => {
+    const hex = d as { sumWeight: number }
+    if (hex.sumWeight >= 5) return HEXBIN_COLORS.high.top
+    if (hex.sumWeight >= 3) return HEXBIN_COLORS.med.top
+    return HEXBIN_COLORS.low.top
+  }, [])
+
+  const getHexSideColor = useCallback((d: object) => {
+    const hex = d as { sumWeight: number }
+    if (hex.sumWeight >= 5) return HEXBIN_COLORS.high.side
+    if (hex.sumWeight >= 3) return HEXBIN_COLORS.med.side
+    return HEXBIN_COLORS.low.side
+  }, [])
+
+  const getHexAltitude = useCallback((d: object) => {
+    const hex = d as { sumWeight: number }
+    return Math.min(hex.sumWeight * 0.04, 0.5)
+  }, [])
+
+  const getHexLabel = useCallback((d: object) => {
+    const hex = d as { sumWeight: number }
+    const count = Math.round(hex.sumWeight)
+    const bg = isDark ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.9)'
+    const textColor = isDark ? 'rgba(255,255,255,0.95)' : 'rgba(20,30,50,0.9)'
+    const border = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'
+    return `<div style="background:${bg};color:${textColor};padding:4px 8px;border-radius:6px;font-size:11px;backdrop-filter:blur(12px);border:1px solid ${border};font-family:system-ui,sans-serif"><b>${count}</b> contact${count === 1 ? '' : 's'}</div>`
+  }, [isDark])
 
   const htmlElements = useMemo(() => {
     if (!userLocation) return []
@@ -778,6 +835,7 @@ export default memo(function GlobeCanvas({
         backgroundColor="rgba(0,0,0,0)"
         atmosphereColor={isDark ? '#1a3a7a' : '#6b8cc7'}
         atmosphereAltitude={0.18}
+        showGraticules={display.showGraticules}
         polygonsData={countries}
         polygonCapColor={getPolygonCapColor}
         polygonSideColor={getPolygonSideColor}
@@ -804,6 +862,33 @@ export default memo(function GlobeCanvas({
         arcDashAnimateTime={getArcAnimateTime}
         arcStroke={getArcStroke}
         arcsTransitionDuration={0}
+        ringsData={ringsData}
+        ringLat="lat"
+        ringLng="lng"
+        ringColor="color"
+        ringMaxRadius="maxR"
+        ringPropagationSpeed="speed"
+        ringRepeatPeriod="repeat"
+        ringResolution={48}
+        heatmapsData={heatmapData}
+        heatmapPointLat="lat"
+        heatmapPointLng="lng"
+        heatmapPointWeight={1}
+        heatmapBandwidth={3.5}
+        heatmapColorSaturation={1.8}
+        heatmapBaseAltitude={0.008}
+        heatmapTopAltitude={0.12}
+        hexBinPointsData={hexBinPoints}
+        hexBinPointLat="lat"
+        hexBinPointLng="lng"
+        hexBinResolution={4}
+        hexMargin={0.3}
+        hexAltitude={getHexAltitude}
+        hexTopColor={getHexTopColor}
+        hexSideColor={getHexSideColor}
+        hexLabel={getHexLabel}
+        hexTopCurvatureResolution={5}
+        hexTransitionDuration={600}
         htmlElementsData={htmlElements}
         htmlLat="lat"
         htmlLng="lng"
@@ -889,6 +974,36 @@ export default memo(function GlobeCanvas({
                     <span className="text-[10px] text-muted-foreground">Indirect ties</span>
                   </div>
                 )}
+              </div>
+            )}
+            {display.showHeatmap && (
+              <div className={`${GLASS.control} rounded-lg px-2.5 py-2 flex flex-col gap-1`}>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-3 h-3 rounded-sm" style={{ background: 'linear-gradient(90deg, rgba(0,0,255,0.3), rgba(0,255,0,0.5), rgba(255,255,0,0.7), rgba(255,0,0,0.9))' }} />
+                  <span className="text-[10px] text-muted-foreground">Network density</span>
+                </div>
+                <div className="text-[9px] text-muted-foreground/60 mt-0.5">
+                  Heatmap overlay
+                </div>
+              </div>
+            )}
+            {display.showHexBins && (
+              <div className={`${GLASS.control} rounded-lg px-2.5 py-2 flex flex-col gap-1`}>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: HEXBIN_COLORS.low.top }} />
+                  <span className="text-[10px] text-muted-foreground">1-2 contacts</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: HEXBIN_COLORS.med.top }} />
+                  <span className="text-[10px] text-muted-foreground">3-4 contacts</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: HEXBIN_COLORS.high.top }} />
+                  <span className="text-[10px] text-muted-foreground">5+ contacts</span>
+                </div>
+                <div className="text-[9px] text-muted-foreground/60 mt-0.5">
+                  Hex bin height = count
+                </div>
               </div>
             )}
             {((visitedCountries && visitedCountries.size > 0) || (wishlistCountries && wishlistCountries.size > 0) || !!userCountry) && (

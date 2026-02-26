@@ -58,6 +58,17 @@ export const POLYGON_COLORS = {
   userCountryStroke: { dark: 'rgba(34, 197, 94, 0.6)', light: 'rgba(34, 197, 94, 0.45)' },
 } as const
 
+export const RING_COLORS = {
+  selected: ['rgba(56, 189, 248, 0.8)', 'rgba(56, 189, 248, 0)'] as [string, string],
+  user: ['rgba(34, 197, 94, 0.8)', 'rgba(34, 197, 94, 0)'] as [string, string],
+} as const
+
+export const HEXBIN_COLORS = {
+  low: { top: 'rgba(251, 146, 60, 0.7)', side: 'rgba(234, 88, 12, 0.5)' },
+  med: { top: 'rgba(234, 88, 12, 0.85)', side: 'rgba(194, 65, 12, 0.6)' },
+  high: { top: 'rgba(194, 65, 12, 0.95)', side: 'rgba(154, 52, 18, 0.7)' },
+} as const
+
 export const TENSE_COLORS = {
   past: { icon: 'bg-blue-500/10', iconText: 'text-blue-400', hover: 'hover:bg-blue-500/5', arrow: 'text-blue-400/50' },
   current: { icon: 'bg-red-500/10', iconText: 'text-red-400', hover: 'hover:bg-red-500/5', arrow: 'text-red-400/50' },
