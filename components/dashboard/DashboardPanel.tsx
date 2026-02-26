@@ -41,6 +41,8 @@ interface DashboardPanelProps {
   onImportTrips?: () => void
   onTripClick?: (trip: Trip) => void
   onAddTrip?: (prefill?: { arrivalDate?: string; departureDate?: string }) => void
+  onEditTrip?: (trip: Trip) => void
+  onDeleteTrip?: (trip: Trip) => void
   dashboardTab?: 'connections' | 'travel'
   onDashboardTabChange?: (tab: 'connections' | 'travel') => void
 }
@@ -76,6 +78,8 @@ export default function DashboardPanel({
   onImportTrips,
   onTripClick,
   onAddTrip,
+  onEditTrip,
+  onDeleteTrip,
   dashboardTab: dashboardTabProp,
   onDashboardTabChange,
 }: DashboardPanelProps) {
@@ -120,6 +124,8 @@ export default function DashboardPanel({
             onImportTrips={onImportTrips || (() => {})}
             onTripClick={onTripClick}
             onAddTrip={onAddTrip}
+            onEditTrip={onEditTrip}
+            onDeleteTrip={onDeleteTrip}
           />
         ) : (
           <ContactListSection

@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useMemo } from 'react'
-import { X, MapPin, Calendar, Clock, Plane, ArrowRight, ArrowLeft } from 'lucide-react'
+import { X, MapPin, Calendar, Clock, Plane, ArrowRight, ArrowLeft, Pencil, Trash2 } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { useClickOutside } from '@/hooks/use-click-outside'
 import { useHotkey } from '@/hooks/use-hotkey'
@@ -20,6 +20,8 @@ interface TripCountryPopupProps {
   open: boolean
   onTripClick?: (trip: Trip) => void
   onClose: () => void
+  onEditTrip?: (trip: Trip) => void
+  onDeleteTrip?: (trip: Trip) => void
 }
 
 const POPUP_W = 340
@@ -49,7 +51,7 @@ function getTripTense(trip: Trip, now: Date): TripTense {
   return 'past'
 }
 
-export default function TripCountryPopup({ country, trips, allTrips, x, y, open, onTripClick, onClose }: TripCountryPopupProps) {
+export default function TripCountryPopup({ country, trips, allTrips, x, y, open, onTripClick, onClose, onEditTrip, onDeleteTrip }: TripCountryPopupProps) {
   const ref = useRef<HTMLDivElement>(null)
   useClickOutside(ref, onClose, open)
   useHotkey('Escape', onClose, { enabled: open, priority: Z.overlay })
@@ -214,52 +216,90 @@ export default function TripCountryPopup({ country, trips, allTrips, x, y, open,
               const tense = getTripTense(trip, now)
               const c = TENSE_COLORS[tense]
               return (
-                <button
+                <div
                   key={trip.id}
-                  onClick={() => onTripClick?.(trip)}
-                  className={`w-full text-left px-4 py-2 ${c.hover} transition-colors cursor-pointer`}
+                  className={`w-full text-left px-4 py-2 ${c.hover} transition-colors cursor-pointer relative group/trip`}
                 >
-                  <div className="flex items-center gap-3">
-                    <div className={`shrink-0 w-6 h-6 rounded-md ${c.icon} flex items-center justify-center`}>
-                      <MapPin className={`h-3 w-3 ${c.iconText}`} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 text-[11px] text-foreground">
-                        <span className="flex items-center gap-1">
-                          <Calendar className="h-2.5 w-2.5 text-muted-foreground/60" />
-                          {formatShortDate(trip.arrivalDate)}
-                          {trip.departureDate && ` \u2013 ${formatShortDate(trip.departureDate)}`}
-                        </span>
-                        {trip.durationDays != null && (
-                          <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
-                            <Clock className="h-2.5 w-2.5" />
-                            {trip.durationDays}d
-                          </span>
-                        )}
-                        {tense === 'current' && (
-                          <span className="text-[9px] font-medium text-red-400">Now</span>
-                        )}
+                  <button
+                    onClick={() => onTripClick?.(trip)}
+                    className="w-full text-left"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`shrink-0 w-6 h-6 rounded-md ${c.icon} flex items-center justify-center`}>
+                        <MapPin className={`h-3 w-3 ${c.iconText}`} />
                       </div>
-                      {route && (route.prev || route.next) && (
-                        <div className="flex items-center gap-1.5 mt-1 text-[9px] text-muted-foreground/70">
-                          {route.prev && (
-                            <span className="flex items-center gap-0.5">
-                              <ArrowLeft className={`h-2.5 w-2.5 ${c.arrow}`} />
-                              {route.prev.city}
+                      <div className="flex-1 min-w-0 pr-10">
+                        <div className="flex items-center gap-2 text-[11px] text-foreground">
+                          <span className="flex items-center gap-1">
+                            <Calendar className="h-2.5 w-2.5 text-muted-foreground/60" />
+                            {formatShortDate(trip.arrivalDate)}
+                            {trip.departureDate && ` \u2013 ${formatShortDate(trip.departureDate)}`}
+                          </span>
+                          {trip.durationDays != null && (
+                            <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
+                              <Clock className="h-2.5 w-2.5" />
+                              {trip.durationDays}d
                             </span>
                           )}
-                          {route.prev && route.next && <span className="text-muted-foreground/30">&middot;</span>}
-                          {route.next && (
-                            <span className="flex items-center gap-0.5">
-                              {route.next.city}
-                              <ArrowRight className={`h-2.5 w-2.5 ${c.arrow}`} />
-                            </span>
+                          {tense === 'current' && (
+                            <span className="text-[9px] font-medium text-red-400">Now</span>
                           )}
                         </div>
+                        {route && (route.prev || route.next) && (
+                          <div className="flex items-center gap-1.5 mt-1 text-[9px] text-muted-foreground/70">
+                            {route.prev && (
+                              <span className="flex items-center gap-0.5">
+                                <ArrowLeft className={`h-2.5 w-2.5 ${c.arrow}`} />
+                                {route.prev.city}
+                              </span>
+                            )}
+                            {route.prev && route.next && <span className="text-muted-foreground/30">&middot;</span>}
+                            {route.next && (
+                              <span className="flex items-center gap-0.5">
+                                {route.next.city}
+                                <ArrowRight className={`h-2.5 w-2.5 ${c.arrow}`} />
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                  {(onEditTrip || onDeleteTrip) && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-0.5 opacity-0 group-hover/trip:opacity-100 transition-opacity">
+                      {onEditTrip && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); onEditTrip(trip) }}
+                                className="h-5 w-5 flex items-center justify-center rounded text-muted-foreground/60 hover:text-foreground hover:bg-accent transition-colors"
+                              >
+                                <Pencil className="h-2.5 w-2.5" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent className="text-xs">Edit trip</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                      {onDeleteTrip && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); onDeleteTrip(trip) }}
+                                className="h-5 w-5 flex items-center justify-center rounded text-muted-foreground/60 hover:text-destructive hover:bg-destructive/10 transition-colors"
+                              >
+                                <Trash2 className="h-2.5 w-2.5" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent className="text-xs">Delete trip</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       )}
                     </div>
-                  </div>
-                </button>
+                  )}
+                </div>
               )
             })}
           </div>

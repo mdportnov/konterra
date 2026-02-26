@@ -127,6 +127,22 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
     data.reloadVisitedCountries()
   }, [data.reloadTrips, data.reloadVisitedCountries])
 
+  const handleDeleteTrip = useCallback(async (trip: Trip) => {
+    if (!confirm(`Delete trip to ${trip.city}, ${trip.country}?`)) return
+    try {
+      const res = await fetch(`/api/trips/${trip.id}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error('Failed to delete trip')
+      const { toast } = await import('sonner')
+      toast.success('Trip deleted')
+      tripSelection.clearSelectedTrip()
+      data.reloadTrips()
+      data.reloadVisitedCountries()
+    } catch {
+      const { toast } = await import('sonner')
+      toast.error('Failed to delete trip')
+    }
+  }, [tripSelection.clearSelectedTrip, data.reloadTrips, data.reloadVisitedCountries])
+
   const visitedCityCount = useMemo(() => {
     const now = new Date()
     return new Set(
@@ -204,6 +220,8 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
     onImportTrips: () => setTripImportDialogOpen(true),
     onTripClick: tripSelection.handleTripClick,
     onAddTrip: handleAddTrip,
+    onEditTrip: handleEditTrip,
+    onDeleteTrip: handleDeleteTrip,
     dashboardTab,
     onDashboardTabChange: setDashboardTab,
   } as const
@@ -380,6 +398,8 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
         onNavigate={tripSelection.handleTripNavigate}
         onClose={tripSelection.clearSelectedTrip}
         onAddTrip={handleAddTrip}
+        onEditTrip={handleEditTrip}
+        onDeleteTrip={handleDeleteTrip}
       />
 
       {popups.countryPopup && (
@@ -420,6 +440,8 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
           open={popups.tripCountryPopupOpen}
           onTripClick={popups.handleTripCountryTripClick}
           onClose={popups.closeTripCountryPopup}
+          onEditTrip={handleEditTrip}
+          onDeleteTrip={handleDeleteTrip}
         />
       )}
 

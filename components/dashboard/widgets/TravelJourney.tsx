@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { Plane, Upload, Calendar, Clock, ArrowRight, Plus, AlertTriangle, Search, X } from 'lucide-react'
+import { Plane, Upload, Calendar, Clock, ArrowRight, Plus, AlertTriangle, Search, X, Pencil, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
@@ -15,6 +15,8 @@ interface TravelJourneyProps {
   onImport: () => void
   onTripClick?: (trip: Trip) => void
   onAddTrip?: (prefill?: { arrivalDate?: string; departureDate?: string }) => void
+  onEditTrip?: (trip: Trip) => void
+  onDeleteTrip?: (trip: Trip) => void
 }
 
 function formatDate(d: Date | string | null): string {
@@ -41,7 +43,7 @@ function computeGap(laterTrip: Trip, earlierTrip: Trip): number {
   return Math.round((startDate.getTime() - endDate.getTime()) / 86400000)
 }
 
-export default function TravelJourney({ trips, loading, onImport, onTripClick, onAddTrip }: TravelJourneyProps) {
+export default function TravelJourney({ trips, loading, onImport, onTripClick, onAddTrip, onEditTrip, onDeleteTrip }: TravelJourneyProps) {
   const now = useMemo(() => new Date(), [])
   const [search, setSearch] = useState('')
 
@@ -227,31 +229,69 @@ export default function TravelJourney({ trips, loading, onImport, onTripClick, o
 
               return (
                 <div key={trip.id}>
-                  <button
-                    onClick={() => onTripClick?.(trip)}
+                  <div
                     className={`w-full text-left pl-5 pr-2 py-1.5 rounded-md transition-colors relative group ${isFuture ? 'hover:bg-green-500/5' : 'hover:bg-blue-500/5'}`}
                   >
                     <div className={`absolute left-[-3px] top-[11px] w-2 h-2 rounded-full border-2 border-background ring-1 ${isFuture ? 'bg-green-400 ring-green-400/40' : 'bg-blue-400 ring-blue-400/40'}`} />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-foreground truncate">
-                        {trip.city}
-                        <span className="text-muted-foreground/50 font-normal ml-1">{trip.country} {countryFlag(trip.country)}</span>
-                      </p>
-                      <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-                        <span className="flex items-center gap-0.5">
-                          <Calendar className="h-2.5 w-2.5" />
-                          {formatDate(trip.arrivalDate)}
-                          {trip.departureDate && ` \u2013 ${formatDate(trip.departureDate)}`}
-                        </span>
-                        {trip.durationDays != null && (
+                    <button
+                      onClick={() => onTripClick?.(trip)}
+                      className="w-full text-left"
+                    >
+                      <div className="flex-1 min-w-0 pr-12">
+                        <p className="text-xs font-medium text-foreground truncate">
+                          {trip.city}
+                          <span className="text-muted-foreground/50 font-normal ml-1">{trip.country} {countryFlag(trip.country)}</span>
+                        </p>
+                        <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
                           <span className="flex items-center gap-0.5">
-                            <Clock className="h-2.5 w-2.5" />
-                            {trip.durationDays}d
+                            <Calendar className="h-2.5 w-2.5" />
+                            {formatDate(trip.arrivalDate)}
+                            {trip.departureDate && ` \u2013 ${formatDate(trip.departureDate)}`}
                           </span>
+                          {trip.durationDays != null && (
+                            <span className="flex items-center gap-0.5">
+                              <Clock className="h-2.5 w-2.5" />
+                              {trip.durationDays}d
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </button>
+                    {(onEditTrip || onDeleteTrip) && (
+                      <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {onEditTrip && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); onEditTrip(trip) }}
+                                  className="h-5 w-5 flex items-center justify-center rounded text-muted-foreground/60 hover:text-foreground hover:bg-accent transition-colors"
+                                >
+                                  <Pencil className="h-2.5 w-2.5" />
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent className="text-xs">Edit trip</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                        {onDeleteTrip && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); onDeleteTrip(trip) }}
+                                  className="h-5 w-5 flex items-center justify-center rounded text-muted-foreground/60 hover:text-destructive hover:bg-destructive/10 transition-colors"
+                                >
+                                  <Trash2 className="h-2.5 w-2.5" />
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent className="text-xs">Delete trip</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         )}
                       </div>
-                    </div>
-                  </button>
+                    )}
+                  </div>
                   {!isSearching && !isLastOverall && nextInSorted && (() => {
                     if (gapDays > 1) {
                       const gapEndDate = nextInSorted.departureDate || nextInSorted.arrivalDate

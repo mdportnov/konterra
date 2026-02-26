@@ -5,7 +5,7 @@ import type { Trip } from '@/lib/db/schema'
 import { GLASS, Z } from '@/lib/constants/ui'
 import { TENSE_COLORS } from '@/lib/constants/globe-colors'
 import { countryFlag } from '@/lib/country-flags'
-import { ChevronLeft, ChevronRight, X, Calendar, Clock, MapPin, Plus } from 'lucide-react'
+import { ChevronLeft, ChevronRight, X, Calendar, Clock, MapPin, Plus, Pencil, Trash2 } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
 interface TripPopupProps {
@@ -15,6 +15,8 @@ interface TripPopupProps {
   onNavigate: (trip: Trip) => void
   onClose: () => void
   onAddTrip?: (prefill?: { arrivalDate?: string; departureDate?: string }) => void
+  onEditTrip?: (trip: Trip) => void
+  onDeleteTrip?: (trip: Trip) => void
 }
 
 function formatDate(date: Date | null | undefined): string | null {
@@ -41,7 +43,7 @@ function gapDaysBetween(prev: Trip | null, next: Trip | null): number | null {
   return gap > 1 ? gap : null
 }
 
-export default function TripPopup({ trip, prevTrip, nextTrip, onNavigate, onClose, onAddTrip }: TripPopupProps) {
+export default function TripPopup({ trip, prevTrip, nextTrip, onNavigate, onClose, onAddTrip, onEditTrip, onDeleteTrip }: TripPopupProps) {
   const [visible, setVisible] = useState(false)
   const [shouldRender, setShouldRender] = useState(false)
 
@@ -104,19 +106,51 @@ export default function TripPopup({ trip, prevTrip, nextTrip, onNavigate, onClos
             <div className="text-xs text-muted-foreground truncate">{trip.country} {countryFlag(trip.country)}</div>
           </div>
         </div>
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                onClick={onClose}
-                className="text-muted-foreground hover:text-foreground transition-colors shrink-0 ml-2"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent>Close</TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        <div className="flex items-center gap-0.5 shrink-0 ml-2">
+          {onEditTrip && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => onEditTrip(trip)}
+                    className="h-6 w-6 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                  >
+                    <Pencil className="h-3 w-3" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent className="text-xs">Edit trip</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+          {onDeleteTrip && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => onDeleteTrip(trip)}
+                    className="h-6 w-6 flex items-center justify-center rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent className="text-xs">Delete trip</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={onClose}
+                  className="h-6 w-6 flex items-center justify-center rounded text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent className="text-xs">Close</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
       </div>
 
       <div className="flex items-center gap-3 mt-2">
