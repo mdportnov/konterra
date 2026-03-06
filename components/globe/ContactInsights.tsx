@@ -19,6 +19,7 @@ interface ContactInsightsProps {
 interface InsightResult {
   type: InsightType
   content: string
+  model?: string
 }
 
 export default function ContactInsights({ contactId, expanded, onToggle }: ContactInsightsProps) {
@@ -173,6 +174,11 @@ export default function ContactInsights({ contactId, expanded, onToggle }: Conta
                   <div className="text-[11px] text-foreground leading-relaxed insight-markdown">
                     <Markdown>{activeResult.content}</Markdown>
                   </div>
+                  {activeResult.model && (
+                    <div className="mt-1.5 text-[9px] text-muted-foreground/40">
+                      {activeResult.model.split('/').pop()}
+                    </div>
+                  )}
                 </div>
               </div>
             )}

@@ -1,5 +1,5 @@
 import { db } from './index'
-import { users, contacts, interactions, contactConnections, contactCountryConnections, introductions, favors, visitedCountries, waitlist, tags, trips, countryWishlist } from './schema'
+import { users, contacts, interactions, contactConnections, contactCountryConnections, introductions, favors, visitedCountries, waitlist, tags, trips, countryWishlist, appSettings } from './schema'
 import { eq, and, or, desc, sql, arrayContains, inArray } from 'drizzle-orm'
 import type { NewContact, NewContactConnection, NewContactCountryConnection, NewIntroduction, NewFavor, NewTrip, NewCountryWishlistEntry } from './schema'
 
@@ -1063,4 +1063,24 @@ export async function removeWishlistCountryByName(userId: string, country: strin
   await db.delete(countryWishlist).where(
     and(eq(countryWishlist.userId, userId), eq(countryWishlist.country, country)),
   )
+}
+
+export async function getSetting(key: string): Promise<string | null> {
+  const row = await db.query.appSettings.findFirst({
+    where: eq(appSettings.key, key),
+  })
+  return row?.value ?? null
+}
+
+export async function getAllSettings(): Promise<Record<string, string>> {
+  const rows = await db.query.appSettings.findMany()
+  return Object.fromEntries(rows.map((r) => [r.key, r.value]))
+}
+
+export async function upsertSetting(key: string, value: string) {
+  await db.insert(appSettings).values({ key, value, updatedAt: new Date() })
+    .onConflictDoUpdate({
+      target: appSettings.key,
+      set: { value, updatedAt: new Date() },
+    })
 }

@@ -21,12 +21,13 @@ import {
   ArrowLeft, Users, Globe, Link2, MessageSquare, Heart, Plane, Tag,
   Plus, Loader2, Shield, ShieldCheck, User, Eye, EyeOff, Search, X,
   ChevronDown, ChevronUp, Trash2, RefreshCw, Pencil, Save, KeyRound,
-  Clock, CheckCircle2, XCircle, UserPlus, Copy, Mail,
+  Clock, CheckCircle2, XCircle, UserPlus, Copy, Mail, Settings, Sparkles,
 } from 'lucide-react'
 import { GLASS, TRANSITION } from '@/lib/constants/ui'
 import { toast } from 'sonner'
+import { LLM_MODELS, SETTING_KEY_LLM_MODEL, DEFAULT_MODEL_ID } from '@/lib/constants/llm-models'
 
-type Tab = 'users' | 'waitlist'
+type Tab = 'users' | 'waitlist' | 'settings'
 type WaitlistFilter = 'all' | 'pending' | 'approved' | 'rejected'
 
 interface AdminStats {
@@ -125,6 +126,10 @@ export default function AdminPage() {
   const [rejectNote, setRejectNote] = useState('')
   const [rejecting, setRejecting] = useState(false)
 
+  const [settingsLoading, setSettingsLoading] = useState(false)
+  const [selectedModel, setSelectedModel] = useState(DEFAULT_MODEL_ID)
+  const [savingModel, setSavingModel] = useState(false)
+
   const isAdmin = session?.user?.role === 'admin'
   const hasAccess = isAdmin || session?.user?.role === 'moderator'
 
@@ -171,15 +176,51 @@ export default function AdminPage() {
     fetchData()
   }, [status, session, hasAccess, router, fetchData])
 
+  const fetchSettings = useCallback(async () => {
+    setSettingsLoading(true)
+    try {
+      const res = await fetch('/api/admin/settings')
+      if (!res.ok) throw new Error('Failed to load settings')
+      const data = await res.json()
+      if (data[SETTING_KEY_LLM_MODEL]) setSelectedModel(data[SETTING_KEY_LLM_MODEL])
+    } catch {
+      toast.error('Failed to load settings')
+    } finally {
+      setSettingsLoading(false)
+    }
+  }, [])
+
+  const handleSaveModel = async (modelId: string) => {
+    setSelectedModel(modelId)
+    setSavingModel(true)
+    try {
+      const res = await fetch('/api/admin/settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: SETTING_KEY_LLM_MODEL, value: modelId }),
+      })
+      if (!res.ok) throw new Error('Failed to save')
+      toast.success('Model updated')
+    } catch {
+      toast.error('Failed to save model setting')
+    } finally {
+      setSavingModel(false)
+    }
+  }
+
   useEffect(() => {
     if (tab === 'waitlist' && hasAccess) {
       fetchWaitlist()
     }
-  }, [tab, hasAccess, fetchWaitlist])
+    if (tab === 'settings' && hasAccess) {
+      fetchSettings()
+    }
+  }, [tab, hasAccess, fetchWaitlist, fetchSettings])
 
   const handleRefresh = () => {
     fetchData(true)
     if (tab === 'waitlist') fetchWaitlist()
+    if (tab === 'settings') fetchSettings()
   }
 
   const handleCreateUser = async () => {
@@ -527,6 +568,20 @@ export default function AdminPage() {
               </Badge>
             )}
           </button>
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={() => setTab('settings')}
+              className={`px-4 pb-3 text-sm font-medium ${TRANSITION.color} flex items-center gap-2 ${
+                tab === 'settings'
+                  ? 'text-foreground border-b-2 border-foreground'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Settings className="h-3.5 w-3.5" />
+              Settings
+            </button>
+          )}
         </div>
 
         {tab === 'users' && (
@@ -1098,6 +1153,77 @@ export default function AdminPage() {
                   )}
                 </div>
               </ScrollArea>
+            )}
+          </section>
+        )}
+
+        {tab === 'settings' && isAdmin && (
+          <section className="space-y-6">
+            <h2 className="text-sm font-medium text-muted-foreground/60 uppercase tracking-wider">
+              AI / LLM Configuration
+            </h2>
+
+            {settingsLoading ? (
+              <div className="space-y-3">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-24 w-full" />
+              </div>
+            ) : (
+              <div className="rounded-xl border border-border bg-card/50 p-4 sm:p-5 space-y-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <Sparkles className="h-4 w-4 text-muted-foreground" />
+                  <h3 className="text-sm font-medium text-foreground">Insights Model</h3>
+                  {savingModel && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Select the LLM model used for generating contact insights. Models are ordered by recommended priority.
+                </p>
+
+                <div className="space-y-2">
+                  {LLM_MODELS.map((model) => {
+                    const isSelected = selectedModel === model.id
+                    const providerColor = model.provider === 'google'
+                      ? 'border-blue-500/30 bg-blue-500/5'
+                      : 'border-orange-500/30 bg-orange-500/5'
+                    const providerBadge = model.provider === 'google'
+                      ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20'
+                      : 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20'
+                    return (
+                      <button
+                        key={model.id}
+                        onClick={() => handleSaveModel(model.id)}
+                        disabled={savingModel}
+                        className={`w-full text-left px-4 py-3 rounded-lg border ${TRANSITION.color} ${
+                          isSelected
+                            ? `${providerColor} ring-1 ring-primary/30`
+                            : 'border-border/50 bg-accent/30 hover:bg-accent/60'
+                        } disabled:opacity-50`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className={`w-2 h-2 rounded-full ${isSelected ? 'bg-primary' : 'bg-muted-foreground/20'}`} />
+                            <span className={`text-sm font-medium ${isSelected ? 'text-foreground' : 'text-muted-foreground'}`}>
+                              {model.name}
+                            </span>
+                            <Badge variant="outline" className={`text-[9px] px-1.5 py-0 ${providerBadge}`}>
+                              {model.provider === 'google' ? 'Google' : 'Anthropic'}
+                            </Badge>
+                          </div>
+                          {isSelected && (
+                            <CheckCircle2 className="h-4 w-4 text-primary" />
+                          )}
+                        </div>
+                        <p className="text-[11px] text-muted-foreground/70 mt-1 ml-4">
+                          {model.description}
+                        </p>
+                        <p className="text-[9px] text-muted-foreground/40 mt-0.5 ml-4 font-mono">
+                          {model.id}
+                        </p>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
             )}
           </section>
         )}

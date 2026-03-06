@@ -1,4 +1,6 @@
 import { env } from '@/lib/env'
+import { getSetting } from '@/lib/db/queries'
+import { DEFAULT_MODEL_ID, SETTING_KEY_LLM_MODEL } from '@/lib/constants/llm-models'
 
 interface ChatMessage {
   role: 'system' | 'user' | 'assistant'
@@ -7,6 +9,7 @@ interface ChatMessage {
 
 interface LLMResponse {
   content: string
+  model: string
 }
 
 export async function chatCompletion(
@@ -18,7 +21,12 @@ export async function chatCompletion(
     throw new Error('OPENROUTER_API_KEY is not configured')
   }
 
-  const model = options?.model ?? 'google/gemini-2.5-flash-preview'
+  let model = options?.model
+  if (!model) {
+    const saved = await getSetting(SETTING_KEY_LLM_MODEL)
+    model = saved ?? DEFAULT_MODEL_ID
+  }
+
   const temperature = options?.temperature ?? 0.7
   const maxTokens = options?.maxTokens ?? 2048
 
@@ -47,5 +55,5 @@ export async function chatCompletion(
     throw new Error('Empty response from LLM')
   }
 
-  return { content }
+  return { content, model }
 }

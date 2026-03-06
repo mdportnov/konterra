@@ -46,7 +46,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     })
     const response = await chatCompletion(messages)
 
-    return success({ type: insightType, content: response.content })
+    return success({ type: insightType, content: response.content, model: response.model })
   } catch (error) {
     if (error instanceof Error && error.message.includes('OPENROUTER_API_KEY')) {
       return badRequest('LLM integration is not configured. Please add OPENROUTER_API_KEY to your environment.')
