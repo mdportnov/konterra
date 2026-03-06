@@ -96,7 +96,7 @@ export default function ContactDetailContent({
   const [connections, setConnections] = useState<ContactConnection[]>([])
   const [loadingConnections, setLoadingConnections] = useState(false)
   const [showAddConnection, setShowAddConnection] = useState(false)
-  const [newConnection, setNewConnection] = useState({ targetContactId: '', connectionType: 'knows', strength: 3 })
+  const [newConnection, setNewConnection] = useState({ targetContactId: '', connectionType: 'knows', strength: 3, notes: '' })
   const [savingConnection, setSavingConnection] = useState(false)
   const [favorsList, setFavorsList] = useState<Favor[]>([])
   const [loadingFavors, setLoadingFavors] = useState(false)
@@ -216,13 +216,13 @@ export default function ContactDetailContent({
       const res = await fetch(`/api/contacts/${contact.id}/connections`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newConnection),
+        body: JSON.stringify({ ...newConnection, notes: newConnection.notes || null }),
       })
       if (res.ok) {
         const conn = await res.json()
         setConnections((prev) => [...prev, conn])
         setShowAddConnection(false)
-        setNewConnection({ targetContactId: '', connectionType: 'knows', strength: 3 })
+        setNewConnection({ targetContactId: '', connectionType: 'knows', strength: 3, notes: '' })
         toast.success('Connection added')
       }
     } catch {
@@ -512,9 +512,9 @@ export default function ContactDetailContent({
   const completeness = computeProfileCompleteness(contact)
   const otherContacts = allContacts.filter((c) => c.id !== contact.id)
 
-  const getConnectionContactName = (conn: ContactConnection) => {
+  const getConnectionContact = (conn: ContactConnection) => {
     const otherId = conn.sourceContactId === contact.id ? conn.targetContactId : conn.sourceContactId
-    return allContacts.find((c) => c.id === otherId)?.name || 'Unknown'
+    return allContacts.find((c) => c.id === otherId)
   }
 
   const hasBirthday = contact.birthday != null
@@ -1182,6 +1182,12 @@ export default function ContactDetailContent({
               >
                 {CONNECTION_TYPES.map((t) => <option key={t} value={t}>{t.replace('_', ' ')}</option>)}
               </select>
+              <textarea
+                value={newConnection.notes}
+                onChange={(e) => setNewConnection((p) => ({ ...p, notes: e.target.value }))}
+                placeholder="How do they know each other?"
+                className="w-full h-14 text-xs rounded-md border border-input bg-muted/50 px-2 py-1.5 text-foreground resize-none"
+              />
               <div className="flex items-center gap-2">
                 <span className="text-[10px] text-muted-foreground">Strength:</span>
                 {[1, 2, 3, 4, 5].map((s) => (
@@ -1210,26 +1216,41 @@ export default function ContactDetailContent({
             </div>
           ) : (
           <div className="space-y-1">
-            {connections.map((conn) => (
-              <div key={conn.id} className="flex items-center gap-2 py-1 group">
-                <Link2 className="h-3 w-3 text-muted-foreground/60 shrink-0" />
-                <span className="text-[11px] text-foreground font-medium">{getConnectionContactName(conn)}</span>
-                <Badge className="text-[9px] bg-muted text-muted-foreground border-border">
-                  {conn.connectionType.replace('_', ' ')}
-                </Badge>
-                <div className="flex gap-0.5 ml-auto">
-                  {Array.from({ length: 5 }, (_, i) => (
-                    <div key={i} className={`w-1.5 h-1.5 rounded-full ${i < (conn.strength || 0) ? 'bg-orange-500' : 'bg-border'}`} />
-                  ))}
+            {connections.map((conn) => {
+              const other = getConnectionContact(conn)
+              return (
+                <div key={conn.id} className="group">
+                  <div className="flex items-center gap-2 py-1">
+                    <Link2 className="h-3 w-3 text-muted-foreground/60 shrink-0" />
+                    <button
+                      onClick={() => {
+                        if (other) onConnectedContactClick?.({ id: other.id, name: other.name, lat: other.lat, lng: other.lng })
+                      }}
+                      className="text-[11px] text-foreground font-medium hover:text-orange-500 transition-colors cursor-pointer truncate"
+                    >
+                      {other?.name || 'Unknown'}
+                    </button>
+                    <Badge className="text-[9px] bg-muted text-muted-foreground border-border shrink-0">
+                      {conn.connectionType.replace('_', ' ')}
+                    </Badge>
+                    <div className="flex gap-0.5 ml-auto shrink-0">
+                      {Array.from({ length: 5 }, (_, i) => (
+                        <div key={i} className={`w-1.5 h-1.5 rounded-full ${i < (conn.strength || 0) ? 'bg-orange-500' : 'bg-border'}`} />
+                      ))}
+                    </div>
+                    <button
+                      onClick={() => handleDeleteConnection(conn.id)}
+                      className="opacity-0 group-hover:opacity-100 text-muted-foreground/40 hover:text-red-500 transition-opacity shrink-0 cursor-pointer"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                  {conn.notes && (
+                    <p className="text-[10px] text-muted-foreground/70 pl-5 pb-1 leading-relaxed">{conn.notes}</p>
+                  )}
                 </div>
-                <button
-                  onClick={() => handleDeleteConnection(conn.id)}
-                  className="opacity-0 group-hover:opacity-100 text-muted-foreground/40 hover:text-red-500 transition-opacity shrink-0 cursor-pointer"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </div>
-            ))}
+              )
+            })}
             {connections.length === 0 && (
               <p className="text-[11px] text-muted-foreground/60 py-1">No connections yet</p>
             )}
