@@ -284,3 +284,25 @@
   max-width: none !important;
 }
 
+.insight-markdown h1,
+.insight-markdown h2,
+.insight-markdown h3 {
+  font-weight: 600;
+  margin-top: 0.75em;
+  margin-bottom: 0.25em;
+}
+.insight-markdown h1 { font-size: 1em; }
+.insight-markdown h2 { font-size: 0.95em; }
+.insight-markdown h3 { font-size: 0.9em; }
+.insight-markdown p { margin: 0.4em 0; }
+.insight-markdown ul,
+.insight-markdown ol {
+  padding-left: 1.25em;
+  margin: 0.3em 0;
+}
+.insight-markdown li { margin: 0.15em 0; }
+.insight-markdown ul { list-style-type: disc; }
+.insight-markdown ol { list-style-type: decimal; }
+.insight-markdown strong { font-weight: 600; }
+.insight-markdown em { font-style: italic; }
+

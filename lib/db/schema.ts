@@ -332,3 +332,11 @@ export const waitlist = pgTable('waitlist', {
 
 export type WaitlistEntry = typeof waitlist.$inferSelect
 export type NewWaitlistEntry = typeof waitlist.$inferInsert
+
+export const appSettings = pgTable('app_settings', {
+  key: text('key').primaryKey(),
+  value: text('value').notNull(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+})
+
+export type AppSetting = typeof appSettings.$inferSelect
