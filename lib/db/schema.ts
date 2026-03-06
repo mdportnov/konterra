@@ -295,6 +295,31 @@ export type NewFavor = typeof favors.$inferInsert
 export type Trip = typeof trips.$inferSelect
 export type NewTrip = typeof trips.$inferInsert
 
+export const socialPreviewStatusEnum = pgEnum('social_preview_status', ['pending', 'success', 'failed'])
+
+export const socialPreviews = pgTable('social_previews', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  contactId: text('contact_id').references(() => contacts.id, { onDelete: 'cascade' }).notNull(),
+  platform: text('platform').notNull(),
+  url: text('url').notNull(),
+  title: text('title'),
+  description: text('description'),
+  imageUrl: text('image_url'),
+  avatarUrl: text('avatar_url'),
+  followers: integer('followers'),
+  bio: text('bio'),
+  extra: jsonb('extra'),
+  status: socialPreviewStatusEnum('status').notNull().default('pending'),
+  fetchedAt: timestamp('fetched_at'),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (t) => [
+  index('social_previews_contact_id_idx').on(t.contactId),
+  uniqueIndex('social_previews_contact_platform_idx').on(t.contactId, t.platform),
+])
+
+export type SocialPreview = typeof socialPreviews.$inferSelect
+export type NewSocialPreview = typeof socialPreviews.$inferInsert
+
 export const wishlistPriorityEnum = pgEnum('wishlist_priority', ['dream', 'high', 'medium', 'low'])
 
 export const wishlistStatusEnum = pgEnum('wishlist_status', ['idea', 'researching', 'planning', 'ready'])
