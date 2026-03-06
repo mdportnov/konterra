@@ -194,21 +194,25 @@ export function CountriesTab({ visitedCountries, onToggleVisitedCountry, wishlis
 
                       if (viewMode === 'visited') {
                         return (
-                          <label key={name} className="flex items-center gap-2 px-1 py-1 rounded hover:bg-accent cursor-pointer">
+                          <div key={name} className="flex items-center gap-2 px-1 py-1 rounded hover:bg-accent group">
                             <Checkbox
                               checked={visitedCountries?.has(name) || false}
                               onCheckedChange={() => onToggleVisitedCountry(name)}
                             />
-                            <span className="text-sm text-foreground flex-1">{countryFlag(name)} {name}</span>
-                            {isWishlisted && (
-                              <Heart className="h-3 w-3 fill-rose-500 text-rose-500 shrink-0" />
-                            )}
+                            <label className="text-sm text-foreground flex-1 cursor-pointer" onClick={() => onToggleVisitedCountry(name)}>{countryFlag(name)} {name}</label>
                             {count > 0 && (
                               <span className="text-[10px] text-muted-foreground/60 bg-muted rounded-full px-1.5 py-0.5 min-w-[20px] text-center">
                                 {count}
                               </span>
                             )}
-                          </label>
+                            <button
+                              onClick={() => onToggleWishlistCountry?.(name)}
+                              aria-label={isWishlisted ? `Remove ${name} from wishlist` : `Add ${name} to wishlist`}
+                              className={`cursor-pointer shrink-0 ${isWishlisted ? '' : 'opacity-0 group-hover:opacity-100 focus:opacity-100'} transition-opacity`}
+                            >
+                              <Heart className={`h-3.5 w-3.5 transition-colors ${isWishlisted ? 'fill-rose-500 text-rose-500' : 'text-muted-foreground/40 hover:text-rose-400'}`} />
+                            </button>
+                          </div>
                         )
                       }
 
@@ -247,24 +251,24 @@ export function CountriesTab({ visitedCountries, onToggleVisitedCountry, wishlis
                       }
 
                       return (
-                        <div key={name} className="flex items-center gap-2 px-1 py-1 rounded hover:bg-accent">
+                        <div key={name} className="flex items-center gap-2 px-1 py-1 rounded hover:bg-accent group">
                           <Checkbox
                             checked={visitedCountries?.has(name) || false}
                             onCheckedChange={() => onToggleVisitedCountry(name)}
                           />
                           <span className="text-sm text-foreground flex-1">{countryFlag(name)} {name}</span>
-                          <button
-                            onClick={() => onToggleWishlistCountry?.(name)}
-                            aria-label={isWishlisted ? `Remove ${name} from wishlist` : `Add ${name} to wishlist`}
-                            className="cursor-pointer"
-                          >
-                            <Heart className={`h-3 w-3 transition-colors ${isWishlisted ? 'fill-rose-500 text-rose-500' : 'text-muted-foreground/30 hover:text-rose-400'}`} />
-                          </button>
                           {count > 0 && (
                             <span className="text-[10px] text-muted-foreground/60 bg-muted rounded-full px-1.5 py-0.5 min-w-[20px] text-center">
                               {count}
                             </span>
                           )}
+                          <button
+                            onClick={() => onToggleWishlistCountry?.(name)}
+                            aria-label={isWishlisted ? `Remove ${name} from wishlist` : `Add ${name} to wishlist`}
+                            className={`cursor-pointer shrink-0 ${isWishlisted ? '' : 'opacity-0 group-hover:opacity-100 focus:opacity-100'} transition-opacity`}
+                          >
+                            <Heart className={`h-3.5 w-3.5 transition-colors ${isWishlisted ? 'fill-rose-500 text-rose-500' : 'text-muted-foreground/40 hover:text-rose-400'}`} />
+                          </button>
                         </div>
                       )
                     })}
