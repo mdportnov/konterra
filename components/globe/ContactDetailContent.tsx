@@ -224,6 +224,9 @@ export default function ContactDetailContent({
         setShowAddConnection(false)
         setNewConnection({ targetContactId: '', connectionType: 'knows', strength: 3, notes: '' })
         toast.success('Connection added')
+      } else {
+        const err = await res.json().catch(() => null)
+        toast.error(err?.error || 'Failed to add connection')
       }
     } catch {
       toast.error('Failed to add connection')
@@ -1222,14 +1225,23 @@ export default function ContactDetailContent({
                 <div key={conn.id} className="group">
                   <div className="flex items-center gap-2 py-1">
                     <Link2 className="h-3 w-3 text-muted-foreground/60 shrink-0" />
-                    <button
-                      onClick={() => {
-                        if (other) onConnectedContactClick?.({ id: other.id, name: other.name, lat: other.lat, lng: other.lng })
-                      }}
-                      className="text-[11px] text-foreground font-medium hover:text-orange-500 transition-colors cursor-pointer truncate"
-                    >
-                      {other?.name || 'Unknown'}
-                    </button>
+                    {other ? (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              onClick={() => onConnectedContactClick?.({ id: other.id, name: other.name, lat: other.lat, lng: other.lng })}
+                              className="text-[11px] text-foreground font-medium hover:text-orange-500 transition-colors cursor-pointer truncate"
+                            >
+                              {other.name}
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="text-xs">View contact</TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    ) : (
+                      <span className="text-[11px] text-muted-foreground font-medium truncate">Unknown</span>
+                    )}
                     <Badge className="text-[9px] bg-muted text-muted-foreground border-border shrink-0">
                       {conn.connectionType.replace('_', ' ')}
                     </Badge>
