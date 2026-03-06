@@ -1209,16 +1209,20 @@ export default function AdminPage() {
                               {model.provider === 'google' ? 'Google' : 'Anthropic'}
                             </Badge>
                           </div>
-                          {isSelected && (
-                            <CheckCircle2 className="h-4 w-4 text-primary" />
-                          )}
+                          <div className="flex items-center gap-2">
+                            {isSelected && (
+                              <CheckCircle2 className="h-4 w-4 text-primary" />
+                            )}
+                          </div>
                         </div>
                         <p className="text-[11px] text-muted-foreground/70 mt-1 ml-4">
                           {model.description}
                         </p>
-                        <p className="text-[9px] text-muted-foreground/40 mt-0.5 ml-4 font-mono">
-                          {model.id}
-                        </p>
+                        <div className="flex items-center gap-3 mt-0.5 ml-4">
+                          <span className="text-[9px] text-muted-foreground/40 font-mono">{model.id}</span>
+                          <span className="text-[9px] text-muted-foreground/30">{model.context} ctx</span>
+                          <span className="text-[9px] text-muted-foreground/30">{model.pricing}</span>
+                        </div>
                       </button>
                     )
                   })}
