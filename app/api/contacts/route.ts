@@ -1,8 +1,9 @@
 import { auth } from '@/auth'
-import { getContactsByUserId, createContact, deleteAllContactsByUserId, getOrCreateSelfContact, createConnection } from '@/lib/db/queries'
+import { getContactsByUserId, createContact, deleteAllContactsByUserId, getOrCreateSelfContact, createConnection, upsertSocialPreview } from '@/lib/db/queries'
 import { geocode } from '@/lib/geocoding'
 import { validateContact, safeParseBody } from '@/lib/validation'
 import { toStringOrNull, toDateOrNull, parsePagination, unauthorized, badRequest, success } from '@/lib/api-utils'
+import { scrapeAllProfiles } from '@/lib/social/scraper'
 
 export async function GET(req: Request) {
   const session = await auth()
@@ -103,5 +104,30 @@ export async function POST(req: Request) {
     }
   }
 
+  triggerEnrichment(contact)
+
   return success(contact, 201)
+}
+
+function triggerEnrichment(contact: Awaited<ReturnType<typeof createContact>>) {
+  const hasSocial = contact.github || contact.website || contact.linkedin || contact.twitter || contact.instagram || contact.telegram
+  if (!hasSocial) return
+  scrapeAllProfiles(contact).then((results) => {
+    for (const r of results) {
+      upsertSocialPreview({
+        contactId: contact.id,
+        platform: r.platform,
+        url: r.url,
+        title: r.title,
+        description: r.description,
+        imageUrl: r.imageUrl,
+        avatarUrl: r.avatarUrl,
+        followers: r.followers,
+        bio: r.bio,
+        extra: r.extra,
+        status: r.status,
+        fetchedAt: new Date(),
+      }).catch((e) => console.error('Social preview upsert error:', e))
+    }
+  }).catch((e) => console.error('Enrichment error:', e))
 }

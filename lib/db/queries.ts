@@ -1,7 +1,7 @@
 import { db } from './index'
-import { users, contacts, interactions, contactConnections, contactCountryConnections, introductions, favors, visitedCountries, waitlist, tags, trips, countryWishlist, appSettings } from './schema'
+import { users, contacts, interactions, contactConnections, contactCountryConnections, introductions, favors, visitedCountries, waitlist, tags, trips, countryWishlist, appSettings, socialPreviews } from './schema'
 import { eq, and, or, desc, sql, arrayContains, inArray } from 'drizzle-orm'
-import type { NewContact, NewContactConnection, NewContactCountryConnection, NewIntroduction, NewFavor, NewTrip, NewCountryWishlistEntry } from './schema'
+import type { NewContact, NewContactConnection, NewContactCountryConnection, NewIntroduction, NewFavor, NewTrip, NewCountryWishlistEntry, NewSocialPreview } from './schema'
 
 export async function deleteAllContactsByUserId(userId: string) {
   return db.delete(contacts).where(eq(contacts.userId, userId))
@@ -1083,4 +1083,37 @@ export async function upsertSetting(key: string, value: string) {
       target: appSettings.key,
       set: { value, updatedAt: new Date() },
     })
+}
+
+export async function getSocialPreviewsByContactId(contactId: string) {
+  return db.query.socialPreviews.findMany({
+    where: eq(socialPreviews.contactId, contactId),
+  })
+}
+
+export async function upsertSocialPreview(data: NewSocialPreview) {
+  const [row] = await db
+    .insert(socialPreviews)
+    .values(data)
+    .onConflictDoUpdate({
+      target: [socialPreviews.contactId, socialPreviews.platform],
+      set: {
+        url: data.url,
+        title: data.title,
+        description: data.description,
+        imageUrl: data.imageUrl,
+        avatarUrl: data.avatarUrl,
+        followers: data.followers,
+        bio: data.bio,
+        extra: data.extra,
+        status: data.status,
+        fetchedAt: new Date(),
+      },
+    })
+    .returning()
+  return row
+}
+
+export async function deleteSocialPreviewsByContactId(contactId: string) {
+  await db.delete(socialPreviews).where(eq(socialPreviews.contactId, contactId))
 }

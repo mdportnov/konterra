@@ -1,4 +1,4 @@
-import type { Contact, ContactConnection, ContactCountryConnection, CountryWishlistEntry, Interaction, Favor, Tag, Trip } from '@/lib/db/schema'
+import type { Contact, ContactConnection, ContactCountryConnection, CountryWishlistEntry, Interaction, Favor, Tag, Trip, SocialPreview } from '@/lib/db/schema'
 
 interface PaginatedResponse<T> {
   data: T[]
@@ -108,4 +108,18 @@ export async function fetchTrips(signal?: AbortSignal): Promise<Trip[]> {
 
 export async function fetchWishlistCountries(signal?: AbortSignal): Promise<CountryWishlistEntry[]> {
   return apiFetch<CountryWishlistEntry[]>('/api/wishlist-countries', signal)
+}
+
+export async function fetchSocialPreviews(contactId: string, signal?: AbortSignal): Promise<SocialPreview[]> {
+  return apiFetch<SocialPreview[]>(`/api/contacts/${contactId}/social-previews`, signal)
+}
+
+export async function enrichContact(contactId: string, platforms?: string[]): Promise<SocialPreview[]> {
+  const res = await fetch(`/api/contacts/${contactId}/enrich`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(platforms ? { platforms } : {}),
+  })
+  if (!res.ok) throw new Error('Enrichment failed')
+  return res.json()
 }

@@ -1,8 +1,11 @@
 import { auth } from '@/auth'
-import { getContactById, updateContact, deleteContact } from '@/lib/db/queries'
+import { getContactById, updateContact, deleteContact, upsertSocialPreview } from '@/lib/db/queries'
 import { geocode } from '@/lib/geocoding'
 import { validateContact, safeParseBody } from '@/lib/validation'
 import { toStringOrNull, toDateOrNull, unauthorized, badRequest, notFound, success } from '@/lib/api-utils'
+import { scrapeAllProfiles } from '@/lib/social/scraper'
+import type { SocialPlatform } from '@/lib/social/types'
+import type { Contact } from '@/lib/db/schema'
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
@@ -91,7 +94,34 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   if (!contact) return notFound('Contact')
 
+  const socialFields: (keyof typeof body & string)[] = ['linkedin', 'twitter', 'instagram', 'github', 'website', 'telegram']
+  const changedPlatforms = socialFields.filter((f) => body[f] !== undefined) as SocialPlatform[]
+  if (changedPlatforms.length > 0) {
+    triggerEnrichment(contact, changedPlatforms)
+  }
+
   return success(contact)
+}
+
+function triggerEnrichment(contact: Contact, platforms: SocialPlatform[]) {
+  scrapeAllProfiles(contact, platforms).then((results) => {
+    for (const r of results) {
+      upsertSocialPreview({
+        contactId: contact.id,
+        platform: r.platform,
+        url: r.url,
+        title: r.title,
+        description: r.description,
+        imageUrl: r.imageUrl,
+        avatarUrl: r.avatarUrl,
+        followers: r.followers,
+        bio: r.bio,
+        extra: r.extra,
+        status: r.status,
+        fetchedAt: new Date(),
+      }).catch((e) => console.error('Social preview upsert error:', e))
+    }
+  }).catch((e) => console.error('Enrichment error:', e))
 }
 
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {

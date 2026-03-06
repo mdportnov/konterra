@@ -33,6 +33,7 @@ import type { Contact, Interaction, ContactConnection, ContactCountryConnection,
 import type { ConnectedContact } from '@/components/globe/ContactDetail'
 import { PerplexityIcon } from '@/components/icons/perplexity'
 import ContactInsights from '@/components/globe/ContactInsights'
+import SocialPreviewCards from '@/components/globe/SocialPreviewCards'
 
 function buildPerplexityUrl(city: string | null, country: string | null): string {
   const location = [city, country].filter(Boolean).join(', ')
@@ -860,6 +861,11 @@ export default function ContactDetailContent({
             {contact.website && <SocialButton href={ensureUrl(contact.website, 'https://')} icon={Globe} />}
           </div>
         )}
+
+        <SocialPreviewCards
+          contactId={contact.id}
+          hasSocialLinks={!!(contact.linkedin || contact.twitter || contact.telegram || contact.instagram || contact.github || contact.website)}
+        />
 
         {contact.tags && contact.tags.length > 0 && (
           <div className="flex flex-wrap gap-1">
