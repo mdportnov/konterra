@@ -32,6 +32,7 @@ import { fetchContactInteractions, fetchContactConnections, fetchContactFavors, 
 import type { Contact, Interaction, ContactConnection, ContactCountryConnection, Favor } from '@/lib/db/schema'
 import type { ConnectedContact } from '@/components/globe/ContactDetail'
 import { PerplexityIcon } from '@/components/icons/perplexity'
+import ContactInsights from '@/components/globe/ContactInsights'
 
 function buildPerplexityUrl(city: string | null, country: string | null): string {
   const location = [city, country].filter(Boolean).join(', ')
@@ -111,7 +112,7 @@ export default function ContactDetailContent({
   const [editInteractionData, setEditInteractionData] = useState({ type: '', notes: '', date: '' })
   const [editingCountryTie, setEditingCountryTie] = useState<string | null>(null)
   const [editCountryTieNotes, setEditCountryTieNotes] = useState('')
-  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({ timeline: false, connections: false, favors: false, countryTies: false, profile: false })
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({ timeline: false, connections: false, favors: false, countryTies: false, profile: false, insights: false })
   const abortRef = useRef<AbortController | null>(null)
 
   const toggleSection = useCallback((key: string) => {
@@ -1533,6 +1534,14 @@ export default function ContactDetailContent({
             </div>
           </div>
         </CollapsibleSection>
+
+        {!contact.isSelf && (
+          <ContactInsights
+            contactId={contact.id}
+            expanded={expandedSections.insights}
+            onToggle={() => toggleSection('insights')}
+          />
+        )}
       </div>
     </div>
   )
