@@ -1,4 +1,4 @@
-import type { Contact } from '@/lib/db/schema'
+import type { Contact, Interaction, Favor } from '@/lib/db/schema'
 
 export const INSIGHT_TYPES = [
   'networking_strategy',
@@ -44,7 +44,31 @@ function formatContactProfile(contact: Contact): string {
   if (contact.financialCapacity) parts.push(`Financial capacity: ${contact.financialCapacity}`)
   if (contact.tags?.length) parts.push(`Tags: ${contact.tags.join(', ')}`)
   if (contact.notes) parts.push(`Notes: ${contact.notes}`)
+  if (contact.lastContactedAt) parts.push(`Last contacted: ${new Date(contact.lastContactedAt).toLocaleDateString()}`)
+  if (contact.nextFollowUp) parts.push(`Next follow-up: ${new Date(contact.nextFollowUp).toLocaleDateString()}`)
   return parts.join('\n')
+}
+
+function formatInteractions(interactions: Interaction[]): string {
+  if (!interactions.length) return 'No recorded interactions yet.'
+  const recent = interactions.slice(0, 10)
+  return recent.map((i) => {
+    const date = i.date ? new Date(i.date).toLocaleDateString() : 'unknown date'
+    const parts = [`- ${i.type} on ${date}`]
+    if (i.location) parts[0] += ` at ${i.location}`
+    if (i.notes) parts[0] += `: ${i.notes}`
+    return parts[0]
+  }).join('\n')
+}
+
+function formatFavors(favors: Favor[]): string {
+  if (!favors.length) return 'No recorded favors.'
+  return favors.map((f) => {
+    const dir = f.direction === 'given' ? 'I did for them' : 'They did for me'
+    const parts = [`- ${f.type} (${dir}, ${f.value} value, ${f.status})`]
+    if (f.description) parts[0] += `: ${f.description}`
+    return parts[0]
+  }).join('\n')
 }
 
 const SYSTEM_PROMPT = `You are a strategic networking advisor. You help people build meaningful professional and personal relationships. You provide specific, actionable advice based on available information about both parties. Be concise, practical, and culturally aware. Respond in the same language that the user's notes and profile are written in. If the information is in Russian, respond in Russian. If in English, respond in English.`
@@ -77,11 +101,17 @@ Make them natural and specific, not generic small talk.`,
 Make it realistic and actionable.`,
 }
 
+export interface InsightContext {
+  interactions?: Interaction[]
+  favors?: Favor[]
+  extraContext?: string
+}
+
 export function buildInsightMessages(
   insightType: InsightType,
   selfContact: Contact,
   targetContact: Contact,
-  extraContext?: string,
+  context?: InsightContext,
 ): { role: 'system' | 'user'; content: string }[] {
   const userMessage = [
     '## About me:',
@@ -91,8 +121,16 @@ export function buildInsightMessages(
     formatContactProfile(targetContact),
   ]
 
-  if (extraContext) {
-    userMessage.push('', '## Additional context:', extraContext)
+  if (context?.interactions?.length) {
+    userMessage.push('', '## Interaction history:', formatInteractions(context.interactions))
+  }
+
+  if (context?.favors?.length) {
+    userMessage.push('', '## Favors exchanged:', formatFavors(context.favors))
+  }
+
+  if (context?.extraContext) {
+    userMessage.push('', '## Additional context:', context.extraContext)
   }
 
   userMessage.push('', '## Task:', INSIGHT_PROMPTS[insightType])

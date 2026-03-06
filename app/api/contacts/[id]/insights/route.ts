@@ -7,6 +7,7 @@ import { contacts } from '@/lib/db/schema'
 import { eq, and } from 'drizzle-orm'
 import { chatCompletion } from '@/lib/llm'
 import { buildInsightMessages, INSIGHT_TYPES, type InsightType } from '@/lib/prompts'
+import { getInteractionsByContactId, getFavorsByContactId } from '@/lib/db/queries'
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -24,19 +25,25 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     const extraContext = typeof body.context === 'string' ? body.context : undefined
 
-    const [targetContact, selfContact] = await Promise.all([
+    const [targetContact, selfContact, interactions, favors] = await Promise.all([
       db.query.contacts.findFirst({
         where: and(eq(contacts.id, id), eq(contacts.userId, session.user.id)),
       }),
       db.query.contacts.findFirst({
         where: and(eq(contacts.userId, session.user.id), eq(contacts.isSelf, true)),
       }),
+      getInteractionsByContactId(id),
+      getFavorsByContactId(id, session.user.id),
     ])
 
     if (!targetContact) return notFound('Contact')
     if (!selfContact) return badRequest('Please fill in your own profile first (self contact)')
 
-    const messages = buildInsightMessages(insightType, selfContact, targetContact, extraContext)
+    const messages = buildInsightMessages(insightType, selfContact, targetContact, {
+      interactions,
+      favors,
+      extraContext,
+    })
     const response = await chatCompletion(messages)
 
     return success({ type: insightType, content: response.content })

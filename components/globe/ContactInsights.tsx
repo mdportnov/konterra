@@ -1,10 +1,12 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Sparkles, RefreshCw, ChevronRight } from 'lucide-react'
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
+import { Sparkles, RefreshCw, ChevronRight, Send } from 'lucide-react'
 import { toast } from 'sonner'
+import Markdown from 'react-markdown'
 import { INSIGHT_TYPES, INSIGHT_LABELS, INSIGHT_DESCRIPTIONS } from '@/lib/prompts'
 import type { InsightType } from '@/lib/prompts'
 
@@ -23,28 +25,57 @@ export default function ContactInsights({ contactId, expanded, onToggle }: Conta
   const [loading, setLoading] = useState<InsightType | null>(null)
   const [results, setResults] = useState<Record<string, InsightResult>>({})
   const [activeTab, setActiveTab] = useState<InsightType | null>(null)
+  const [extraContext, setExtraContext] = useState('')
+  const abortRef = useRef<AbortController | null>(null)
+  const prevContactIdRef = useRef(contactId)
+
+  useEffect(() => {
+    if (prevContactIdRef.current !== contactId) {
+      abortRef.current?.abort()
+      setResults({})
+      setActiveTab(null)
+      setLoading(null)
+      setExtraContext('')
+      prevContactIdRef.current = contactId
+    }
+  }, [contactId])
+
+  useEffect(() => {
+    return () => { abortRef.current?.abort() }
+  }, [])
 
   const generateInsight = useCallback(async (type: InsightType) => {
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
+
     setLoading(type)
     setActiveTab(type)
     try {
+      const body: Record<string, string> = { type }
+      if (extraContext.trim()) body.context = extraContext.trim()
+
       const res = await fetch(`/api/contacts/${contactId}/insights`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type }),
+        body: JSON.stringify(body),
+        signal: controller.signal,
       })
       if (!res.ok) {
-        const body = await res.json().catch(() => ({ error: 'Request failed' }))
-        throw new Error(body.error || `HTTP ${res.status}`)
+        const data = await res.json().catch(() => ({ error: 'Request failed' }))
+        throw new Error(data.error || `HTTP ${res.status}`)
       }
       const data: InsightResult = await res.json()
-      setResults((prev) => ({ ...prev, [type]: data }))
+      if (!controller.signal.aborted) {
+        setResults((prev) => ({ ...prev, [type]: data }))
+      }
     } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') return
       toast.error(error instanceof Error ? error.message : 'Failed to generate insight')
     } finally {
-      setLoading(null)
+      if (!controller.signal.aborted) setLoading(null)
     }
-  }, [contactId])
+  }, [contactId, extraContext])
 
   const activeResult = activeTab ? results[activeTab] : null
 
@@ -70,6 +101,29 @@ export default function ContactInsights({ contactId, expanded, onToggle }: Conta
       >
         <div className="overflow-hidden">
           <div className="mt-2 space-y-2">
+            <div className="relative">
+              <textarea
+                value={extraContext}
+                onChange={(e) => setExtraContext(e.target.value)}
+                placeholder="Additional context (optional): paste any unstructured info about this person..."
+                rows={2}
+                className="w-full text-[11px] bg-accent/30 border border-border/50 rounded-md px-2.5 py-2 pr-8 resize-none placeholder:text-muted-foreground/40 focus:outline-none focus:ring-1 focus:ring-primary/30 text-foreground"
+              />
+              {extraContext.trim() && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => { if (activeTab) generateInsight(activeTab) }}
+                      className="absolute top-2 right-2 text-muted-foreground hover:text-primary transition-colors"
+                    >
+                      <Send className="h-3.5 w-3.5" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>Re-generate with context</TooltipContent>
+                </Tooltip>
+              )}
+            </div>
+
             <div className="grid grid-cols-2 gap-1.5">
               {INSIGHT_TYPES.map((type) => (
                 <button
@@ -100,19 +154,24 @@ export default function ContactInsights({ contactId, expanded, onToggle }: Conta
 
             {!loading && activeResult && (
               <div className="relative">
-                <div className="absolute top-1 right-1">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6"
-                    onClick={() => generateInsight(activeResult.type)}
-                  >
-                    <RefreshCw className="h-3 w-3" />
-                  </Button>
+                <div className="absolute top-1 right-1 z-10">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => generateInsight(activeResult.type)}
+                      >
+                        <RefreshCw className="h-3 w-3" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Regenerate</TooltipContent>
+                  </Tooltip>
                 </div>
                 <div className="bg-accent/30 rounded-md border border-border/50 px-3 py-2.5 pr-8">
-                  <div className="text-[11px] text-foreground leading-relaxed whitespace-pre-wrap prose-sm">
-                    {activeResult.content}
+                  <div className="text-[11px] text-foreground leading-relaxed insight-markdown">
+                    <Markdown>{activeResult.content}</Markdown>
                   </div>
                 </div>
               </div>
