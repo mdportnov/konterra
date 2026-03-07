@@ -18,11 +18,13 @@ export async function getUserByEmail(email: string) {
   })
 }
 
-export async function createWaitlistEntry(data: { email: string; name: string; message?: string }) {
-  await db
+export async function createWaitlistEntry(data: { email: string; name: string; message: string | null }) {
+  const result = await db
     .insert(waitlist)
     .values(data)
     .onConflictDoNothing({ target: waitlist.email })
+    .returning({ id: waitlist.id })
+  return result.length > 0
 }
 
 export async function getUserById(id: string) {
