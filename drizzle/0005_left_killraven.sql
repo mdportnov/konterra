@@ -1,3 +1,7 @@
+ALTER TABLE "waitlist" ADD COLUMN "admin_note" text;--> statement-breakpoint
+ALTER TABLE "waitlist" ADD COLUMN "reviewed_by" text;--> statement-breakpoint
+ALTER TABLE "waitlist" ADD COLUMN "reviewed_at" timestamp;--> statement-breakpoint
+ALTER TABLE "waitlist" ADD CONSTRAINT "waitlist_reviewed_by_users_id_fk" FOREIGN KEY ("reviewed_by") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 CREATE TYPE "public"."social_preview_status" AS ENUM('pending', 'success', 'failed');--> statement-breakpoint
 CREATE TABLE "social_previews" (
 	"id" text PRIMARY KEY NOT NULL,
