@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { unauthorized, badRequest, notFound, success, serverError } from '@/lib/api-utils'
-import { getUserById, getUserProfile, updateUserProfile, getUserByUsername } from '@/lib/db/queries'
+import { getUserById, getUserProfile, updateUserProfile, getUserByUsername, getReferrer } from '@/lib/db/queries'
 
 const USERNAME_RE = /^[a-z0-9][a-z0-9_-]{1,28}[a-z0-9]$/
 
@@ -10,7 +10,10 @@ export async function GET() {
   if (!session?.user?.id) return unauthorized()
 
   try {
-    const user = await getUserProfile(session.user.id)
+    const [user, referrer] = await Promise.all([
+      getUserProfile(session.user.id),
+      getReferrer(session.user.id),
+    ])
     return success({
       name: user?.name ?? session.user.name ?? '',
       email: user?.email ?? session.user.email ?? '',
@@ -21,6 +24,7 @@ export async function GET() {
       profilePrivacyLevel: user?.profilePrivacyLevel ?? 'countries_only',
       globeAutoRotate: user?.globeAutoRotate ?? true,
       createdAt: user?.createdAt ?? null,
+      referrer,
     })
   } catch (err) {
     console.error('[GET /api/profile]', err instanceof Error ? err.message : err)
@@ -34,6 +38,7 @@ export async function GET() {
       profilePrivacyLevel: 'countries_only',
       globeAutoRotate: true,
       createdAt: null,
+      referrer: null,
     })
   }
 }

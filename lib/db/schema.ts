@@ -69,6 +69,7 @@ export const users = pgTable('users', {
   profileVisibility: profileVisibilityEnum('profile_visibility').notNull().default('private'),
   profilePrivacyLevel: profilePrivacyLevelEnum('profile_privacy_level').notNull().default('countries_only'),
   globeAutoRotate: boolean('globe_auto_rotate').notNull().default(true),
+  invitedBy: text('invited_by').references((): import('drizzle-orm/pg-core').AnyPgColumn => users.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at').defaultNow(),
 })
 
@@ -365,3 +366,17 @@ export const appSettings = pgTable('app_settings', {
 })
 
 export type AppSetting = typeof appSettings.$inferSelect
+
+export const invites = pgTable('invites', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  code: text('code').notNull().unique(),
+  createdBy: text('created_by').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  usedBy: text('used_by').references(() => users.id, { onDelete: 'set null' }),
+  expiresAt: timestamp('expires_at').notNull(),
+  usedAt: timestamp('used_at'),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (t) => [
+  index('invites_created_by_idx').on(t.createdBy),
+])
+
+export type Invite = typeof invites.$inferSelect

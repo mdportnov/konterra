@@ -1,5 +1,5 @@
 import { db } from './index'
-import { users, contacts, interactions, contactConnections, contactCountryConnections, introductions, favors, visitedCountries, waitlist, tags, trips, countryWishlist, appSettings, socialPreviews } from './schema'
+import { users, contacts, interactions, contactConnections, contactCountryConnections, introductions, favors, visitedCountries, waitlist, tags, trips, countryWishlist, appSettings, socialPreviews, invites } from './schema'
 import { eq, and, or, desc, sql, arrayContains, inArray } from 'drizzle-orm'
 import type { NewContact, NewContactConnection, NewContactCountryConnection, NewIntroduction, NewFavor, NewTrip, NewCountryWishlistEntry, NewSocialPreview } from './schema'
 
@@ -1118,4 +1118,109 @@ export async function upsertSocialPreview(data: NewSocialPreview) {
 
 export async function deleteSocialPreviewsByContactId(contactId: string) {
   await db.delete(socialPreviews).where(eq(socialPreviews.contactId, contactId))
+}
+
+export async function getInviteByCode(code: string) {
+  return db.query.invites.findFirst({
+    where: eq(invites.code, code),
+  })
+}
+
+export async function getInviterByCode(code: string) {
+  const rows = await db
+    .select({ invite: invites, inviterName: users.name, inviterImage: users.image })
+    .from(invites)
+    .innerJoin(users, eq(users.id, invites.createdBy))
+    .where(eq(invites.code, code))
+    .limit(1)
+  return rows[0] ?? null
+}
+
+export async function getActiveInviteByUserId(userId: string) {
+  return db.query.invites.findFirst({
+    where: and(eq(invites.createdBy, userId), sql`${invites.usedBy} is null`, sql`${invites.expiresAt} > now()`),
+  })
+}
+
+export async function getInviteByUserId(userId: string) {
+  return db.query.invites.findFirst({
+    where: eq(invites.createdBy, userId),
+    orderBy: desc(invites.createdAt),
+  })
+}
+
+export async function deleteExpiredInvite(userId: string) {
+  await db
+    .delete(invites)
+    .where(and(eq(invites.createdBy, userId), sql`${invites.usedBy} is null`, sql`${invites.expiresAt} <= now()`))
+}
+
+export async function createInvite(userId: string, code: string, expiresAt: Date) {
+  const active = await getActiveInviteByUserId(userId)
+  if (active) return null
+  await deleteExpiredInvite(userId)
+  const rows = await db
+    .insert(invites)
+    .values({ createdBy: userId, code, expiresAt })
+    .returning()
+  return rows[0] ?? null
+}
+
+export async function registerViaInvite(data: { email: string; name: string; password: string }, code: string) {
+  return db.transaction(async (tx) => {
+    const claimed = await tx
+      .update(invites)
+      .set({ usedAt: new Date() })
+      .where(and(eq(invites.code, code), sql`${invites.usedBy} is null`, sql`${invites.expiresAt} > now()`))
+      .returning({ id: invites.id, createdBy: invites.createdBy })
+    if (!claimed.length) return { error: 'invalid_invite' as const }
+
+    const invite = claimed[0]
+
+    const existing = await tx.query.users.findFirst({
+      where: eq(users.email, data.email),
+      columns: { id: true },
+    })
+    if (existing) {
+      await tx
+        .update(invites)
+        .set({ usedAt: null })
+        .where(eq(invites.id, invite.id))
+      return { error: 'email_taken' as const }
+    }
+
+    const id = crypto.randomUUID()
+    const [user] = await tx
+      .insert(users)
+      .values({ id, email: data.email, name: data.name, password: data.password, invitedBy: invite.createdBy })
+      .returning({ id: users.id, email: users.email, name: users.name, role: users.role })
+
+    await tx
+      .update(invites)
+      .set({ usedBy: user.id })
+      .where(eq(invites.id, invite.id))
+
+    return { user }
+  })
+}
+
+export async function getReferrer(userId: string) {
+  const rows = await db
+    .select({ name: users.name, image: users.image })
+    .from(users)
+    .where(
+      sql`${users.id} = (SELECT "invited_by" FROM "users" WHERE "id" = ${userId})`
+    )
+    .limit(1)
+  return rows[0] ?? null
+}
+
+export async function getInvitedUser(userId: string) {
+  const rows = await db
+    .select({ name: users.name, image: users.image, createdAt: users.createdAt })
+    .from(invites)
+    .innerJoin(users, eq(users.id, invites.usedBy))
+    .where(eq(invites.createdBy, userId))
+    .limit(1)
+  return rows[0] ?? null
 }

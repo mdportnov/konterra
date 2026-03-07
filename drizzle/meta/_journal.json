@@ -43,6 +43,13 @@
       "when": 1772778466909,
       "tag": "0005_left_killraven",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1772868676557,
+      "tag": "0006_solid_mordo",
+      "breakpoints": true
     }
   ]
 }

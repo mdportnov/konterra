@@ -1,15 +1,28 @@
 'use client'
 
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { Suspense, useState, useRef, useEffect, useCallback } from 'react'
 import { signIn } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
 import NetworkBackground from '@/components/auth/NetworkBackground'
 
-type Mode = 'signin' | 'waitlist'
+type Mode = 'signin' | 'waitlist' | 'register'
 type SignInStep = 'email' | 'password'
 
+interface InviteInfo {
+  status: 'valid' | 'used' | 'expired'
+  inviterName: string | null
+}
+
 export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginContent />
+    </Suspense>
+  )
+}
+
+function LoginContent() {
   const [mode, setMode] = useState<Mode>('signin')
   const [animating, setAnimating] = useState(false)
   const [visible, setVisible] = useState(true)
@@ -17,13 +30,44 @@ export default function LoginPage() {
   const [submitted, setSubmitted] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [name, setName] = useState('')
   const [message, setMessage] = useState('')
   const [signInStep, setSignInStep] = useState<SignInStep>('email')
   const [passwordVisible, setPasswordVisible] = useState(false)
+  const [inviteInfo, setInviteInfo] = useState<InviteInfo | null>(null)
   const formRef = useRef<HTMLDivElement>(null)
   const passwordRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
+  const searchParams = useSearchParams()
+
+  const inviteCode = searchParams.get('invite')
+
+  useEffect(() => {
+    if (!inviteCode) return
+    const controller = new AbortController()
+    fetch(`/api/public/invite/${encodeURIComponent(inviteCode)}`, { signal: controller.signal })
+      .then((r) => {
+        if (!r.ok) throw new Error()
+        return r.json()
+      })
+      .then((data: InviteInfo) => {
+        if (data.status === 'valid') {
+          setInviteInfo(data)
+          setMode('register')
+          setVisible(true)
+        } else if (data.status === 'used') {
+          toast.error('This invite has already been used')
+        } else if (data.status === 'expired') {
+          toast.error('This invite has expired')
+        }
+      })
+      .catch((err) => {
+        if (err instanceof DOMException && err.name === 'AbortError') return
+        toast.error('Invalid invite link')
+      })
+    return () => controller.abort()
+  }, [inviteCode])
 
   const switchMode = useCallback((next: Mode) => {
     if (next === mode || animating) return
@@ -104,6 +148,47 @@ export default function LoginPage() {
     setLoading(false)
   }
 
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (password !== confirmPassword) {
+      toast.error('Passwords do not match')
+      return
+    }
+    if (password.length < 8) {
+      toast.error('Password must be at least 8 characters')
+      return
+    }
+    setLoading(true)
+    try {
+      const normalizedEmail = email.toLowerCase().trim()
+      const res = await fetch('/api/public/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: normalizedEmail, name, password, inviteCode }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        toast.error(data.error || 'Registration failed')
+        setLoading(false)
+        return
+      }
+      const result = await signIn('credentials', { email: normalizedEmail, password, redirect: false })
+      if (result?.ok) {
+        router.push('/app')
+        router.refresh()
+      } else {
+        toast.error('Registration succeeded but auto-login failed. Please sign in.')
+        setMode('signin')
+        setInviteInfo(null)
+      }
+    } catch {
+      toast.error('Registration failed. Try again.')
+    }
+    setLoading(false)
+  }
+
+  const showTabs = mode !== 'register'
+
   return (
     <div className="min-h-dvh flex items-center justify-center relative">
       <NetworkBackground />
@@ -118,26 +203,36 @@ export default function LoginPage() {
           </p>
         </div>
 
-        <div className="flex gap-0 mb-8 border-b border-white/10">
-          <button
-            type="button"
-            onClick={() => switchMode('signin')}
-            className={`flex-1 pb-3 font-mono text-xs uppercase tracking-wider transition-colors ${
-              mode === 'signin' ? 'text-white border-b border-[oklch(0.55_0.08_180)]' : 'text-white/40 hover:text-white/60'
-            }`}
-          >
-            Sign In
-          </button>
-          <button
-            type="button"
-            onClick={() => switchMode('waitlist')}
-            className={`flex-1 pb-3 font-mono text-xs uppercase tracking-wider transition-colors ${
-              mode === 'waitlist' ? 'text-white border-b border-[oklch(0.55_0.08_180)]' : 'text-white/40 hover:text-white/60'
-            }`}
-          >
-            Request Access
-          </button>
-        </div>
+        {showTabs && (
+          <div className="flex gap-0 mb-8 border-b border-white/10">
+            <button
+              type="button"
+              onClick={() => switchMode('signin')}
+              className={`flex-1 pb-3 font-mono text-xs uppercase tracking-wider transition-colors ${
+                mode === 'signin' ? 'text-white border-b border-[oklch(0.55_0.08_180)]' : 'text-white/40 hover:text-white/60'
+              }`}
+            >
+              Sign In
+            </button>
+            <button
+              type="button"
+              onClick={() => switchMode('waitlist')}
+              className={`flex-1 pb-3 font-mono text-xs uppercase tracking-wider transition-colors ${
+                mode === 'waitlist' ? 'text-white border-b border-[oklch(0.55_0.08_180)]' : 'text-white/40 hover:text-white/60'
+              }`}
+            >
+              Request Access
+            </button>
+          </div>
+        )}
+
+        {mode === 'register' && inviteInfo && (
+          <div className="text-center mb-6">
+            <p className="font-mono text-xs text-white/60">
+              Invited by <span className="text-white/90 font-medium">{inviteInfo.inviterName || 'a member'}</span>
+            </p>
+          </div>
+        )}
 
         <div
           ref={formRef}
@@ -235,6 +330,53 @@ export default function LoginPage() {
                   Request logged. You will be contacted if approved.
                 </p>
               </div>
+            )}
+
+            {mode === 'register' && (
+              <form onSubmit={handleRegister} className="space-y-4">
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Email address"
+                  required
+                  className="login-input"
+                />
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Full name"
+                  required
+                  minLength={2}
+                  className="login-input"
+                />
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Password (min 8 characters)"
+                  required
+                  minLength={8}
+                  className="login-input"
+                />
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Confirm password"
+                  required
+                  minLength={8}
+                  className="login-input"
+                />
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="login-button"
+                >
+                  {loading ? 'Creating account...' : 'Create Account'}
+                </button>
+              </form>
             )}
           </div>
         </div>
