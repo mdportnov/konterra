@@ -1,5 +1,8 @@
 import { auth } from '@/auth'
 import { getContactsByUserId, createContact, deleteAllContactsByUserId, getOrCreateSelfContact, createConnection, upsertSocialPreview } from '@/lib/db/queries'
+import { db } from '@/lib/db'
+import { contacts as contactsTable } from '@/lib/db/schema'
+import { eq } from 'drizzle-orm'
 import { geocode } from '@/lib/geocoding'
 import { validateContact, safeParseBody } from '@/lib/validation'
 import { toStringOrNull, toDateOrNull, parsePagination, unauthorized, badRequest, success } from '@/lib/api-utils'
@@ -55,40 +58,60 @@ export async function POST(req: Request) {
 
   const isSelf = body.isSelf === true
 
-  const contact = await createContact({
-    userId: session.user.id,
-    name: body.name as string,
-    photo: toStringOrNull(body.photo),
-    company: toStringOrNull(body.company),
-    role: toStringOrNull(body.role),
-    city: toStringOrNull(body.city),
-    country: toStringOrNull(body.country),
-    address: toStringOrNull(body.address),
-    lat: lat ?? null,
-    lng: lng ?? null,
-    email: toStringOrNull(body.email),
-    phone: toStringOrNull(body.phone),
-    linkedin: toStringOrNull(body.linkedin),
-    twitter: toStringOrNull(body.twitter),
-    telegram: toStringOrNull(body.telegram),
-    instagram: toStringOrNull(body.instagram),
-    github: toStringOrNull(body.github),
-    website: toStringOrNull(body.website),
-    tags,
-    notes: toStringOrNull(body.notes),
-    meta: body.meta ?? null,
-    secondaryLocations: Array.isArray(body.secondaryLocations) ? body.secondaryLocations as string[] : null,
-    rating: typeof body.rating === 'number' ? body.rating : null,
-    gender: toStringOrNull(body.gender) as 'male' | 'female' | null,
-    relationshipType: toStringOrNull(body.relationshipType) as typeof import('@/lib/db/schema').contacts.$inferInsert.relationshipType,
-    metAt: toStringOrNull(body.metAt),
-    metDate: toDateOrNull(body.metDate),
-    lastContactedAt: toDateOrNull(body.lastContactedAt),
-    nextFollowUp: toDateOrNull(body.nextFollowUp),
-    timezone: toStringOrNull(body.timezone),
-    importSource: 'manual',
-    isSelf,
-  })
+  let contact: Awaited<ReturnType<typeof createContact>>
+
+  if (isSelf) {
+    const existing = await getOrCreateSelfContact(session.user.id, body.name as string)
+    const update: Record<string, unknown> = {
+      name: body.name as string,
+      country: toStringOrNull(body.country),
+      city: toStringOrNull(body.city),
+      timezone: toStringOrNull(body.timezone),
+      lat: lat ?? null,
+      lng: lng ?? null,
+    }
+    const [updated] = await db
+      .update(contactsTable)
+      .set(update)
+      .where(eq(contactsTable.id, existing.id))
+      .returning()
+    contact = updated
+  } else {
+    contact = await createContact({
+      userId: session.user.id,
+      name: body.name as string,
+      photo: toStringOrNull(body.photo),
+      company: toStringOrNull(body.company),
+      role: toStringOrNull(body.role),
+      city: toStringOrNull(body.city),
+      country: toStringOrNull(body.country),
+      address: toStringOrNull(body.address),
+      lat: lat ?? null,
+      lng: lng ?? null,
+      email: toStringOrNull(body.email),
+      phone: toStringOrNull(body.phone),
+      linkedin: toStringOrNull(body.linkedin),
+      twitter: toStringOrNull(body.twitter),
+      telegram: toStringOrNull(body.telegram),
+      instagram: toStringOrNull(body.instagram),
+      github: toStringOrNull(body.github),
+      website: toStringOrNull(body.website),
+      tags,
+      notes: toStringOrNull(body.notes),
+      meta: body.meta ?? null,
+      secondaryLocations: Array.isArray(body.secondaryLocations) ? body.secondaryLocations as string[] : null,
+      rating: typeof body.rating === 'number' ? body.rating : null,
+      gender: toStringOrNull(body.gender) as 'male' | 'female' | null,
+      relationshipType: toStringOrNull(body.relationshipType) as typeof import('@/lib/db/schema').contacts.$inferInsert.relationshipType,
+      metAt: toStringOrNull(body.metAt),
+      metDate: toDateOrNull(body.metDate),
+      lastContactedAt: toDateOrNull(body.lastContactedAt),
+      nextFollowUp: toDateOrNull(body.nextFollowUp),
+      timezone: toStringOrNull(body.timezone),
+      importSource: 'manual',
+      isSelf: false,
+    })
+  }
 
   if (!isSelf) {
     try {

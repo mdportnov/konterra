@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { GLASS, Z, TRANSITION } from '@/lib/constants/ui'
+import { CountrySelect } from '@/components/globe/contact-edit/CountrySelect'
 
 const STORAGE_KEY = 'konterra-onboarded'
 
@@ -168,15 +169,11 @@ export default function WelcomeWizard({ onAddContact, onOpenImport, onComplete }
       description: 'Where are you located? This creates your profile pin on the globe.',
       content: (
         <div className="space-y-4 py-2">
-          <div className="space-y-2">
-            <Label htmlFor="wizard-country" className="text-sm">Country *</Label>
-            <Input
-              id="wizard-country"
-              value={country}
-              onChange={(e) => setCountry(e.target.value)}
-              placeholder="e.g. Germany"
-            />
-          </div>
+          <CountrySelect
+            value={country}
+            onChange={setCountry}
+            label="Country *"
+          />
           <div className="space-y-2">
             <Label htmlFor="wizard-city" className="text-sm">City</Label>
             <Input
