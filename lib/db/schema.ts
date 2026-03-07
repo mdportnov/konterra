@@ -70,6 +70,7 @@ export const users = pgTable('users', {
   profilePrivacyLevel: profilePrivacyLevelEnum('profile_privacy_level').notNull().default('countries_only'),
   globeAutoRotate: boolean('globe_auto_rotate').notNull().default(true),
   invitedBy: text('invited_by').references((): import('drizzle-orm/pg-core').AnyPgColumn => users.id, { onDelete: 'set null' }),
+  lastActiveAt: timestamp('last_active_at'),
   createdAt: timestamp('created_at').defaultNow(),
 })
 

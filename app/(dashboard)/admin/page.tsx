@@ -50,7 +50,11 @@ interface AdminUser {
   image: string | null
   role: string
   createdAt: string | null
+  lastActiveAt: string | null
   contactCount: number
+  tripCount: number
+  visitedCountryCount: number
+  visitedCityCount: number
 }
 
 interface WaitlistEntry {
@@ -68,6 +72,21 @@ interface WaitlistEntry {
 interface ApproveResult {
   user: { id: string; email: string; name: string }
   generatedPassword: string
+}
+
+function formatRelativeTime(dateStr: string | null): string {
+  if (!dateStr) return 'Never'
+  const diffMs = Date.now() - new Date(dateStr).getTime()
+  if (diffMs < 0) return 'Just now'
+  const diffMin = Math.floor(diffMs / 60000)
+  if (diffMin < 1) return 'Just now'
+  if (diffMin < 60) return `${diffMin}m ago`
+  const diffH = Math.floor(diffMin / 60)
+  if (diffH < 24) return `${diffH}h ago`
+  const diffD = Math.floor(diffH / 24)
+  if (diffD < 30) return `${diffD}d ago`
+  const diffMo = Math.floor(diffD / 30)
+  return `${diffMo}mo ago`
 }
 
 const ROLE_CONFIG = {
@@ -738,20 +757,33 @@ export default function AdminPage() {
 
                       {isExpanded && !isEditing && (
                         <div className="px-3 sm:px-4 pb-3 pt-0 space-y-3 border-t border-border">
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 pt-3 text-xs">
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-3">
+                            {[
+                              { label: 'Contacts', value: u.contactCount },
+                              { label: 'Trips', value: u.tripCount },
+                              { label: 'Countries', value: u.visitedCountryCount },
+                              { label: 'Cities', value: u.visitedCityCount },
+                            ].map((s) => (
+                              <div key={s.label} className="rounded-lg border border-border bg-muted/30 px-2.5 py-2 text-center">
+                                <p className="text-sm font-semibold text-foreground">{s.value}</p>
+                                <p className="text-[10px] text-muted-foreground">{s.label}</p>
+                              </div>
+                            ))}
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 text-xs">
                             <div>
                               <span className="text-muted-foreground">ID</span>
                               <p className="text-foreground font-mono text-[10px] truncate">{u.id}</p>
-                            </div>
-                            <div>
-                              <span className="text-muted-foreground">Contacts</span>
-                              <p className="text-foreground">{u.contactCount}</p>
                             </div>
                             <div>
                               <span className="text-muted-foreground">Joined</span>
                               <p className="text-foreground">
                                 {u.createdAt ? new Date(u.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
                               </p>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Last active</span>
+                              <p className="text-foreground">{formatRelativeTime(u.lastActiveAt)}</p>
                             </div>
                           </div>
                           {isAdmin && !isSelf && (

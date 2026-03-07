@@ -1,6 +1,6 @@
 {
-  "id": "a1d95da3-350f-409f-9efa-5595f14d7606",
-  "prevId": "7692c1b6-3353-4df7-b401-045da2662266",
+  "id": "9b678080-99ec-4a80-9bc4-d7f613017174",
+  "prevId": "a1d95da3-350f-409f-9efa-5595f14d7606",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -2031,6 +2031,12 @@
         "invited_by": {
           "name": "invited_by",
           "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_active_at": {
+          "name": "last_active_at",
+          "type": "timestamp",
           "primaryKey": false,
           "notNull": false
         },

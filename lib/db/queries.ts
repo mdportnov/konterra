@@ -1,6 +1,6 @@
 import { db } from './index'
 import { users, contacts, interactions, contactConnections, contactCountryConnections, introductions, favors, visitedCountries, waitlist, tags, trips, countryWishlist, appSettings, socialPreviews, invites } from './schema'
-import { eq, and, or, desc, sql, arrayContains, inArray } from 'drizzle-orm'
+import { and, arrayContains, desc, eq, inArray, or, sql } from 'drizzle-orm'
 import type { NewContact, NewContactConnection, NewContactCountryConnection, NewIntroduction, NewFavor, NewTrip, NewCountryWishlistEntry, NewSocialPreview } from './schema'
 
 export async function deleteAllContactsByUserId(userId: string) {
@@ -866,6 +866,18 @@ export async function deleteAllTrips(userId: string) {
   return db.delete(trips).where(eq(trips.userId, userId))
 }
 
+export async function updateLastActive(userId: string) {
+  await db
+    .update(users)
+    .set({ lastActiveAt: new Date() })
+    .where(
+      and(
+        eq(users.id, userId),
+        sql`(${users.lastActiveAt} IS NULL OR ${users.lastActiveAt} < now() - interval '5 minutes')`
+      )
+    )
+}
+
 export async function getAllUsers() {
   const rows = await db
     .select({
@@ -875,11 +887,13 @@ export async function getAllUsers() {
       image: users.image,
       role: users.role,
       createdAt: users.createdAt,
-      contactCount: sql<number>`cast(count(distinct ${contacts.id}) as int)`,
+      lastActiveAt: users.lastActiveAt,
+      contactCount: sql<number>`cast((select count(*) from ${contacts} where ${contacts.userId} = ${users.id}) as int)`,
+      tripCount: sql<number>`cast((select count(*) from ${trips} where ${trips.userId} = ${users.id}) as int)`,
+      visitedCountryCount: sql<number>`cast((select count(*) from ${visitedCountries} where ${visitedCountries.userId} = ${users.id}) as int)`,
+      visitedCityCount: sql<number>`cast((select count(distinct ${trips.city}) from ${trips} where ${trips.userId} = ${users.id}) as int)`,
     })
     .from(users)
-    .leftJoin(contacts, eq(users.id, contacts.userId))
-    .groupBy(users.id)
     .orderBy(desc(users.createdAt))
   return rows
 }

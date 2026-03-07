@@ -50,6 +50,13 @@
       "when": 1772868676557,
       "tag": "0006_solid_mordo",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1772870727757,
+      "tag": "0007_cool_leper_queen",
+      "breakpoints": true
     }
   ]
 }

@@ -1,7 +1,7 @@
 import NextAuth from 'next-auth'
 import Credentials from 'next-auth/providers/credentials'
 import { compare } from 'bcryptjs'
-import { getUserByEmail, getUserById } from '@/lib/db/queries'
+import { getUserByEmail, getUserById, updateLastActive } from '@/lib/db/queries'
 import authConfig from './auth.config'
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
@@ -35,6 +35,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       } else if (token.id) {
         const dbUser = await getUserById(token.id as string)
         if (dbUser) token.role = dbUser.role
+        updateLastActive(token.id as string).catch(() => {})
       }
       return token
     },

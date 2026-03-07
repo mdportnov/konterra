@@ -4,7 +4,7 @@
 - shadcn/ui (new-york style), Lucide icons
 - NextAuth v5-beta (JWT sessions, Credentials provider), Drizzle ORM, Neon PostgreSQL
 - react-globe.gl + three.js for 3D visualization
-- Deployed on Vercel (project: `network-globe`, team: `team_vsABc9ey80bellgNTfkA4cBV`)
+- Deployed on Vercel (project: `konterra`, team: `team_vsABc9ey80bellgNTfkA4cBV`)
 
 ## Project Structure
 ```
