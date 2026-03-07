@@ -45,7 +45,8 @@ Connection string in `.env.local`: `postgresql://konterra:konterra@localhost:543
 | `npm run dev` | Start dev server |
 | `npm run build` | Run migrations + production build |
 | `npm run lint` | ESLint (flat config) |
-| `npm run db:generate` | Generate Drizzle migration SQL from schema diff |
+| `npm run db:generate` | Generate Drizzle migration SQL from schema diff + auto-check |
+| `npm run db:check` | Validate latest migration file for safety |
 | `npm run db:push` | Push schema to local DB (no migration files, fast for dev) |
 | `npm run db:migrate` | Run migration files via drizzle-kit CLI |
 | `npm run db:studio` | Open Drizzle Studio GUI |
@@ -58,15 +59,50 @@ Connection string in `.env.local`: `postgresql://konterra:konterra@localhost:543
 ### Schema Change Workflow
 1. Edit `lib/db/schema.ts`
 2. **Local dev**: `npm run db:push` (applies directly, no migration files)
-3. **Before commit**: `npm run db:generate` (creates SQL in `drizzle/`)
-4. **Commit the migration files** in `drizzle/` — they must be in git
-5. On Vercel deploy: `npm run build` runs `tsx lib/db/migrate.ts` which applies pending migrations to production Neon
+3. **Before commit**: `npm run db:generate` (creates SQL in `drizzle/` + runs safety check)
+4. **Inspect the generated SQL** — open the new `drizzle/0*_*.sql` file and verify it contains only the expected incremental changes
+5. **Commit all migration artifacts**: SQL file + `drizzle/meta/_journal.json` + `drizzle/meta/0*_snapshot.json`
+6. On Vercel deploy: `npm run build` runs `tsx lib/db/migrate.ts` which applies pending migrations to production Neon
+
+### What Must Be in Git
+All three artifact types in `drizzle/` must be committed:
+- `drizzle/0*_*.sql` — the migration SQL
+- `drizzle/meta/_journal.json` — migration ordering/metadata
+- `drizzle/meta/0*_snapshot.json` — schema snapshots (drizzle-kit diffs against these)
+
+**Never gitignore snapshots.** Missing snapshots cause `db:generate` to emit a full schema recreation instead of an incremental diff. This was the root cause of the 0005 migration failure.
+
+### Migration Safety Check
+`npm run db:check` (also runs automatically after `db:generate`) validates the latest migration file. It flags:
+- `CREATE TYPE` statements (enum recreation = full dump, not incremental)
+- `CREATE TABLE` for tables that already exist in prior migrations
+- `DROP TABLE` / `DROP TYPE` (destructive, needs manual review)
+- More than 3 new tables in one migration (likely full recreation)
+
+If the check fails, delete the generated file, ensure snapshots are present, and re-run `db:generate`.
 
 ### Migration Architecture
 - `lib/db/migrate.ts` — programmatic migrator (runs before `next build`)
 - `build` script: `tsx lib/db/migrate.ts && next build`
-- Drizzle tracks applied migrations in `drizzle.__drizzle_migrations` (by `created_at` timestamp)
+- Drizzle tracks applied migrations in `drizzle.__drizzle_migrations` table, keyed by filename hash and `created_at` timestamp
 - Production Neon project: `tiny-shadow-42734311` (aws-eu-central-1)
+
+### Danger Signs in Generated Migrations
+If you see any of these in a generated SQL file, **do not commit it**:
+- `CREATE TYPE` for types that already exist (e.g. `communication_style`, `connection_type`)
+- `CREATE TABLE` for tables that already exist (e.g. `users`, `contacts`)
+- Dozens of statements when you only changed one column
+- Index/constraint cleanup for things you didn't touch
+
+These indicate snapshot drift. Fix: verify `drizzle/meta/0*_snapshot.json` files are present and match the current migration count, then re-run `db:generate`.
+
+### Fixing a Broken Migration That Already Shipped
+If a bad migration was deployed and failed on Vercel:
+1. Check Vercel build logs for the exact SQL error
+2. Rewrite the migration SQL file in-place to contain only the correct incremental DDL
+3. If the migration was partially applied, you may need to run compensating SQL on production via Neon MCP tools
+4. Commit the fixed SQL file and redeploy
+5. Verify via `SELECT * FROM drizzle.__drizzle_migrations ORDER BY created_at` that the migration was tracked
 
 ### Local vs Production
 | | Local | Production |
@@ -127,7 +163,7 @@ Always import `GLASS`, `Z`, `TRANSITION`, `PANEL_WIDTH` from `lib/constants/ui.t
 - After implementation: `npm run build` (catches type + migration errors) → `npm run lint` → commit → push
 - Vercel auto-deploys from `main` branch
 - Migrations run automatically during Vercel build step
-- Always commit `drizzle/` migration files (SQL + meta journal)
+- Always commit `drizzle/` migration files (SQL + meta journal + snapshots)
 
 ## Validation Constants
 Enums for contact fields are defined in `lib/validation.ts` (communication styles, channels, relationship types, connection types, favor types, etc.). Always reference these arrays — never hardcode enum values in API routes or components.
@@ -189,8 +225,9 @@ export type NewMyTable = typeof myTable.$inferInsert
    - Use `db.transaction()` for multi-step operations
 
 3. **Apply locally**: `npm run db:push`
-4. **Generate migration**: `npm run db:generate`
-5. **Commit migration files** in `drizzle/`
+4. **Generate migration**: `npm run db:generate` (auto-runs safety check)
+5. **Inspect the generated SQL** for correctness
+6. **Commit all artifacts**: SQL + `drizzle/meta/_journal.json` + `drizzle/meta/0*_snapshot.json`
 
 ### New API Route
 
