@@ -26,6 +26,7 @@ import {
 import { GLASS, TRANSITION } from '@/lib/constants/ui'
 import { toast } from 'sonner'
 import { LLM_MODELS, SETTING_KEY_LLM_MODEL, DEFAULT_MODEL_ID } from '@/lib/constants/llm-models'
+import { DEFAULT_MAX_INVITES, SETTING_KEY_MAX_INVITES } from '@/lib/constants/invites'
 
 type Tab = 'users' | 'waitlist' | 'settings'
 type WaitlistFilter = 'all' | 'pending' | 'approved' | 'rejected'
@@ -49,12 +50,14 @@ interface AdminUser {
   name: string | null
   image: string | null
   role: string
+  maxInvites: number | null
   createdAt: string | null
   lastActiveAt: string | null
   contactCount: number
   tripCount: number
   visitedCountryCount: number
   visitedCityCount: number
+  usedInviteCount: number
 }
 
 interface WaitlistEntry {
@@ -148,6 +151,8 @@ export default function AdminPage() {
   const [settingsLoading, setSettingsLoading] = useState(false)
   const [selectedModel, setSelectedModel] = useState(DEFAULT_MODEL_ID)
   const [savingModel, setSavingModel] = useState(false)
+  const [globalInviteLimit, setGlobalInviteLimit] = useState(DEFAULT_MAX_INVITES.toString())
+  const [savingInviteLimit, setSavingInviteLimit] = useState(false)
 
   const isAdmin = session?.user?.role === 'admin'
   const hasAccess = isAdmin || session?.user?.role === 'moderator'
@@ -202,6 +207,7 @@ export default function AdminPage() {
       if (!res.ok) throw new Error('Failed to load settings')
       const data = await res.json()
       if (data[SETTING_KEY_LLM_MODEL]) setSelectedModel(data[SETTING_KEY_LLM_MODEL])
+      if (data[SETTING_KEY_MAX_INVITES]) setGlobalInviteLimit(data[SETTING_KEY_MAX_INVITES])
     } catch {
       toast.error('Failed to load settings')
     } finally {
@@ -224,6 +230,48 @@ export default function AdminPage() {
       toast.error('Failed to save model setting')
     } finally {
       setSavingModel(false)
+    }
+  }
+
+  const handleSaveInviteLimit = async () => {
+    const num = parseInt(globalInviteLimit, 10)
+    if (isNaN(num) || num < 0 || num > 1000) {
+      toast.error('Enter a number between 0 and 1000')
+      return
+    }
+    setSavingInviteLimit(true)
+    try {
+      const res = await fetch('/api/admin/settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: SETTING_KEY_MAX_INVITES, value: num.toString() }),
+      })
+      if (!res.ok) throw new Error('Failed to save')
+      toast.success('Invite limit updated')
+    } catch {
+      toast.error('Failed to save invite limit')
+    } finally {
+      setSavingInviteLimit(false)
+    }
+  }
+
+  const handleSaveUserInviteLimit = async (userId: string, value: string) => {
+    const maxInvites = value === '' ? null : parseInt(value, 10)
+    if (maxInvites !== null && (isNaN(maxInvites) || maxInvites < 0 || maxInvites > 1000)) {
+      toast.error('Enter a number between 0 and 1000, or leave empty for default')
+      return
+    }
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, maxInvites }),
+      })
+      if (!res.ok) throw new Error('Failed to save')
+      setUsers((prev) => prev.map((u) => u.id === userId ? { ...u, maxInvites } : u))
+      toast.success(maxInvites === null ? 'Using global default' : 'User invite limit updated')
+    } catch {
+      toast.error('Failed to update user invite limit')
     }
   }
 
@@ -786,6 +834,32 @@ export default function AdminPage() {
                               <p className="text-foreground">{formatRelativeTime(u.lastActiveAt)}</p>
                             </div>
                           </div>
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-xs">
+                            <div>
+                              <span className="text-muted-foreground">Invites used</span>
+                              <p className="text-foreground font-medium">
+                                {u.usedInviteCount}/{u.maxInvites ?? (parseInt(globalInviteLimit, 10) || DEFAULT_MAX_INVITES)}
+                                {u.maxInvites != null && <span className="text-muted-foreground ml-1">(custom)</span>}
+                              </p>
+                            </div>
+                            {isAdmin && !isSelf && (
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-muted-foreground">Limit:</span>
+                                <Input
+                                  type="number"
+                                  min={0}
+                                  max={1000}
+                                  placeholder="default"
+                                  defaultValue={u.maxInvites ?? ''}
+                                  className="h-7 w-20 text-xs"
+                                  onBlur={(e) => handleSaveUserInviteLimit(u.id, e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+                                  }}
+                                />
+                              </div>
+                            )}
+                          </div>
                           {isAdmin && !isSelf && (
                             <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
                               <div className="flex items-center gap-2">
@@ -1190,7 +1264,49 @@ export default function AdminPage() {
         )}
 
         {tab === 'settings' && isAdmin && (
-          <section className="space-y-6">
+          <section className="space-y-8">
+            <div className="space-y-6">
+              <h2 className="text-sm font-medium text-muted-foreground/60 uppercase tracking-wider">
+                Invite Limits
+              </h2>
+
+              {settingsLoading ? (
+                <Skeleton className="h-24 w-full rounded-xl" />
+              ) : (
+                <div className="rounded-xl border border-border bg-card/50 p-4 sm:p-5 space-y-4">
+                  <div className="flex items-center gap-2 mb-1">
+                    <UserPlus className="h-4 w-4 text-muted-foreground" />
+                    <h3 className="text-sm font-medium text-foreground">Default Invites Per User</h3>
+                    {savingInviteLimit && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Maximum number of invites each user can use. Per-user overrides can be set in the Users tab.
+                  </p>
+                  <div className="flex items-center gap-3">
+                    <Input
+                      type="number"
+                      min={0}
+                      max={1000}
+                      value={globalInviteLimit}
+                      onChange={(e) => setGlobalInviteLimit(e.target.value)}
+                      className="w-24 h-9"
+                    />
+                    <Button
+                      size="sm"
+                      onClick={handleSaveInviteLimit}
+                      disabled={savingInviteLimit}
+                      className="gap-1.5"
+                    >
+                      {savingInviteLimit ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                      Save
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <Separator />
+
             <h2 className="text-sm font-medium text-muted-foreground/60 uppercase tracking-wider">
               AI / LLM Configuration
             </h2>

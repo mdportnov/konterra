@@ -33,6 +33,7 @@ import { usePanelNavigation } from '@/hooks/use-panel-navigation'
 import { useTripSelection } from '@/hooks/use-trip-selection'
 import { usePopupState } from '@/hooks/use-popup-state'
 import { useDashboardRouting } from '@/hooks/use-dashboard-routing'
+import { toast } from 'sonner'
 import { ChevronRight } from 'lucide-react'
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
 
@@ -124,6 +125,44 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
     setTripEditPrefill(prefill)
     setTripEditDialogOpen(true)
   }, [])
+
+  const handleGpsLocationDetected = useCallback(async (detected: { city: string; country: string }) => {
+    const dismissKey = `konterra:trip-dismiss:${detected.city.toLowerCase().trim()}`
+    const lastDismiss = localStorage.getItem(dismissKey)
+    if (lastDismiss && Date.now() - parseInt(lastDismiss, 10) < 24 * 60 * 60 * 1000) return
+
+    let homebaseCity: string | null = null
+    try {
+      const res = await fetch('/api/me/location')
+      const loc = await res.json()
+      homebaseCity = loc.city
+    } catch { /* ignore */ }
+
+    if (!homebaseCity) return
+    if (homebaseCity.toLowerCase().trim() === detected.city.toLowerCase().trim()) return
+
+    const now = new Date()
+    const todayISO = now.toISOString().split('T')[0]
+    const hasActiveTrip = data.trips.some((t) => {
+      if (t.city.toLowerCase().trim() !== detected.city.toLowerCase().trim()) return false
+      const arrival = new Date(t.arrivalDate)
+      const departure = t.departureDate ? new Date(t.departureDate) : arrival
+      return arrival <= now && departure >= now
+    })
+    if (hasActiveTrip) return
+
+    toast(`You're in ${detected.city}, ${detected.country}`, {
+      duration: Infinity,
+      action: {
+        label: 'Add trip',
+        onClick: () => handleAddTrip({ city: detected.city, country: detected.country, arrivalDate: todayISO }),
+      },
+      cancel: {
+        label: 'Dismiss',
+        onClick: () => localStorage.setItem(dismissKey, String(Date.now())),
+      },
+    })
+  }, [data.trips, handleAddTrip])
 
   const handleEditTrip = useCallback((trip: Trip) => {
     setEditingTrip(trip)
@@ -244,6 +283,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
         onContactClick={nav.handleContactClick}
         onCountryClick={popups.handleCountryClick}
         onTripPointClick={tripSelection.handleTripPointClick}
+        onGpsLocationDetected={handleGpsLocationDetected}
         display={displayOptions}
         visitedCountries={data.visitedCountries}
         wishlistCountries={data.wishlistCountries}

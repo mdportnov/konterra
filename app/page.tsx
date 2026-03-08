@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import type { Metadata } from 'next'
-import NetworkBackground from '@/components/auth/NetworkBackground'
+import { Particles } from '@/components/magicui/particles'
 
 export const metadata: Metadata = {
   title: {
@@ -109,12 +109,21 @@ const jsonLd = {
 
 export default function LandingPage() {
   return (
-    <div className="relative min-h-dvh overflow-x-hidden">
+    <div className="relative min-h-dvh overflow-x-hidden" style={{ background: 'oklch(0.06 0.01 260)' }}>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <NetworkBackground />
+      <Particles
+        className="fixed inset-0"
+        quantity={120}
+        staticity={40}
+        ease={60}
+        size={0.5}
+        color="#4db8a4"
+        vx={0}
+        vy={-0.02}
+      />
 
       <div className="relative z-10">
         <header className="landing-header fixed top-0 inset-x-0 z-50">

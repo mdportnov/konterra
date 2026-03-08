@@ -73,20 +73,20 @@ export async function PATCH(req: Request) {
   }
 
   const body = await req.json()
-  const { userId, role, name, email, password } = body
+  const { userId, role, name, email, password, maxInvites } = body
 
   if (!userId) return badRequest('userId is required')
 
   const validRoles = ['user', 'moderator', 'admin'] as const
 
-  if (role && !name && !email && !password) {
+  if (role && !name && !email && !password && maxInvites === undefined) {
     if (!validRoles.includes(role)) return badRequest('Invalid role')
     const updated = await updateUserRole(userId, role)
     if (!updated) return notFound('User')
     return success(updated)
   }
 
-  const updates: { name?: string; email?: string; role?: 'user' | 'moderator' | 'admin'; password?: string } = {}
+  const updates: { name?: string; email?: string; role?: 'user' | 'moderator' | 'admin'; password?: string; maxInvites?: number | null } = {}
   if (name !== undefined) updates.name = name
   if (email !== undefined) updates.email = email
   if (role !== undefined) {
@@ -96,6 +96,15 @@ export async function PATCH(req: Request) {
   if (password !== undefined) {
     if (password.length < 6) return badRequest('Password must be at least 6 characters')
     updates.password = await hash(password, 12)
+  }
+  if (maxInvites !== undefined) {
+    if (maxInvites === null) {
+      updates.maxInvites = null
+    } else {
+      const num = typeof maxInvites === 'number' ? maxInvites : parseInt(maxInvites, 10)
+      if (isNaN(num) || num < 0 || num > 1000) return badRequest('Invalid invite limit (0-1000)')
+      updates.maxInvites = num
+    }
   }
 
   try {

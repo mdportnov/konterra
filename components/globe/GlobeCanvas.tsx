@@ -53,6 +53,7 @@ interface GlobeCanvasProps {
   onContactClick: (contact: Contact) => void
   onCountryClick?: (country: string, event: { x: number; y: number }) => void
   onTripPointClick?: (tripId: string) => void
+  onGpsLocationDetected?: (data: { city: string; country: string }) => void
   display: DisplayOptions
   visitedCountries?: Set<string>
   wishlistCountries?: Map<string, { id: string }>
@@ -74,6 +75,7 @@ export default memo(function GlobeCanvas({
   onContactClick,
   onCountryClick,
   onTripPointClick,
+  onGpsLocationDetected,
   display,
   visitedCountries,
   wishlistCountries,
@@ -184,8 +186,15 @@ export default memo(function GlobeCanvas({
           fetch('/api/me/location', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(loc),
-          }).catch(() => {})
+            body: JSON.stringify({ ...loc, source: 'gps' }),
+          })
+            .then((r) => r.json())
+            .then((d) => {
+              if (d.currentCity && d.currentCountry && onGpsLocationDetected) {
+                onGpsLocationDetected({ city: d.currentCity, country: d.currentCountry })
+              }
+            })
+            .catch(() => {})
         },
         fetchSaved,
         { enableHighAccuracy: false, timeout: 10000 }
@@ -193,7 +202,7 @@ export default memo(function GlobeCanvas({
     } else {
       fetchSaved()
     }
-  }, [readOnly])
+  }, [readOnly, onGpsLocationDetected])
 
   useEffect(() => {
     if (!userLocation || countries.length === 0) return

@@ -1,7 +1,8 @@
 import { db } from './index'
 import { users, contacts, interactions, contactConnections, contactCountryConnections, introductions, favors, visitedCountries, waitlist, tags, trips, countryWishlist, appSettings, socialPreviews, invites } from './schema'
-import { and, arrayContains, desc, eq, inArray, or, sql } from 'drizzle-orm'
+import { and, arrayContains, desc, eq, inArray, isNotNull, or, sql } from 'drizzle-orm'
 import type { NewContact, NewContactConnection, NewContactCountryConnection, NewIntroduction, NewFavor, NewTrip, NewCountryWishlistEntry, NewSocialPreview } from './schema'
+import { DEFAULT_MAX_INVITES, SETTING_KEY_MAX_INVITES } from '@/lib/constants/invites'
 
 export async function deleteAllContactsByUserId(userId: string) {
   return db.delete(contacts).where(eq(contacts.userId, userId))
@@ -886,12 +887,14 @@ export async function getAllUsers() {
       name: users.name,
       image: users.image,
       role: users.role,
+      maxInvites: users.maxInvites,
       createdAt: users.createdAt,
       lastActiveAt: users.lastActiveAt,
       contactCount: sql<number>`cast((select count(*) from ${contacts} where ${contacts.userId} = ${users.id}) as int)`,
       tripCount: sql<number>`cast((select count(*) from ${trips} where ${trips.userId} = ${users.id}) as int)`,
       visitedCountryCount: sql<number>`cast((select count(*) from ${visitedCountries} where ${visitedCountries.userId} = ${users.id}) as int)`,
       visitedCityCount: sql<number>`cast((select count(distinct ${trips.city}) from ${trips} where ${trips.userId} = ${users.id}) as int)`,
+      usedInviteCount: sql<number>`cast((select count(*) from ${invites} where ${invites.createdBy} = ${users.id} and ${invites.usedBy} is not null) as int)`,
     })
     .from(users)
     .orderBy(desc(users.createdAt))
@@ -912,12 +915,13 @@ export async function updateUserRole(id: string, role: 'user' | 'moderator' | 'a
   return updated
 }
 
-export async function updateUser(id: string, data: { name?: string; email?: string; role?: 'user' | 'moderator' | 'admin'; password?: string }) {
+export async function updateUser(id: string, data: { name?: string; email?: string; role?: 'user' | 'moderator' | 'admin'; password?: string; maxInvites?: number | null }) {
   const set: Record<string, unknown> = {}
   if (data.name !== undefined) set.name = data.name
   if (data.email !== undefined) set.email = data.email
   if (data.role !== undefined) set.role = data.role
   if (data.password !== undefined) set.password = data.password
+  if (data.maxInvites !== undefined) set.maxInvites = data.maxInvites
   if (Object.keys(set).length === 0) return null
   const [updated] = await db.update(users).set(set).where(eq(users.id, id)).returning({
     id: users.id,
@@ -1169,15 +1173,46 @@ export async function deleteExpiredInvite(userId: string) {
     .where(and(eq(invites.createdBy, userId), sql`${invites.usedBy} is null`, sql`${invites.expiresAt} <= now()`))
 }
 
+export async function getUsedInviteCount(userId: string): Promise<number> {
+  const [{ count }] = await db
+    .select({ count: sql<number>`cast(count(*) as int)` })
+    .from(invites)
+    .where(and(eq(invites.createdBy, userId), isNotNull(invites.usedBy)))
+  return count
+}
+
+export async function getInviteLimit(userId: string): Promise<number> {
+  const user = await db.query.users.findFirst({
+    where: eq(users.id, userId),
+    columns: { maxInvites: true },
+  })
+  if (user?.maxInvites != null) return user.maxInvites
+
+  const setting = await getSetting(SETTING_KEY_MAX_INVITES)
+  if (setting != null) {
+    const parsed = parseInt(setting, 10)
+    if (!isNaN(parsed)) return parsed
+  }
+
+  return DEFAULT_MAX_INVITES
+}
+
 export async function createInvite(userId: string, code: string, expiresAt: Date) {
   const active = await getActiveInviteByUserId(userId)
-  if (active) return null
+  if (active) return { error: 'active_exists' as const }
+
+  const [usedCount, maxInvites] = await Promise.all([
+    getUsedInviteCount(userId),
+    getInviteLimit(userId),
+  ])
+  if (usedCount >= maxInvites) return { error: 'limit_reached' as const }
+
   await deleteExpiredInvite(userId)
   const rows = await db
     .insert(invites)
     .values({ createdBy: userId, code, expiresAt })
     .returning()
-  return rows[0] ?? null
+  return rows[0] ? { invite: rows[0] } : { error: 'active_exists' as const }
 }
 
 export async function registerViaInvite(data: { email: string; name: string; password: string }, code: string) {

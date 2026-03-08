@@ -34,6 +34,8 @@ interface HomebaseData {
   timezone?: string | null
   lat?: number | null
   lng?: number | null
+  currentCity?: string | null
+  currentCountry?: string | null
 }
 
 interface GeoSuggestion {
@@ -73,6 +75,8 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
   const [savingUsername, setSavingUsername] = useState(false)
 
   const [invite, setInvite] = useState<InviteData | null>(null)
+  const [inviteUsedCount, setInviteUsedCount] = useState(0)
+  const [inviteMaxInvites, setInviteMaxInvites] = useState(3)
   const [inviteLoading, setInviteLoading] = useState(true)
   const [generatingInvite, setGeneratingInvite] = useState(false)
 
@@ -102,7 +106,11 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
     setInviteLoading(true)
     fetch('/api/invite')
       .then((r) => r.json())
-      .then((data) => setInvite(data))
+      .then((data) => {
+        setInvite(data.invite ?? null)
+        setInviteUsedCount(data.usedCount ?? 0)
+        setInviteMaxInvites(data.maxInvites ?? 3)
+      })
       .catch(() => setInvite(null))
       .finally(() => setInviteLoading(false))
   }, [open])
@@ -311,6 +319,8 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
       setGeneratingInvite(false)
     }
   }
+
+  const inviteLimitReached = inviteUsedCount >= inviteMaxInvites
 
   const handleCopyInvite = async () => {
     if (!invite?.code) return
@@ -632,10 +642,17 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
                 </div>
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">
-                {homebaseDisplay || 'Not set'}
-                {homebase?.timezone && <span className="text-xs text-muted-foreground/50 ml-1">({homebase.timezone})</span>}
-              </p>
+              <>
+                <p className="text-sm text-muted-foreground">
+                  {homebaseDisplay || 'Not set'}
+                  {homebase?.timezone && <span className="text-xs text-muted-foreground/50 ml-1">({homebase.timezone})</span>}
+                </p>
+                {homebase?.currentCity && homebase.currentCity !== homebase.city && (
+                  <p className="text-xs text-muted-foreground/60 mt-1">
+                    Currently in: {[homebase.currentCity, homebase.currentCountry].filter(Boolean).join(', ')}
+                  </p>
+                )}
+              </>
             )}
           </div>
 
@@ -663,16 +680,21 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
               {inviteLoading ? (
                 <Skeleton className="h-8 w-full" />
               ) : !invite ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full h-8 text-xs"
-                  onClick={handleGenerateInvite}
-                  disabled={generatingInvite}
-                >
-                  {generatingInvite ? <Loader2 className="h-3 w-3 animate-spin mr-1.5" /> : <UserPlus className="h-3 w-3 mr-1.5" />}
-                  Generate Invite Link
-                </Button>
+                <div className="space-y-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full h-8 text-xs"
+                    onClick={handleGenerateInvite}
+                    disabled={generatingInvite || inviteLimitReached}
+                  >
+                    {generatingInvite ? <Loader2 className="h-3 w-3 animate-spin mr-1.5" /> : <UserPlus className="h-3 w-3 mr-1.5" />}
+                    {inviteLimitReached ? 'Invite limit reached' : 'Generate Invite Link'}
+                  </Button>
+                  <p className="text-[10px] text-muted-foreground/60 text-center">
+                    {inviteUsedCount}/{inviteMaxInvites} invites used
+                  </p>
+                </div>
               ) : invite.status === 'active' ? (
                 <div className="space-y-2">
                   <Button

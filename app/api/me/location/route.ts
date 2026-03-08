@@ -5,7 +5,7 @@ import { db } from '@/lib/db'
 import { contacts } from '@/lib/db/schema'
 import { eq, and } from 'drizzle-orm'
 import { unauthorized, badRequest } from '@/lib/api-utils'
-import { geocode } from '@/lib/geocoding'
+import { geocode, reverseGeocode } from '@/lib/geocoding'
 
 export async function GET() {
   const session = await auth()
@@ -19,6 +19,10 @@ export async function GET() {
     timezone: self.timezone,
     lat: self.lat,
     lng: self.lng,
+    currentCity: self.currentCity,
+    currentCountry: self.currentCountry,
+    currentLat: self.currentLat,
+    currentLng: self.currentLng,
   })
 }
 
@@ -26,7 +30,7 @@ export async function POST(req: Request) {
   const session = await auth()
   if (!session?.user?.id) return unauthorized()
 
-  let body: { city?: string; country?: string; timezone?: string; lat?: number; lng?: number }
+  let body: { city?: string; country?: string; timezone?: string; lat?: number; lng?: number; source?: string }
   try {
     body = await req.json()
   } catch {
@@ -34,6 +38,27 @@ export async function POST(req: Request) {
   }
 
   const self = await getOrCreateSelfContact(session.user.id, session.user.name ?? 'Me')
+
+  if (body.source === 'gps' && typeof body.lat === 'number' && typeof body.lng === 'number') {
+    const geo = await reverseGeocode(body.lat, body.lng)
+    const update: Record<string, unknown> = {
+      currentLat: body.lat,
+      currentLng: body.lng,
+      currentCity: geo?.city ?? null,
+      currentCountry: geo?.country ?? null,
+    }
+
+    await db
+      .update(contacts)
+      .set(update)
+      .where(and(eq(contacts.id, self.id), eq(contacts.userId, session.user.id)))
+
+    return NextResponse.json({
+      updated: true,
+      currentCity: update.currentCity,
+      currentCountry: update.currentCountry,
+    })
+  }
 
   const update: Record<string, unknown> = {}
 
