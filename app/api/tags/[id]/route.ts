@@ -1,6 +1,7 @@
 import { auth } from '@/auth'
 import { unauthorized, badRequest, notFound, success } from '@/lib/api-utils'
 import { deleteTag, renameTag } from '@/lib/db/queries'
+import { safeParseBody } from '@/lib/validation'
 
 export async function DELETE(
   _req: Request,
@@ -23,12 +24,8 @@ export async function PATCH(
   const session = await auth()
   if (!session?.user?.id) return unauthorized()
 
-  let body: { name?: string }
-  try {
-    body = await req.json()
-  } catch {
-    return badRequest('Invalid JSON body')
-  }
+  const body = await safeParseBody(req)
+  if (!body) return badRequest('Invalid JSON body')
 
   const name = typeof body.name === 'string' ? body.name.trim() : ''
   if (!name) return badRequest('Tag name is required')

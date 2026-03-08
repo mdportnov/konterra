@@ -107,10 +107,17 @@ export async function POST(req: Request) {
   const body = await safeParseBody(req)
   if (!body || !Array.isArray(body.items)) return badRequest('Invalid request body')
 
-  const items = body.items as BulkItem[]
-  if (items.length > 500) {
+  const rawItems = body.items as unknown[]
+  if (rawItems.length > 500) {
     return NextResponse.json({ error: 'Maximum 500 items per request' }, { status: 400 })
   }
+
+  const validActions = new Set(['create', 'update', 'skip'])
+  const items: BulkItem[] = rawItems.filter((item): item is BulkItem => {
+    if (!item || typeof item !== 'object') return false
+    const i = item as Record<string, unknown>
+    return typeof i.action === 'string' && validActions.has(i.action) && (i.action === 'skip' || (typeof i.contact === 'object' && i.contact !== null))
+  })
 
   const userId = session.user.id
   let created = 0

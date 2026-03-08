@@ -1,6 +1,7 @@
 import { auth } from '@/auth'
 import { getTripsByUserId, createTrip, createTripsBulk, deleteAllTrips, addVisitedCountriesBulk } from '@/lib/db/queries'
 import { unauthorized, badRequest, success } from '@/lib/api-utils'
+import { safeParseBody } from '@/lib/validation'
 import type { NewTrip } from '@/lib/db/schema'
 
 export async function GET() {
@@ -20,12 +21,8 @@ export async function POST(req: Request) {
   const session = await auth()
   if (!session?.user?.id) return unauthorized()
 
-  let body: Record<string, unknown>
-  try {
-    body = await req.json()
-  } catch {
-    return badRequest('Invalid JSON body')
-  }
+  const body = await safeParseBody(req)
+  if (!body) return badRequest('Invalid JSON body')
 
   if (Array.isArray(body.trips)) {
     const tripsData: NewTrip[] = []

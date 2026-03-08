@@ -376,6 +376,23 @@ function LoginContent() {
                 >
                   {loading ? 'Creating account...' : 'Create Account'}
                 </button>
+                <p className="text-center font-mono text-xs text-white/40 mt-2">
+                  Already have an account?{' '}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMode('signin')
+                      setInviteInfo(null)
+                      setSignInStep('email')
+                      setPasswordVisible(false)
+                      setPassword('')
+                      setConfirmPassword('')
+                    }}
+                    className="text-white/60 hover:text-white/80 underline underline-offset-2 transition-colors"
+                  >
+                    Sign in
+                  </button>
+                </p>
               </form>
             )}
           </div>

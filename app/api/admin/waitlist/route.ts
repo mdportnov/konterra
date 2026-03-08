@@ -6,6 +6,7 @@ import {
   getWaitlistEntries, getWaitlistEntryById, updateWaitlistStatus, deleteWaitlistEntry,
 } from '@/lib/db/queries'
 import { hash } from 'bcryptjs'
+import { safeParseBody } from '@/lib/validation'
 
 function forbidden(msg = 'Forbidden') {
   return NextResponse.json({ error: msg }, { status: 403 })
@@ -46,11 +47,12 @@ export async function PATCH(req: Request) {
   const { user: currentUser } = result
 
   try {
-    const body = await req.json()
-    const { id, action, adminNote, password } = body
+    const body = await safeParseBody(req)
+    if (!body) return badRequest('Invalid JSON body')
+    const { id, action, adminNote, password } = body as Record<string, unknown>
 
     if (!id || typeof id !== 'string') return badRequest('id is required')
-    if (!action || !['approve', 'reject'].includes(action)) {
+    if (!action || typeof action !== 'string' || !['approve', 'reject'].includes(action)) {
       return badRequest('action must be "approve" or "reject"')
     }
 
@@ -70,7 +72,7 @@ export async function PATCH(req: Request) {
         )
       }
 
-      const userPassword = password && typeof password === 'string' && password.length >= 6
+      const userPassword = password && typeof password === 'string' && password.length >= 8
         ? password
         : crypto.randomUUID().slice(0, 12)
 
@@ -82,7 +84,8 @@ export async function PATCH(req: Request) {
         role: 'user',
       })
 
-      await updateWaitlistStatus(id, 'approved', currentUser!.id, adminNote)
+      const note = typeof adminNote === 'string' ? adminNote : undefined
+      await updateWaitlistStatus(id, 'approved', currentUser!.id, note)
 
       return success({
         entry: { ...entry, status: 'approved' },
@@ -91,7 +94,8 @@ export async function PATCH(req: Request) {
       })
     }
 
-    const updated = await updateWaitlistStatus(id, 'rejected', currentUser!.id, adminNote)
+    const note = typeof adminNote === 'string' ? adminNote : undefined
+    const updated = await updateWaitlistStatus(id, 'rejected', currentUser!.id, note)
     return success(updated)
   } catch {
     return serverError('Failed to process waitlist action')

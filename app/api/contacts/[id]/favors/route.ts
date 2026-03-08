@@ -56,7 +56,11 @@ export async function PATCH(
 ) {
   const session = await auth()
   if (!session?.user?.id) return unauthorized()
-  await params
+  const { id } = await params
+
+  const contact = await getContactById(id, session.user.id)
+  if (!contact) return notFound('Contact')
+
   const body = await safeParseBody(req)
   if (!body) return badRequest('Invalid JSON body')
   const { favorId, ...updates } = body as Record<string, unknown>
@@ -72,7 +76,11 @@ export async function DELETE(
 ) {
   const session = await auth()
   if (!session?.user?.id) return unauthorized()
-  await params
+  const { id } = await params
+
+  const contact = await getContactById(id, session.user.id)
+  if (!contact) return notFound('Contact')
+
   const body = await safeParseBody(req)
   if (!body) return badRequest('Invalid JSON body')
   if (!body.favorId) return badRequest('favorId required')

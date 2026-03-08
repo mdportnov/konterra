@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { unauthorized, badRequest, notFound, success, serverError } from '@/lib/api-utils'
 import { getUserById, getUserProfile, updateUserProfile, getUserByUsername, getReferrer } from '@/lib/db/queries'
+import { safeParseBody } from '@/lib/validation'
 
 const USERNAME_RE = /^[a-z0-9][a-z0-9_-]{1,28}[a-z0-9]$/
 
@@ -28,18 +29,7 @@ export async function GET() {
     })
   } catch (err) {
     console.error('[GET /api/profile]', err instanceof Error ? err.message : err)
-    return success({
-      name: session.user.name ?? '',
-      email: session.user.email ?? '',
-      image: null,
-      role: (session.user as { role?: string }).role ?? 'user',
-      username: null,
-      profileVisibility: 'private',
-      profilePrivacyLevel: 'countries_only',
-      globeAutoRotate: true,
-      createdAt: null,
-      referrer: null,
-    })
+    return serverError('Failed to load profile')
   }
 }
 
@@ -48,7 +38,8 @@ export async function PATCH(req: Request) {
   if (!session?.user?.id) return unauthorized()
 
   try {
-    const body = await req.json()
+    const body = await safeParseBody(req)
+    if (!body) return badRequest('Invalid JSON body')
     const data: {
       name?: string
       image?: string | null

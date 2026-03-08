@@ -1,6 +1,7 @@
 import { auth } from '@/auth'
 import { deleteTrip, updateTrip } from '@/lib/db/queries'
 import { unauthorized, badRequest, success } from '@/lib/api-utils'
+import { safeParseBody } from '@/lib/validation'
 import { geocode } from '@/lib/geocoding'
 
 function parseDate(v: unknown): Date | null {
@@ -14,12 +15,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   if (!session?.user?.id) return unauthorized()
   const { id } = await params
 
-  let body: Record<string, unknown>
-  try {
-    body = await req.json()
-  } catch {
-    return badRequest('Invalid JSON body')
-  }
+  const body = await safeParseBody(req)
+  if (!body) return badRequest('Invalid JSON body')
 
   const data: Record<string, unknown> = {}
   if (body.city != null) data.city = String(body.city)

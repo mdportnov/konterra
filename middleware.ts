@@ -1,6 +1,11 @@
 import NextAuth from 'next-auth'
 import authConfig from './auth.config'
 import { NextResponse } from 'next/server'
+import { LOCALES, DEFAULT_LOCALE } from '@/lib/i18n/locales'
+
+const LOCALE_ROUTES = new Set(
+  LOCALES.filter(l => l !== DEFAULT_LOCALE).map(l => `/${l}`)
+)
 
 const { auth } = NextAuth(authConfig)
 
@@ -8,6 +13,7 @@ export default auth((req) => {
   const isLoggedIn = !!req.auth
   const { pathname } = req.nextUrl
   const isLandingPage = pathname === '/'
+  const isLocaleLanding = LOCALE_ROUTES.has(pathname)
   const isAuthPage = pathname.startsWith('/login')
   const isApiAuth = pathname.startsWith('/api/auth')
   const isApiWaitlist = pathname.startsWith('/api/waitlist')
@@ -16,7 +22,7 @@ export default auth((req) => {
   const isPrivacyPage = pathname === '/privacy'
   const isOfflinePage = pathname === '/offline'
 
-  if (isApiAuth || isApiWaitlist || isLandingPage || isPublicProfile || isPublicApi || isPrivacyPage || isOfflinePage) {
+  if (isApiAuth || isApiWaitlist || isLandingPage || isLocaleLanding || isPublicProfile || isPublicApi || isPrivacyPage || isOfflinePage) {
     return NextResponse.next()
   }
 

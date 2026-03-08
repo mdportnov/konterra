@@ -5,6 +5,7 @@ import { db } from '@/lib/db'
 import { contacts } from '@/lib/db/schema'
 import { eq, and } from 'drizzle-orm'
 import { unauthorized, badRequest } from '@/lib/api-utils'
+import { safeParseBody } from '@/lib/validation'
 import { geocode, reverseGeocode } from '@/lib/geocoding'
 
 export async function GET() {
@@ -30,12 +31,8 @@ export async function POST(req: Request) {
   const session = await auth()
   if (!session?.user?.id) return unauthorized()
 
-  let body: { city?: string; country?: string; timezone?: string; lat?: number; lng?: number; source?: string }
-  try {
-    body = await req.json()
-  } catch {
-    return badRequest('Invalid JSON')
-  }
+  const body = await safeParseBody(req)
+  if (!body) return badRequest('Invalid JSON')
 
   const self = await getOrCreateSelfContact(session.user.id, session.user.name ?? 'Me')
 

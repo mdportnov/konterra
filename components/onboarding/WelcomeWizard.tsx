@@ -87,9 +87,17 @@ export default function WelcomeWizard({ onAddContact, onOpenImport, onComplete }
   }, [timezone, timezones])
 
   useEffect(() => {
-    if (!localStorage.getItem(STORAGE_KEY)) {
-      setOpen(true)
-    }
+    if (localStorage.getItem(STORAGE_KEY)) return
+    fetch('/api/me/location')
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => {
+        if (data?.country) {
+          localStorage.setItem(STORAGE_KEY, '1')
+        } else {
+          setOpen(true)
+        }
+      })
+      .catch(() => setOpen(true))
   }, [])
 
   const finish = useCallback(() => {

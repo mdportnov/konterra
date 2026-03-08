@@ -73,8 +73,11 @@ export async function PATCH(
   if (location !== undefined) updates.location = (location as string) || null
   if (notes !== undefined) updates.notes = (notes as string) || null
 
-  if (updates.type || updates.date) {
-    const validationError = validateInteraction({ ...updates, date: date || new Date().toISOString() })
+  if (updates.type !== undefined || updates.date !== undefined) {
+    const validationError = validateInteraction({
+      type: updates.type ?? undefined,
+      date: date ?? undefined,
+    })
     if (validationError) return badRequest(validationError)
   }
 
