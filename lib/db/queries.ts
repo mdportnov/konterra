@@ -950,7 +950,7 @@ export async function getAdminStats() {
   const usersWithStats = await db
     .select({
       userId: users.id,
-      contactCount: sql<number>`cast(count(distinct ${contacts.id}) as int)`,
+      contactCount: sql<number>`cast(count(distinct contacts.id) as int)`,
     })
     .from(users)
     .leftJoin(contacts, eq(users.id, contacts.userId))
@@ -1258,7 +1258,7 @@ export async function getReferrer(userId: string) {
     .select({ name: users.name, image: users.image })
     .from(users)
     .where(
-      sql`${users.id} = (SELECT "invited_by" FROM "users" WHERE "id" = ${userId})`
+      sql`users.id = (SELECT "invited_by" FROM "users" WHERE "id" = ${userId})`
     )
     .limit(1)
   return rows[0] ?? null
