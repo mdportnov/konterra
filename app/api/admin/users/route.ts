@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+export const dynamic = 'force-dynamic'
 import { auth } from '@/auth'
 import { unauthorized, badRequest, notFound, success, serverError } from '@/lib/api-utils'
 import { getUserById, getAllUsers, createUser, updateUserRole, updateUser, deleteUser } from '@/lib/db/queries'
