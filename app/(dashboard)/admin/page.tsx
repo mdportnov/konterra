@@ -193,12 +193,13 @@ export default function AdminPage() {
     }
   }, [waitlistFilter])
 
+  const userId = session?.user?.id
   useEffect(() => {
     if (status === 'loading') return
-    if (!session?.user) { router.push('/login'); return }
+    if (!userId) { router.push('/login'); return }
     if (!hasAccess) { router.push('/app'); return }
     fetchData()
-  }, [status, session, hasAccess, router, fetchData])
+  }, [status, userId, hasAccess, router, fetchData])
 
   const fetchSettings = useCallback(async () => {
     setSettingsLoading(true)
