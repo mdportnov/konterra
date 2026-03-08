@@ -890,11 +890,11 @@ export async function getAllUsers() {
       maxInvites: users.maxInvites,
       createdAt: users.createdAt,
       lastActiveAt: users.lastActiveAt,
-      contactCount: sql<number>`cast((select count(*) from ${contacts} where ${contacts.userId} = ${users.id}) as int)`,
-      tripCount: sql<number>`cast((select count(*) from ${trips} where ${trips.userId} = ${users.id}) as int)`,
-      visitedCountryCount: sql<number>`cast((select count(*) from ${visitedCountries} where ${visitedCountries.userId} = ${users.id}) as int)`,
-      visitedCityCount: sql<number>`cast((select count(distinct ${trips.city}) from ${trips} where ${trips.userId} = ${users.id}) as int)`,
-      usedInviteCount: sql<number>`cast((select count(*) from ${invites} where ${invites.createdBy} = ${users.id} and ${invites.usedBy} is not null) as int)`,
+      contactCount: sql<number>`cast((select count(*) from contacts where contacts.user_id = users.id) as int)`,
+      tripCount: sql<number>`cast((select count(*) from trips where trips.user_id = users.id) as int)`,
+      visitedCountryCount: sql<number>`cast((select count(*) from visited_countries where visited_countries.user_id = users.id) as int)`,
+      visitedCityCount: sql<number>`cast((select count(distinct trips.city) from trips where trips.user_id = users.id) as int)`,
+      usedInviteCount: sql<number>`cast((select count(*) from invites where invites.created_by = users.id and invites.used_by is not null) as int)`,
     })
     .from(users)
     .orderBy(desc(users.createdAt))
