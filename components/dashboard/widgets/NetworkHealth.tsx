@@ -125,7 +125,7 @@ export default memo(function NetworkHealth({ contacts, interactions, loading }: 
             </div>
             <div className="w-full h-1 rounded-full bg-border overflow-hidden">
               <div
-                className="h-full rounded-full bg-green-500 transition-all"
+                className="h-full rounded-full bg-green-500 transition-[width] duration-300"
                 style={{ width: `${contacts.length > 0 ? (activeIn90 / contacts.length) * 100 : 0}%` }}
               />
             </div>

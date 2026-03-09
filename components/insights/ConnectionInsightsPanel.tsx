@@ -447,7 +447,7 @@ export default function ConnectionInsightsPanel({
                 <div key={item.strength} className="flex-1 flex flex-col items-center gap-1">
                   <div className="w-full relative" style={{ height: 48 }}>
                     <div
-                      className="absolute bottom-0 w-full rounded-t-sm transition-all duration-500"
+                      className="absolute bottom-0 w-full rounded-t-sm transition-[height] duration-500"
                       style={{
                         height: `${maxStrengthCount > 0 ? (item.count / maxStrengthCount) * 100 : 0}%`,
                         backgroundColor: `rgba(249,115,22,${0.3 + item.strength * 0.14})`,
@@ -791,7 +791,7 @@ function RiskCard({ risk, onContactClick, onDismiss, onSnooze, onQuickLog }: {
   const style = SEVERITY_STYLES[risk.severity]
   const key = `${risk.contact.id}-${risk.type}`
   return (
-    <div className={`p-2.5 rounded-lg border ${style.border} ${style.bg} transition-all`}>
+    <div className={`p-2.5 rounded-lg border ${style.border} ${style.bg}`}>
       <button
         onClick={() => onContactClick(risk.contact)}
         className="w-full text-left focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
