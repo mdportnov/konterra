@@ -77,6 +77,7 @@ export default function GlobePanel({
           borderSide,
           side === 'right' && 'overflow-y-auto'
         )}
+        style={{ willChange: open ? 'transform' : 'auto' }}
       >
         {children}
       </div>

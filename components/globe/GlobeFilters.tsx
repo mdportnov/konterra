@@ -214,6 +214,7 @@ export default function GlobeFilters({
             transform: panelVisible ? 'translateY(0) scale(1)' : 'translateY(-8px) scale(0.97)',
             transition: 'opacity 200ms cubic-bezier(0.32,0.72,0,1), transform 200ms cubic-bezier(0.32,0.72,0,1)',
             pointerEvents: panelVisible ? 'auto' : 'none',
+            willChange: panelMounted ? 'transform, opacity' : 'auto',
           }}
         >
           <div className="flex items-center justify-between mb-3">

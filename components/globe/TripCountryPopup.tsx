@@ -139,6 +139,7 @@ export default function TripCountryPopup({ country, trips, allTrips, x, y, open,
         transform: open ? 'scale(1) translateY(0)' : 'scale(0.95) translateY(4px)',
         transition: 'opacity 200ms cubic-bezier(0.32,0.72,0,1), transform 200ms cubic-bezier(0.32,0.72,0,1)',
         pointerEvents: open ? 'auto' : 'none',
+        willChange: open ? 'transform, opacity' : 'auto',
       }}
     >
       <div className="flex items-center justify-between px-4 py-3 border-b border-blue-500/20 bg-blue-500/5 shrink-0">

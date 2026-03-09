@@ -163,15 +163,20 @@ export function Particles({
 
     const animate = () => {
       clearContext()
-      circles.current.forEach((circle: Circle, i: number) => {
-        const edge = [
-          circle.x + circle.translateX - circle.size,
-          canvasSize.current.w - circle.x - circle.translateX - circle.size,
-          circle.y + circle.translateY - circle.size,
-          canvasSize.current.h - circle.y - circle.translateY - circle.size,
-        ]
-        const closestEdge = edge.reduce((a, b) => Math.min(a, b))
-        const remapClosestEdge = parseFloat(remapValue(closestEdge, 0, 20, 0, 1).toFixed(2))
+      const arr = circles.current
+      const w = canvasSize.current.w
+      const h = canvasSize.current.h
+      const mx = mouse.current.x
+      const my = mouse.current.y
+      let writeIdx = 0
+      for (let i = 0; i < arr.length; i++) {
+        const circle = arr[i]
+        const edge0 = circle.x + circle.translateX - circle.size
+        const edge1 = w - circle.x - circle.translateX - circle.size
+        const edge2 = circle.y + circle.translateY - circle.size
+        const edge3 = h - circle.y - circle.translateY - circle.size
+        const closestEdge = Math.min(edge0, edge1, edge2, edge3)
+        const remapClosestEdge = remapValue(closestEdge, 0, 20, 0, 1)
         if (remapClosestEdge > 1) {
           circle.alpha += 0.02
           if (circle.alpha > circle.targetAlpha) {
@@ -183,23 +188,25 @@ export function Particles({
         circle.x += circle.dx + vx
         circle.y += circle.dy + vy
         circle.translateX +=
-          (mouse.current.x / (staticity / circle.magnetism) - circle.translateX) / ease
+          (mx / (staticity / circle.magnetism) - circle.translateX) / ease
         circle.translateY +=
-          (mouse.current.y / (staticity / circle.magnetism) - circle.translateY) / ease
+          (my / (staticity / circle.magnetism) - circle.translateY) / ease
 
         drawCircle(circle, true)
 
         if (
           circle.x < -circle.size ||
-          circle.x > canvasSize.current.w + circle.size ||
+          circle.x > w + circle.size ||
           circle.y < -circle.size ||
-          circle.y > canvasSize.current.h + circle.size
+          circle.y > h + circle.size
         ) {
-          circles.current.splice(i, 1)
           const newCircle = circleParams()
           drawCircle(newCircle)
+        } else {
+          arr[writeIdx++] = circle
         }
-      })
+      }
+      arr.length = writeIdx
       rafID.current = window.requestAnimationFrame(animate)
     }
 

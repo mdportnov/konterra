@@ -546,6 +546,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
             opacity: showDashboard ? 1 : 0,
             pointerEvents: showDashboard ? 'auto' : 'none',
             transform: showDashboard ? 'translateX(0)' : 'translateX(-8%)',
+            willChange: 'transform, opacity',
           }}
         >
           <DashboardPanel
@@ -559,6 +560,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
             opacity: showGlobe ? 1 : 0,
             pointerEvents: showGlobe ? 'auto' : 'none',
             transform: showGlobe ? 'translateX(0)' : 'translateX(8%)',
+            willChange: 'transform, opacity',
           }}
         >
           <div className="relative w-full h-full overflow-hidden globe-bg">

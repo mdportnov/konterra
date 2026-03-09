@@ -168,6 +168,7 @@ export default function CountryPopup({ country, contacts, x, y, open, onSelect, 
         transform: open ? 'scale(1) translateY(0)' : 'scale(0.95) translateY(4px)',
         transition: 'opacity 200ms cubic-bezier(0.32,0.72,0,1), transform 200ms cubic-bezier(0.32,0.72,0,1)',
         pointerEvents: open ? 'auto' : 'none',
+        willChange: open ? 'transform, opacity' : 'auto',
       }}
     >
       <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">

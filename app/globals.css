@@ -138,7 +138,7 @@
 
 @layer base {
   [data-slot="scroll-area-viewport"] > div {
-    transition: height 200ms ease-out;
+    transition: none;
   }
 }
 
