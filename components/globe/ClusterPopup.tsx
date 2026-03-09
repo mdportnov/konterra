@@ -45,7 +45,7 @@ export default function ClusterPopup({ contacts, x, y, city, open, onSelect, onC
   return (
     <div
       ref={ref}
-      className={`${GLASS.heavy} fixed rounded-xl overflow-hidden z-50 shadow-2xl`}
+      className={`${GLASS.heavy} fixed rounded-xl z-50 shadow-2xl`}
       style={{
         left: pos.left,
         top: pos.top,

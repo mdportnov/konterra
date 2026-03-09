@@ -1265,12 +1265,11 @@ export async function getReferrer(userId: string) {
   return rows[0] ?? null
 }
 
-export async function getInvitedUser(userId: string) {
-  const rows = await db
+export async function getAllInvitedUsers(userId: string) {
+  return db
     .select({ name: users.name, image: users.image, createdAt: users.createdAt })
     .from(invites)
     .innerJoin(users, eq(users.id, invites.usedBy))
     .where(eq(invites.createdBy, userId))
-    .limit(1)
-  return rows[0] ?? null
+    .orderBy(desc(users.createdAt))
 }

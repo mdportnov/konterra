@@ -850,7 +850,7 @@ export default function AdminPage() {
                                   type="number"
                                   min={0}
                                   max={1000}
-                                  placeholder="default"
+                                  placeholder={String(parseInt(globalInviteLimit, 10) || DEFAULT_MAX_INVITES)}
                                   defaultValue={u.maxInvites ?? ''}
                                   className="h-7 w-20 text-xs"
                                   onBlur={(e) => handleSaveUserInviteLimit(u.id, e.target.value)}

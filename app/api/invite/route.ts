@@ -1,6 +1,6 @@
 import { auth } from '@/auth'
 import { unauthorized, success, serverError } from '@/lib/api-utils'
-import { getInviteByUserId, createInvite, getInvitedUser, getUsedInviteCount, getInviteLimit } from '@/lib/db/queries'
+import { getActiveInviteByUserId, createInvite, getAllInvitedUsers, getUsedInviteCount, getInviteLimit } from '@/lib/db/queries'
 import { randomBytes } from 'crypto'
 import { NextResponse } from 'next/server'
 
@@ -9,31 +9,20 @@ export async function GET() {
   if (!session?.user?.id) return unauthorized()
 
   try {
-    const [invite, usedCount, maxInvites] = await Promise.all([
-      getInviteByUserId(session.user.id),
+    const [activeInvite, usedCount, maxInvites, invitedUsers] = await Promise.all([
+      getActiveInviteByUserId(session.user.id),
       getUsedInviteCount(session.user.id),
       getInviteLimit(session.user.id),
+      getAllInvitedUsers(session.user.id),
     ])
 
-    if (!invite) return success({ invite: null, usedCount, maxInvites })
-
-    let status: 'active' | 'used' | 'expired' = 'active'
-    if (invite.usedBy) {
-      status = 'used'
-    } else if (new Date(invite.expiresAt) < new Date()) {
-      status = 'expired'
-    }
-
-    const invitedUser = status === 'used' ? await getInvitedUser(session.user.id) : null
-
     return success({
-      invite: {
-        code: invite.code,
-        status,
-        expiresAt: invite.expiresAt,
-        createdAt: invite.createdAt,
-        invitedUser,
-      },
+      activeInvite: activeInvite ? {
+        code: activeInvite.code,
+        expiresAt: activeInvite.expiresAt,
+        createdAt: activeInvite.createdAt,
+      } : null,
+      invitedUsers,
       usedCount,
       maxInvites,
     })

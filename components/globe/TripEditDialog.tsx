@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useFormNavigation } from '@/hooks/use-form-navigation'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
@@ -24,6 +24,12 @@ function toDateStr(d: Date | string | null | undefined): string {
   const date = typeof d === 'string' ? new Date(d) : d
   if (isNaN(date.getTime())) return ''
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+}
+
+function addWeeks(dateStr: string, weeks: number): string {
+  const d = new Date(dateStr + 'T00:00:00')
+  d.setDate(d.getDate() + weeks * 7)
+  return toDateStr(d)
 }
 
 function diffDays(a: string, b: string): number | null {
@@ -63,6 +69,20 @@ export default function TripEditDialog({ open, onOpenChange, trip, prefill, trip
       setNotes('')
     }
   }, [open, trip, prefill])
+
+  const handleArrivalChange = useCallback((val: string) => {
+    setArrivalDate(val)
+    if (val && !departureDate) {
+      setDepartureDate(addWeeks(val, 2))
+    }
+  }, [departureDate])
+
+  const handleDepartureChange = useCallback((val: string) => {
+    setDepartureDate(val)
+    if (val && !arrivalDate) {
+      setArrivalDate(addWeeks(val, -2))
+    }
+  }, [arrivalDate])
 
   const duration = useMemo(() => diffDays(arrivalDate, departureDate), [arrivalDate, departureDate])
 
@@ -135,8 +155,8 @@ export default function TripEditDialog({ open, onOpenChange, trip, prefill, trip
             <CountrySelect label="Country *" value={country} onChange={setCountry} />
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <DatePickerField label="Arrival *" value={arrivalDate} onChange={setArrivalDate} />
-            <DatePickerField label="Departure" value={departureDate} onChange={setDepartureDate} />
+            <DatePickerField label="Arrival *" value={arrivalDate} onChange={handleArrivalChange} />
+            <DatePickerField label="Departure" value={departureDate} onChange={handleDepartureChange} />
           </div>
           {dateError && <p className="text-[10px] text-destructive">{dateError}</p>}
           {overlapWarning && <p className="text-[10px] text-amber-500">{overlapWarning}</p>}

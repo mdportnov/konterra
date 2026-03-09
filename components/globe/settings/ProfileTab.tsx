@@ -45,12 +45,16 @@ interface GeoSuggestion {
   lng: number
 }
 
-interface InviteData {
+interface ActiveInvite {
   code: string
-  status: 'active' | 'used' | 'expired'
   expiresAt: string
   createdAt: string
-  invitedUser?: { name: string | null; image: string | null; createdAt: string | null } | null
+}
+
+interface InvitedUser {
+  name: string | null
+  image: string | null
+  createdAt: string | null
 }
 
 export function ProfileTab({ open, contactCount, connectionCount, visitedCountryCount, visitedCityCount }: ProfileTabProps) {
@@ -79,7 +83,8 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
   const [usernameValue, setUsernameValue] = useState('')
   const [savingUsername, setSavingUsername] = useState(false)
 
-  const [invite, setInvite] = useState<InviteData | null>(null)
+  const [activeInvite, setActiveInvite] = useState<ActiveInvite | null>(null)
+  const [invitedUsers, setInvitedUsers] = useState<InvitedUser[]>([])
   const [inviteUsedCount, setInviteUsedCount] = useState(0)
   const [inviteMaxInvites, setInviteMaxInvites] = useState(3)
   const [inviteLoading, setInviteLoading] = useState(true)
@@ -112,11 +117,12 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
     fetch('/api/invite')
       .then((r) => r.json())
       .then((data) => {
-        setInvite(data.invite ?? null)
+        setActiveInvite(data.activeInvite ?? null)
+        setInvitedUsers(data.invitedUsers ?? [])
         setInviteUsedCount(data.usedCount ?? 0)
         setInviteMaxInvites(data.maxInvites ?? 3)
       })
-      .catch(() => setInvite(null))
+      .catch(() => { setActiveInvite(null); setInvitedUsers([]) })
       .finally(() => setInviteLoading(false))
   }, [open])
 
@@ -336,7 +342,7 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
         toast.error(data.error || 'Failed to generate invite')
         return
       }
-      setInvite(data)
+      setActiveInvite({ code: data.code, expiresAt: data.expiresAt, createdAt: data.createdAt })
       toast.success('Invite link generated')
     } catch {
       toast.error('Failed to generate invite')
@@ -348,8 +354,8 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
   const inviteLimitReached = inviteUsedCount >= inviteMaxInvites
 
   const handleCopyInvite = async () => {
-    if (!invite?.code) return
-    const url = `${window.location.origin}/login?invite=${invite.code}`
+    if (!activeInvite?.code) return
+    const url = `${window.location.origin}/login?invite=${activeInvite.code}`
     try {
       await navigator.clipboard.writeText(url)
       toast.success('Invite link copied')
@@ -372,8 +378,8 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
   const isPublic = user?.profileVisibility === 'public'
   const hasUsername = !!user?.username
 
-  const inviteExpiresIn = invite?.status === 'active' && invite.expiresAt
-    ? Math.max(0, Math.ceil((new Date(invite.expiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+  const inviteExpiresIn = activeInvite?.expiresAt
+    ? Math.max(0, Math.ceil((new Date(activeInvite.expiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
     : null
 
   return (
@@ -740,68 +746,70 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
 
           {user && (
             <div className="space-y-3">
-              <div className="flex items-center gap-1.5">
-                <Ticket className="h-3.5 w-3.5 text-muted-foreground/60" />
-                <span className="text-xs font-medium text-muted-foreground/60 uppercase tracking-wider">Invite</span>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <Ticket className="h-3.5 w-3.5 text-muted-foreground/60" />
+                  <span className="text-xs font-medium text-muted-foreground/60 uppercase tracking-wider">Invites</span>
+                </div>
+                <span className="text-[10px] text-muted-foreground/60">{inviteUsedCount}/{inviteMaxInvites} used</span>
               </div>
 
               {inviteLoading ? (
                 <Skeleton className="h-8 w-full" />
-              ) : !invite ? (
+              ) : (
                 <div className="space-y-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full h-8 text-xs"
-                    onClick={handleGenerateInvite}
-                    disabled={generatingInvite || inviteLimitReached}
-                  >
-                    {generatingInvite ? <Loader2 className="h-3 w-3 animate-spin mr-1.5" /> : <UserPlus className="h-3 w-3 mr-1.5" />}
-                    {inviteLimitReached ? 'Invite limit reached' : 'Generate Invite Link'}
-                  </Button>
-                  <p className="text-[10px] text-muted-foreground/60 text-center">
-                    {inviteUsedCount}/{inviteMaxInvites} invites used
-                  </p>
-                </div>
-              ) : invite.status === 'active' ? (
-                <div className="space-y-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full h-8 text-xs"
-                    onClick={handleCopyInvite}
-                  >
-                    <Copy className="h-3 w-3 mr-1.5" />
-                    Copy invite link
-                  </Button>
-                  <p className="text-xs text-muted-foreground/60 text-center">
-                    Expires in {inviteExpiresIn} {inviteExpiresIn === 1 ? 'day' : 'days'}
-                  </p>
-                </div>
-              ) : invite.status === 'expired' ? (
-                <div className="rounded-md border border-border bg-muted/30 px-3 py-2">
-                  <p className="text-xs text-muted-foreground">
-                    <span className="inline-flex items-center rounded-full bg-yellow-500/10 border border-yellow-500/20 px-2 py-0.5 text-[10px] font-medium text-yellow-600 dark:text-yellow-400">
-                      Expired
-                    </span>
-                  </p>
-                </div>
-              ) : invite.status === 'used' && invite.invitedUser ? (
-                <div className="rounded-md border border-border bg-muted/30 px-3 py-2 space-y-1">
-                  <p className="text-sm text-foreground">
-                    Invited <span className="font-medium">{invite.invitedUser.name || 'someone'}</span>
-                  </p>
-                  {invite.invitedUser.createdAt && (
-                    <p className="text-xs text-muted-foreground/60">
-                      Joined {new Date(invite.invitedUser.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                  {invitedUsers.length > 0 && (
+                    <div className="space-y-1.5">
+                      {invitedUsers.map((iu, i) => (
+                        <div key={i} className="flex items-center gap-2 rounded-md border border-border bg-muted/30 px-3 py-2">
+                          <Avatar className="h-5 w-5">
+                            <AvatarImage src={iu.image || undefined} />
+                            <AvatarFallback className="text-[8px]">{iu.name?.charAt(0)?.toUpperCase() || '?'}</AvatarFallback>
+                          </Avatar>
+                          <span className="text-sm text-foreground font-medium truncate flex-1">{iu.name || 'Unknown'}</span>
+                          {iu.createdAt && (
+                            <span className="text-[10px] text-muted-foreground/50 shrink-0">
+                              {new Date(iu.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {activeInvite ? (
+                    <div className="space-y-1.5">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full h-8 text-xs"
+                        onClick={handleCopyInvite}
+                      >
+                        <Copy className="h-3 w-3 mr-1.5" />
+                        Copy invite link
+                      </Button>
+                      <p className="text-[10px] text-muted-foreground/60 text-center">
+                        {inviteExpiresIn === 0 ? 'Expires today' : `Expires in ${inviteExpiresIn} ${inviteExpiresIn === 1 ? 'day' : 'days'}`}
+                      </p>
+                    </div>
+                  ) : inviteLimitReached ? (
+                    <p className="text-xs text-muted-foreground/60 text-center py-1">
+                      All invites used
                     </p>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full h-8 text-xs"
+                      onClick={handleGenerateInvite}
+                      disabled={generatingInvite}
+                    >
+                      {generatingInvite ? <Loader2 className="h-3 w-3 animate-spin mr-1.5" /> : <UserPlus className="h-3 w-3 mr-1.5" />}
+                      Generate Invite Link
+                    </Button>
                   )}
                 </div>
-              ) : invite.status === 'used' ? (
-                <div className="rounded-md border border-border bg-muted/30 px-3 py-2">
-                  <p className="text-xs text-muted-foreground">Invite used</p>
-                </div>
-              ) : null}
+              )}
             </div>
           )}
         </div>

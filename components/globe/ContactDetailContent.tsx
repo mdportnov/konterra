@@ -20,7 +20,7 @@ import {
   Mail, Phone, Linkedin, Twitter, Send, Instagram, Github, Globe, MapPin,
   Building2, Pencil, X, CalendarDays, Users, Handshake, Trash2, Plus,
   MessageSquare, Calendar, Clock, Link2, Gift, Cake, Brain, Target,
-  Shield, Zap, ChevronRight, ArrowLeft,
+  Shield, Zap, ChevronRight, ArrowLeft, Check,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { StarRating } from '@/components/ui/star-rating'
@@ -116,6 +116,7 @@ export default function ContactDetailContent({
   const [editingCountryTie, setEditingCountryTie] = useState<string | null>(null)
   const [editCountryTieNotes, setEditCountryTieNotes] = useState('')
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({ timeline: false, connections: false, favors: false, countryTies: false, profile: false, insights: false })
+  const [confirmDeleteConnId, setConfirmDeleteConnId] = useState<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)
 
   const toggleSection = useCallback((key: string) => {
@@ -1251,12 +1252,21 @@ export default function ContactDetailContent({
                         <div key={i} className={`w-1.5 h-1.5 rounded-full ${i < (conn.strength || 0) ? 'bg-orange-500' : 'bg-border'}`} />
                       ))}
                     </div>
-                    <button
-                      onClick={() => handleDeleteConnection(conn.id)}
-                      className="opacity-0 group-hover:opacity-100 text-muted-foreground/40 hover:text-red-500 transition-opacity shrink-0 cursor-pointer"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
+                    {confirmDeleteConnId === conn.id ? (
+                      <button
+                        onClick={() => { setConfirmDeleteConnId(null); handleDeleteConnection(conn.id) }}
+                        className="text-red-500 shrink-0 cursor-pointer animate-in fade-in duration-150"
+                      >
+                        <Check className="h-3 w-3" />
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => setConfirmDeleteConnId(conn.id)}
+                        className="opacity-0 group-hover:opacity-100 text-muted-foreground/40 hover:text-red-500 transition-opacity shrink-0 cursor-pointer"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    )}
                   </div>
                   {conn.notes && (
                     <p className="text-[10px] text-muted-foreground/70 pl-5 pb-1 leading-relaxed">{conn.notes}</p>
