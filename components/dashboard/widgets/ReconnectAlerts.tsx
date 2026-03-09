@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { AlertTriangle, Clock, Cake, MessageSquare, X, AlarmClockOff, Check } from 'lucide-react'
+import { InlineDatePicker } from '@/components/globe/contact-edit/form-fields'
 import { toast } from 'sonner'
 import { staleContacts, overdueFollowUps, upcomingBirthdays } from '@/lib/metrics'
 import type { Contact } from '@/lib/db/schema'
@@ -212,7 +213,7 @@ export default memo(function ReconnectAlerts({ contacts, onContactClick, onInter
                     <select value={quickForm.type} onChange={(e) => setQuickForm((p) => ({ ...p, type: e.target.value }))} className="h-6 text-[10px] rounded border border-input bg-muted/50 px-1 text-foreground cursor-pointer">
                       {INTERACTION_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
                     </select>
-                    <input type="date" value={quickForm.date} max={new Date().toISOString().slice(0, 10)} onChange={(e) => setQuickForm((p) => ({ ...p, date: e.target.value }))} className="h-6 text-[10px] rounded border border-input bg-muted/50 px-1 text-foreground" />
+                    <InlineDatePicker value={quickForm.date} max={new Date().toISOString().slice(0, 10)} onChange={(v) => setQuickForm((p) => ({ ...p, date: v }))} className="h-6 text-[10px]" />
                     <button onClick={() => { setQuickAdd(null); setPendingDone(null) }} className="ml-auto text-muted-foreground/40 hover:text-foreground cursor-pointer"><X className="h-3 w-3" /></button>
                   </div>
                   <Input value={quickForm.notes} onChange={(e) => setQuickForm((p) => ({ ...p, notes: e.target.value }))} placeholder="Notes (optional)..." className="h-6 text-[10px] bg-muted/50" />
@@ -261,7 +262,7 @@ export default memo(function ReconnectAlerts({ contacts, onContactClick, onInter
                     <select value={quickForm.type} onChange={(e) => setQuickForm((p) => ({ ...p, type: e.target.value }))} className="h-6 text-[10px] rounded border border-input bg-muted/50 px-1 text-foreground cursor-pointer">
                       {INTERACTION_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
                     </select>
-                    <input type="date" value={quickForm.date} max={new Date().toISOString().slice(0, 10)} onChange={(e) => setQuickForm((p) => ({ ...p, date: e.target.value }))} className="h-6 text-[10px] rounded border border-input bg-muted/50 px-1 text-foreground" />
+                    <InlineDatePicker value={quickForm.date} max={new Date().toISOString().slice(0, 10)} onChange={(v) => setQuickForm((p) => ({ ...p, date: v }))} className="h-6 text-[10px]" />
                     <button onClick={() => setQuickAdd(null)} className="ml-auto text-muted-foreground/40 hover:text-foreground cursor-pointer"><X className="h-3 w-3" /></button>
                   </div>
                   <Input value={quickForm.notes} onChange={(e) => setQuickForm((p) => ({ ...p, notes: e.target.value }))} placeholder="Notes (optional)..." className="h-6 text-[10px] bg-muted/50" />

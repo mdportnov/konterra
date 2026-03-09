@@ -310,14 +310,90 @@ export function PrefixInput({
   )
 }
 
+function formatDateValue(d: Date) {
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
+function toDateString(d: Date) {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+function parseDate(value: string) {
+  if (!value) return undefined
+  const d = new Date(value + 'T00:00:00')
+  return !isNaN(d.getTime()) ? d : undefined
+}
+
+export function InlineDatePicker({
+  value,
+  onChange,
+  min,
+  max,
+  placeholder = 'Pick date',
+  className = '',
+}: {
+  value: string
+  onChange: (v: string) => void
+  min?: string
+  max?: string
+  placeholder?: string
+  className?: string
+}) {
+  const [open, setOpen] = useState(false)
+  const valid = parseDate(value)
+  const minDate = min ? parseDate(min) : undefined
+  const maxDate = max ? parseDate(max) : undefined
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className={`flex items-center gap-1 rounded-md border border-input bg-muted/50 px-2 text-foreground cursor-pointer hover:bg-accent/50 transition-colors ${className}`}
+        >
+          <CalendarIcon className="h-3 w-3 text-muted-foreground/50 shrink-0" />
+          <span className={valid ? 'truncate' : 'text-muted-foreground/40 truncate'}>
+            {valid ? formatDateValue(valid) : placeholder}
+          </span>
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0" side="bottom" align="start">
+        <Calendar
+          mode="single"
+          selected={valid}
+          defaultMonth={valid || new Date()}
+          onSelect={(d) => {
+            onChange(d ? toDateString(d) : '')
+            setOpen(false)
+          }}
+          disabled={(d) => {
+            if (minDate && d < minDate) return true
+            if (maxDate && d > maxDate) return true
+            return false
+          }}
+        />
+        {value && (
+          <div className="border-t border-border px-3 py-2">
+            <button
+              type="button"
+              onClick={() => { onChange(''); setOpen(false) }}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Clear date
+            </button>
+          </div>
+        )}
+      </PopoverContent>
+    </Popover>
+  )
+}
+
 export function DatePickerField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   const [open, setOpen] = useState(false)
-
-  const date = value ? new Date(value + 'T00:00:00') : undefined
-  const valid = date && !isNaN(date.getTime()) ? date : undefined
-
-  const formatDate = (d: Date) =>
-    d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  const valid = parseDate(value)
 
   return (
     <div className="space-y-1.5">
@@ -329,7 +405,7 @@ export function DatePickerField({ label, value, onChange }: { label: string; val
             className="flex h-8 w-full items-center justify-between rounded-md border border-input bg-muted/50 px-3 text-sm cursor-pointer hover:bg-accent/50 transition-colors"
           >
             <span className={valid ? 'text-foreground' : 'text-muted-foreground/40'}>
-              {valid ? formatDate(valid) : 'Pick a date...'}
+              {valid ? formatDateValue(valid) : 'Pick a date...'}
             </span>
             <CalendarIcon className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0 ml-1" />
           </button>
@@ -340,14 +416,7 @@ export function DatePickerField({ label, value, onChange }: { label: string; val
             selected={valid}
             defaultMonth={valid || new Date()}
             onSelect={(d) => {
-              if (d) {
-                const y = d.getFullYear()
-                const m = String(d.getMonth() + 1).padStart(2, '0')
-                const day = String(d.getDate()).padStart(2, '0')
-                onChange(`${y}-${m}-${day}`)
-              } else {
-                onChange('')
-              }
+              onChange(d ? toDateString(d) : '')
               setOpen(false)
             }}
             captionLayout="dropdown"

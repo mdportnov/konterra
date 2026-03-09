@@ -28,6 +28,8 @@ import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/comp
 import { RATING_LABELS } from '@/lib/constants/rating'
 import { countryFlag } from '@/lib/country-flags'
 import { trajectoryIcon, trajectoryColor, computeTrajectory, computeRelationshipStrength, computeProfileCompleteness } from '@/lib/metrics'
+import { InlineDatePicker } from '@/components/globe/contact-edit/form-fields'
+import { CountrySelect } from '@/components/globe/contact-edit/CountrySelect'
 import { fetchContactInteractions, fetchContactConnections, fetchContactFavors, fetchContactCountryConnections } from '@/lib/api'
 import type { Contact, Interaction, ContactConnection, ContactCountryConnection, Favor } from '@/lib/db/schema'
 import type { ConnectedContact } from '@/components/globe/ContactDetail'
@@ -713,11 +715,12 @@ export default function ContactDetailContent({
       </div>
       {showFollowUpPicker && (
         <div className="mb-3 flex items-center gap-2">
-          <input
-            type="date"
+          <InlineDatePicker
+            value=""
             min={new Date().toISOString().slice(0, 10)}
-            className="h-7 text-xs rounded-md border border-input bg-muted/50 px-2 text-foreground"
-            onChange={(e) => { if (e.target.value) handleSetFollowUp(e.target.value) }}
+            onChange={(v) => { if (v) handleSetFollowUp(v) }}
+            placeholder="Pick date"
+            className="h-7 text-xs"
           />
           <div className="flex gap-1">
             {[3, 7, 14, 30].map((d) => (
@@ -1033,12 +1036,11 @@ export default function ContactDetailContent({
               >
                 {INTERACTION_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
               </select>
-              <input
-                type="date"
+              <InlineDatePicker
                 value={newInteraction.date}
                 max={new Date().toISOString().slice(0, 10)}
-                onChange={(e) => setNewInteraction((p) => ({ ...p, date: e.target.value }))}
-                className="w-full h-7 text-xs rounded-md border border-input bg-muted/50 px-2 text-foreground"
+                onChange={(v) => setNewInteraction((p) => ({ ...p, date: v }))}
+                className="w-full h-7 text-xs"
               />
               <Input
                 value={newInteraction.notes}
@@ -1072,12 +1074,11 @@ export default function ContactDetailContent({
                     >
                       {INTERACTION_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
                     </select>
-                    <input
-                      type="date"
+                    <InlineDatePicker
                       value={editInteractionData.date}
                       max={new Date().toISOString().slice(0, 10)}
-                      onChange={(e) => setEditInteractionData((p) => ({ ...p, date: e.target.value }))}
-                      className="w-full h-7 text-xs rounded-md border border-input bg-muted/50 px-2 text-foreground"
+                      onChange={(v) => setEditInteractionData((p) => ({ ...p, date: v }))}
+                      className="w-full h-7 text-xs"
                     />
                     <Input
                       value={editInteractionData.notes}
@@ -1297,11 +1298,9 @@ export default function ContactDetailContent({
           >
             <div className="overflow-hidden">
             <div className="p-2 rounded-lg bg-accent/50 border border-border space-y-2 mb-2">
-              <Input
+              <CountrySelect
                 value={newCountryTie.country}
-                onChange={(e) => setNewCountryTie((p) => ({ ...p, country: e.target.value }))}
-                placeholder="Country name..."
-                className="h-7 text-xs bg-muted/50"
+                onChange={(v) => setNewCountryTie((p) => ({ ...p, country: v }))}
               />
               <Input
                 value={newCountryTie.notes}
