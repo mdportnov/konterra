@@ -23,6 +23,7 @@ export async function GET() {
       username: user?.username ?? null,
       profileVisibility: user?.profileVisibility ?? 'private',
       profilePrivacyLevel: user?.profilePrivacyLevel ?? 'countries_only',
+      bio: user?.bio ?? null,
       globeAutoRotate: user?.globeAutoRotate ?? true,
       createdAt: user?.createdAt ?? null,
       referrer,
@@ -44,6 +45,7 @@ export async function PATCH(req: Request) {
       name?: string
       image?: string | null
       username?: string | null
+      bio?: string | null
       profileVisibility?: 'private' | 'public'
       profilePrivacyLevel?: 'countries_only' | 'full_travel'
       globeAutoRotate?: boolean
@@ -100,6 +102,16 @@ export async function PATCH(req: Request) {
       data.profilePrivacyLevel = body.profilePrivacyLevel
     }
 
+    if (body.bio !== undefined) {
+      if (body.bio === null || body.bio === '') {
+        data.bio = null
+      } else if (typeof body.bio === 'string') {
+        const trimmed = body.bio.trim()
+        if (trimmed.length > 300) return badRequest('Bio must be 300 characters or less')
+        data.bio = trimmed
+      }
+    }
+
     if (typeof body.globeAutoRotate === 'boolean') {
       data.globeAutoRotate = body.globeAutoRotate
     }
@@ -115,6 +127,7 @@ export async function PATCH(req: Request) {
       name: updated.name,
       image: updated.image,
       username: updated.username,
+      bio: updated.bio,
       profileVisibility: updated.profileVisibility,
       profilePrivacyLevel: updated.profilePrivacyLevel,
       globeAutoRotate: (updated as { globeAutoRotate?: boolean }).globeAutoRotate ?? true,

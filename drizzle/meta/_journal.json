@@ -71,6 +71,13 @@
       "when": 1772979745236,
       "tag": "0009_chemical_juggernaut",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1773052009382,
+      "tag": "0010_volatile_dazzler",
+      "breakpoints": true
     }
   ]
 }

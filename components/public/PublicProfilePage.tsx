@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react'
 import dynamic from 'next/dynamic'
+import Link from 'next/link'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Globe, MapPin, Calendar } from 'lucide-react'
 import { normalizeToGlobeName } from '@/components/globe/data/country-centroids'
@@ -16,6 +17,7 @@ interface PublicProfilePageProps {
     name: string | null
     image: string | null
     username: string | null
+    bio: string | null
     createdAt: string | null
   }
   privacyLevel: 'countries_only' | 'full_travel'
@@ -76,6 +78,10 @@ export default function PublicProfilePage({ user, privacyLevel, countries, trips
             </div>
           </div>
 
+          {user.bio && (
+            <p className="text-xs text-muted-foreground">{user.bio}</p>
+          )}
+
           <div className="grid grid-cols-2 gap-2">
             <div className="rounded-lg border border-border bg-muted/30 p-2.5 text-center space-y-0.5">
               <Globe className="h-3.5 w-3.5 mx-auto text-muted-foreground/60" />
@@ -116,12 +122,12 @@ export default function PublicProfilePage({ user, privacyLevel, countries, trips
             </div>
           )}
 
-          <a
+          <Link
             href="/login"
             className="block w-full text-center rounded-lg bg-orange-500 hover:bg-orange-600 text-white text-xs font-medium py-2 transition-colors"
           >
             Join Konterra to track your travels
-          </a>
+          </Link>
         </div>
       </div>
     </div>

@@ -21,6 +21,7 @@ interface SessionUser {
   image?: string | null
   role?: string | null
   username?: string | null
+  bio?: string | null
   profileVisibility?: string | null
   profilePrivacyLevel?: string | null
   globeAutoRotate?: boolean | null
@@ -69,6 +70,10 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const [profileError, setProfileError] = useState(false)
+
+  const [editingBio, setEditingBio] = useState(false)
+  const [bioValue, setBioValue] = useState('')
+  const [savingBio, setSavingBio] = useState(false)
 
   const [editingUsername, setEditingUsername] = useState(false)
   const [usernameValue, setUsernameValue] = useState('')
@@ -220,6 +225,26 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
       toast.success('Name updated')
     } catch {
       toast.error('Failed to update name')
+    }
+  }
+
+  const handleSaveBio = async () => {
+    setSavingBio(true)
+    try {
+      const res = await fetch('/api/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bio: bioValue.trim() || null }),
+      })
+      if (!res.ok) throw new Error()
+      const data = await res.json()
+      setUser((prev) => prev ? { ...prev, bio: data.bio } : prev)
+      setEditingBio(false)
+      toast.success('Bio updated')
+    } catch {
+      toast.error('Failed to update bio')
+    } finally {
+      setSavingBio(false)
     }
   }
 
@@ -419,6 +444,48 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
                     Invited by <span className="font-medium text-muted-foreground">{user.referrer.name}</span>
                   </p>
                 )}
+                {editingBio ? (
+                  <div className="w-full max-w-[260px] space-y-1">
+                    <textarea
+                      value={bioValue}
+                      onChange={(e) => setBioValue(e.target.value.slice(0, 300))}
+                      className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring resize-none"
+                      rows={3}
+                      autoFocus
+                      placeholder="Write a short bio..."
+                      onKeyDown={(e) => {
+                        if (e.key === 'Escape') { setEditingBio(false); setBioValue('') }
+                      }}
+                    />
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] text-muted-foreground/60">{bioValue.length}/300</span>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 shrink-0"
+                          disabled={savingBio}
+                          onClick={handleSaveBio}
+                        >
+                          {savingBio ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => { setEditingBio(false); setBioValue('') }}>
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    className="w-full max-w-[260px] text-center cursor-pointer group"
+                    onClick={() => { setBioValue(user.bio || ''); setEditingBio(true) }}
+                  >
+                    <p className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">
+                      {user.bio || 'Add a bio...'}
+                    </p>
+                  </div>
+                )}
+
                 {user.role && user.role !== 'user' && (
                   <span className="inline-flex items-center gap-1 rounded-full bg-orange-500/10 border border-orange-500/20 px-2.5 py-0.5 text-xs font-medium text-orange-600 dark:text-orange-300">
                     <Shield className="h-3 w-3" />

@@ -4,12 +4,13 @@ import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { Separator } from '@/components/ui/separator'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Settings, Plus, LayoutDashboard, Search } from 'lucide-react'
+import { Settings, Plus, LayoutDashboard, Search, Sparkles } from 'lucide-react'
 import { GLASS, Z } from '@/lib/constants/ui'
 
 interface GlobeControlsProps {
   onAddContact?: () => void
   onSearch?: () => void
+  onInsights?: () => void
   onSettings?: () => void
   onProfile?: () => void
   isMobile?: boolean
@@ -17,7 +18,7 @@ interface GlobeControlsProps {
   user?: { name?: string | null; email?: string | null; image?: string | null } | null
 }
 
-export default function GlobeControls({ onAddContact, onSearch, onSettings, onProfile, isMobile, onSwitchToDashboard, user }: GlobeControlsProps) {
+export default function GlobeControls({ onAddContact, onSearch, onInsights, onSettings, onProfile, isMobile, onSwitchToDashboard, user }: GlobeControlsProps) {
   const btnSize = isMobile ? 'h-10 w-10' : 'h-8 w-8'
   const iconSize = isMobile ? 'h-5 w-5' : 'h-4 w-4'
 
@@ -79,6 +80,20 @@ export default function GlobeControls({ onAddContact, onSearch, onSettings, onPr
             </Button>
           </TooltipTrigger>
           <TooltipContent>Add Contact</TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              size="icon"
+              variant="ghost"
+              className={`${btnSize} !text-muted-foreground hover:!text-foreground hover:!bg-accent`}
+              onClick={onInsights}
+            >
+              <Sparkles className={iconSize} />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Insights</TooltipContent>
         </Tooltip>
 
         <Tooltip>

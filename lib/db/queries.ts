@@ -38,14 +38,14 @@ export async function getUserById(id: string) {
 export async function getUserProfile(id: string) {
   return db.query.users.findFirst({
     where: eq(users.id, id),
-    columns: { id: true, email: true, name: true, image: true, role: true, username: true, profileVisibility: true, profilePrivacyLevel: true, globeAutoRotate: true, createdAt: true },
+    columns: { id: true, email: true, name: true, image: true, role: true, username: true, bio: true, profileVisibility: true, profilePrivacyLevel: true, globeAutoRotate: true, createdAt: true },
   })
 }
 
 export async function getUserByUsername(username: string) {
   return db.query.users.findFirst({
     where: sql`lower(${users.username}) = ${username.toLowerCase()}`,
-    columns: { id: true, name: true, image: true, username: true, profileVisibility: true, profilePrivacyLevel: true, createdAt: true },
+    columns: { id: true, name: true, image: true, username: true, bio: true, profileVisibility: true, profilePrivacyLevel: true, createdAt: true },
   })
 }
 
@@ -71,6 +71,7 @@ export async function updateUserProfile(id: string, data: {
   name?: string
   image?: string | null
   username?: string | null
+  bio?: string | null
   profileVisibility?: 'private' | 'public'
   profilePrivacyLevel?: 'countries_only' | 'full_travel'
   globeAutoRotate?: boolean

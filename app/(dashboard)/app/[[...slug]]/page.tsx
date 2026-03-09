@@ -403,6 +403,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
       <GlobeControls
         onAddContact={nav.handleAddContact}
         onSearch={() => setCommandMenuOpen(true)}
+        onInsights={nav.handleOpenInsights}
         onSettings={nav.handleOpenSettings}
         onProfile={nav.handleOpenProfile}
         isMobile={isMobile}
