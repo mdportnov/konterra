@@ -607,6 +607,7 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
                     className="h-8 text-sm"
                     autoFocus
                     onKeyDown={(e) => {
+                      if (e.key === 'Enter' && cityInput.trim()) handleSaveHomebase()
                       if (e.key === 'Escape') handleCancelHomebase()
                     }}
                   />

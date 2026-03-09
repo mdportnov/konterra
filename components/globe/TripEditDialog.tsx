@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
+import { useFormNavigation } from '@/hooks/use-form-navigation'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -35,6 +36,10 @@ function diffDays(a: string, b: string): number | null {
 
 export default function TripEditDialog({ open, onOpenChange, trip, prefill, trips, onSaved }: TripEditDialogProps) {
   const isEdit = !!trip
+  const formNavRef = useFormNavigation<HTMLDivElement>({
+    onSubmit: handleSave,
+    enabled: open,
+  })
   const [city, setCity] = useState('')
   const [country, setCountry] = useState('')
   const [arrivalDate, setArrivalDate] = useState('')
@@ -121,7 +126,7 @@ export default function TripEditDialog({ open, onOpenChange, trip, prefill, trip
         <DialogHeader>
           <DialogTitle>{isEdit ? 'Edit trip' : 'Add trip'}</DialogTitle>
         </DialogHeader>
-        <div className="space-y-3 py-2">
+        <div ref={formNavRef} className="space-y-3 py-2">
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label className="text-xs text-muted-foreground">City *</Label>

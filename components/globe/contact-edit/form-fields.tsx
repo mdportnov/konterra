@@ -189,7 +189,14 @@ export function ChipInput({
   }, [chips, fireChange])
 
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' || e.key === ',') {
+    if (e.key === 'Enter') {
+      if (input.trim()) {
+        e.preventDefault()
+        addChip()
+      }
+      return
+    }
+    if (e.key === ',') {
       e.preventDefault()
       addChip()
     }

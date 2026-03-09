@@ -57,7 +57,7 @@ export function TagSelector({
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
+    if (e.key === 'Enter' && newTagInput.trim()) {
       e.preventDefault()
       handleCreateTag()
     }
