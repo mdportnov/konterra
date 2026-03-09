@@ -90,7 +90,7 @@ export default function StepDedupReview({ entries: initial, intraDupCount = 0, o
           <ScrollArea className="max-h-[300px]">
             <div className="space-y-3 pr-3">
               {duplicates.map((entry, i) => (
-                <div key={i} className="rounded-lg border border-border p-3 space-y-2 transition-all duration-200 ease-out">
+                <div key={i} className="rounded-lg border border-border p-3 space-y-2">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-foreground truncate">{entry.parsed.name}</p>
@@ -116,19 +116,19 @@ export default function StepDedupReview({ entries: initial, intraDupCount = 0, o
                   >
                     <ToggleGroupItem
                       value="skip"
-                      className="flex-1 text-xs data-[state=on]:bg-accent data-[state=on]:text-foreground transition-all duration-150"
+                      className="flex-1 text-xs data-[state=on]:bg-accent data-[state=on]:text-foreground transition-colors duration-150"
                     >
                       Skip
                     </ToggleGroupItem>
                     <ToggleGroupItem
                       value="merge"
-                      className="flex-1 text-xs data-[state=on]:bg-accent data-[state=on]:text-foreground transition-all duration-150"
+                      className="flex-1 text-xs data-[state=on]:bg-accent data-[state=on]:text-foreground transition-colors duration-150"
                     >
                       Merge
                     </ToggleGroupItem>
                     <ToggleGroupItem
                       value="create"
-                      className="flex-1 text-xs data-[state=on]:bg-accent data-[state=on]:text-foreground transition-all duration-150"
+                      className="flex-1 text-xs data-[state=on]:bg-accent data-[state=on]:text-foreground transition-colors duration-150"
                     >
                       Create New
                     </ToggleGroupItem>

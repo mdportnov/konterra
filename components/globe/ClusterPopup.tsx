@@ -54,6 +54,7 @@ export default function ClusterPopup({ contacts, x, y, city, open, onSelect, onC
         transform: open ? 'scale(1) translateY(0)' : 'scale(0.95) translateY(4px)',
         transition: 'opacity 150ms ease-out, transform 150ms ease-out',
         pointerEvents: open ? 'auto' : 'none',
+        willChange: open ? 'transform, opacity' : 'auto',
       }}
     >
       <div className="flex items-center justify-between px-4 py-3 border-b border-border">

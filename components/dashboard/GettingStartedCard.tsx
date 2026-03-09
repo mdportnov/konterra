@@ -90,7 +90,7 @@ export default function GettingStartedCard({
       <div className="space-y-1">
         <div className="h-1.5 rounded-full bg-muted overflow-hidden">
           <div
-            className="h-full rounded-full bg-orange-500 transition-all duration-500"
+            className="h-full rounded-full bg-orange-500 transition-[width] duration-500"
             style={{ width: `${pct}%` }}
           />
         </div>

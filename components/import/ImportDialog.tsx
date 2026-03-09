@@ -57,7 +57,7 @@ function AnimatedStep({ active, children }: { active: boolean; children: React.R
 
   return (
     <div
-      className="transition-all duration-200 ease-out"
+      className="transition-[opacity,transform] duration-200 ease-out"
       style={{
         opacity: visible ? 1 : 0,
         transform: visible ? 'translateY(0)' : 'translateY(8px)',

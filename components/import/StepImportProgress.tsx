@@ -148,9 +148,7 @@ export default function StepImportProgress({ entries, source, konterraData, onCo
       }
 
       setResult(agg)
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => setResultVisible(true))
-      })
+      requestAnimationFrame(() => setResultVisible(true))
     })()
   }, [batches, hasRelations, total, konterraData])
 
@@ -161,7 +159,7 @@ export default function StepImportProgress({ entries, source, konterraData, onCo
 
     return (
       <div
-        className="space-y-4 text-center transition-all duration-300 ease-out"
+        className="space-y-4 text-center transition-[opacity,transform] duration-300 ease-out"
         style={{
           opacity: resultVisible ? 1 : 0,
           transform: resultVisible ? 'translateY(0) scale(1)' : 'translateY(12px) scale(0.97)',
@@ -206,7 +204,7 @@ export default function StepImportProgress({ entries, source, konterraData, onCo
       </p>
       <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
         <div
-          className="bg-foreground h-full rounded-full transition-all duration-300 ease-out"
+          className="bg-foreground h-full rounded-full transition-[width] duration-300 ease-out"
           style={{ width: `${pct}%` }}
         />
       </div>

@@ -236,10 +236,10 @@ function LoginContent() {
 
         <div
           ref={formRef}
-          className="transition-all duration-200 ease-out overflow-hidden"
+          className="transition-[opacity,transform,max-height] duration-200 ease-out overflow-hidden"
         >
           <div
-            className={`transition-all duration-200 ease-out ${
+            className={`transition-[opacity,transform] duration-200 ease-out ${
               visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
             }`}
           >
@@ -257,7 +257,7 @@ function LoginContent() {
                   className="login-input"
                 />
                 <div
-                  className={`transition-all duration-200 ease-out overflow-hidden ${
+                  className={`transition-[opacity,transform,max-height] duration-200 ease-out overflow-hidden ${
                     passwordVisible
                       ? 'opacity-100 translate-y-0 max-h-20'
                       : 'opacity-0 translate-y-2 max-h-0'

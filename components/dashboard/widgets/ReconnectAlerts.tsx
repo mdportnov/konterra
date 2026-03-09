@@ -186,21 +186,21 @@ export default memo(function ReconnectAlerts({ contacts, onContactClick, onInter
                 </button>
                 <button
                   onClick={() => handleSnooze(c.id)}
-                  className="opacity-0 group-hover:opacity-100 text-muted-foreground/40 hover:text-amber-500 transition-all shrink-0 cursor-pointer"
+                  className="opacity-0 group-hover:opacity-100 text-muted-foreground/40 hover:text-amber-500 transition-[opacity,color] duration-150 shrink-0 cursor-pointer"
                   title="Snooze 7d"
                 >
                   <AlarmClockOff className="h-3.5 w-3.5" />
                 </button>
                 <button
                   onClick={() => { setPendingDone(c.id); setQuickAdd(quickAdd === c.id ? null : c.id) }}
-                  className="opacity-0 group-hover:opacity-100 text-muted-foreground/40 hover:text-green-500 transition-all shrink-0 cursor-pointer"
+                  className="opacity-0 group-hover:opacity-100 text-muted-foreground/40 hover:text-green-500 transition-[opacity,color] duration-150 shrink-0 cursor-pointer"
                   title="Done"
                 >
                   <Check className="h-3.5 w-3.5" />
                 </button>
                 <button
                   onClick={() => { setPendingDone(null); setQuickAdd(quickAdd === c.id ? null : c.id) }}
-                  className="opacity-0 group-hover:opacity-100 text-muted-foreground/40 hover:text-orange-500 transition-all shrink-0 cursor-pointer"
+                  className="opacity-0 group-hover:opacity-100 text-muted-foreground/40 hover:text-orange-500 transition-[opacity,color] duration-150 shrink-0 cursor-pointer"
                   title="Log interaction"
                 >
                   <MessageSquare className="h-3.5 w-3.5" />
@@ -249,7 +249,7 @@ export default memo(function ReconnectAlerts({ contacts, onContactClick, onInter
                 </button>
                 <button
                   onClick={() => setQuickAdd(quickAdd === c.id ? null : c.id)}
-                  className="opacity-0 group-hover:opacity-100 text-muted-foreground/40 hover:text-orange-500 transition-all shrink-0 cursor-pointer"
+                  className="opacity-0 group-hover:opacity-100 text-muted-foreground/40 hover:text-orange-500 transition-[opacity,color] duration-150 shrink-0 cursor-pointer"
                   title="Log interaction"
                 >
                   <MessageSquare className="h-3.5 w-3.5" />

@@ -66,6 +66,7 @@ export default function GlobePanel({
         width: panelWidth,
         zIndex: z,
         pointerEvents: open ? 'auto' : 'none',
+        willChange: open ? 'transform, opacity' : 'auto',
         paddingBottom: isMobile ? 'env(safe-area-inset-bottom, 0px)' : undefined,
       }}
     >
@@ -76,6 +77,7 @@ export default function GlobePanel({
           borderSide,
           side === 'right' && 'overflow-y-auto'
         )}
+        style={{ willChange: open ? 'transform' : 'auto' }}
       >
         {children}
       </div>

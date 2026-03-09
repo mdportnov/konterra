@@ -93,6 +93,7 @@ export default function TripPopup({ trip, prevTrip, nextTrip, onNavigate, onClos
         transform: visible ? 'translateY(0)' : 'translateY(8px)',
         transition: 'opacity 200ms cubic-bezier(0.32,0.72,0,1), transform 200ms cubic-bezier(0.32,0.72,0,1)',
         pointerEvents: visible ? 'auto' : 'none',
+        willChange: visible ? 'transform, opacity' : 'auto',
         zIndex: Z.overlay,
       }}
     >
