@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useFormNavigation } from '@/hooks/use-form-navigation'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -184,6 +185,10 @@ interface ContactEditPanelProps {
 }
 
 export default function ContactEditPanel({ contact, open, onSaved, onCancel, availableTags = [], onTagCreated, prefill }: ContactEditPanelProps) {
+  const formRef = useFormNavigation<HTMLFormElement>({
+    onSubmit: () => { formRef.current?.requestSubmit() },
+    enabled: open,
+  })
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState<FormData>(buildFormData(contact))
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
@@ -330,7 +335,7 @@ export default function ContactEditPanel({ contact, open, onSaved, onCancel, ava
       </p>
 
       <ScrollArea className="flex-1">
-        <form id="contact-edit-panel-form" onSubmit={handleSubmit} className="px-4 py-3 space-y-5">
+        <form ref={formRef} id="contact-edit-panel-form" onSubmit={handleSubmit} className="px-4 py-3 space-y-5">
           <div className="space-y-3">
             <SectionLabel icon={User} text="Basic Info" />
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

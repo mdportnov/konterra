@@ -1,6 +1,7 @@
 'use client'
 
 import { Suspense, useState, useRef, useEffect, useCallback } from 'react'
+import { useFormNavigation } from '@/hooks/use-form-navigation'
 import { signIn } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
@@ -36,7 +37,12 @@ function LoginContent() {
   const [signInStep, setSignInStep] = useState<SignInStep>('email')
   const [passwordVisible, setPasswordVisible] = useState(false)
   const [inviteInfo, setInviteInfo] = useState<InviteInfo | null>(null)
-  const formRef = useRef<HTMLDivElement>(null)
+  const animRef = useRef<HTMLDivElement>(null)
+  const formNavRef = useFormNavigation<HTMLDivElement>({
+    onSubmit: () => {
+      formNavRef.current?.querySelector<HTMLFormElement>('form')?.requestSubmit()
+    },
+  })
   const passwordRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -87,7 +93,7 @@ function LoginContent() {
   }, [mode, animating])
 
   useEffect(() => {
-    const el = formRef.current
+    const el = animRef.current
     if (!el) return
     el.style.height = 'auto'
     const h = el.scrollHeight
@@ -235,10 +241,11 @@ function LoginContent() {
         )}
 
         <div
-          ref={formRef}
+          ref={animRef}
           className="transition-[opacity,transform,max-height] duration-200 ease-out overflow-hidden"
         >
           <div
+            ref={formNavRef}
             className={`transition-[opacity,transform] duration-200 ease-out ${
               visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
             }`}
