@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "tsx lib/db/migrate.ts && next build --webpack",
+    "build": "tsx lib/db/migrate.ts && rm -rf .next && next build --webpack",
     "build:check": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
