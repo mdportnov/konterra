@@ -3,8 +3,9 @@
 import { useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Check, Circle, UserPlus, MessageSquare, Link2, Tag, Home } from 'lucide-react'
+import { Check, UserPlus, MessageSquare, Link2, Tag, Home, Globe } from 'lucide-react'
 import { GLASS } from '@/lib/constants/ui'
+import { useIsMobile } from '@/hooks/use-mobile'
 import type { Contact, ContactConnection } from '@/lib/db/schema'
 
 interface GettingStartedCardProps {
@@ -13,6 +14,7 @@ interface GettingStartedCardProps {
   recentInteractions: { contactName: string }[]
   onAddContact: () => void
   onOpenProfile: () => void
+  onSwitchToGlobe?: () => void
 }
 
 interface Step {
@@ -29,7 +31,10 @@ export default function GettingStartedCard({
   recentInteractions,
   onAddContact,
   onOpenProfile,
+  onSwitchToGlobe,
 }: GettingStartedCardProps) {
+  const isMobile = useIsMobile()
+
   const steps = useMemo<Step[]>(() => {
     const hasProfile = contacts.some((c) => c.isSelf)
     const nonSelfContacts = contacts.filter((c) => !c.isSelf)
@@ -133,6 +138,19 @@ export default function GettingStartedCard({
           )
         })}
       </div>
+
+      {isMobile && onSwitchToGlobe && (
+        <button
+          onClick={onSwitchToGlobe}
+          className="flex w-full items-center gap-2.5 rounded-lg bg-primary/5 border border-primary/10 px-3 py-2.5 transition-colors hover:bg-primary/10 active:scale-[0.98]"
+        >
+          <div className="h-5 w-5 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+            <Globe className="h-3 w-3 text-primary" />
+          </div>
+          <span className="text-[11px] text-foreground">Tap here to explore the globe view</span>
+          <span className="text-primary text-[10px] ml-auto shrink-0">View</span>
+        </button>
+      )}
     </div>
   )
 }
