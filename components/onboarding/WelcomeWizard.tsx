@@ -11,11 +11,12 @@ import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import {
-  Globe, UserPlus, Upload, LayoutDashboard, Settings, ArrowRight, ArrowLeft, Loader2, Check, ChevronsUpDown, Search, X,
+  Globe, UserPlus, Upload, LayoutDashboard, Settings, ArrowRight, ArrowLeft, Loader2, Check, ChevronsUpDown, Search, X, ArrowLeftRight,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { GLASS, Z, TRANSITION } from '@/lib/constants/ui'
 import { CountrySelect } from '@/components/globe/contact-edit/CountrySelect'
+import { useIsMobile } from '@/hooks/use-mobile'
 
 const STORAGE_KEY = 'konterra-onboarded'
 
@@ -40,6 +41,46 @@ function parseOffsetMinutes(offset: string): number {
   return sign * (parseInt(match[2]) * 60 + parseInt(match[3] || '0'))
 }
 
+function StepDots({ current, total }: { current: number; total: number }) {
+  return (
+    <div className="flex items-center justify-center gap-1.5">
+      {Array.from({ length: total }, (_, i) => (
+        <div
+          key={i}
+          className={`rounded-full transition-all duration-300 ${
+            i === current
+              ? 'w-6 h-2 bg-primary'
+              : i < current
+                ? 'w-2 h-2 bg-primary/40'
+                : 'w-2 h-2 bg-muted-foreground/20'
+          }`}
+        />
+      ))}
+    </div>
+  )
+}
+
+interface UIOverviewItemProps {
+  icon: React.ReactNode
+  title: string
+  description: string
+  highlight?: boolean
+}
+
+function UIOverviewItem({ icon, title, description, highlight }: UIOverviewItemProps) {
+  return (
+    <div className="flex items-start gap-3">
+      <div className={`h-9 w-9 rounded-md flex items-center justify-center shrink-0 ${highlight ? 'bg-primary/10' : 'bg-muted'}`}>
+        {icon}
+      </div>
+      <div>
+        <p className="text-sm font-medium text-foreground">{title}</p>
+        <p className="text-xs text-muted-foreground">{description}</p>
+      </div>
+    </div>
+  )
+}
+
 interface WelcomeWizardProps {
   onAddContact: (prefill?: Record<string, string>) => void
   onOpenImport: () => void
@@ -62,6 +103,7 @@ export default function WelcomeWizard({ onAddContact, onOpenImport, onComplete }
   const [tzOpen, setTzOpen] = useState(false)
   const [tzSearch, setTzSearch] = useState('')
   const tzInputRef = useRef<HTMLInputElement>(null)
+  const isMobile = useIsMobile()
 
   const timezones = useMemo(() => {
     const list = RAW_TIMEZONES.map(tz => {
@@ -158,14 +200,14 @@ export default function WelcomeWizard({ onAddContact, onOpenImport, onComplete }
           <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
             <Globe className="h-8 w-8 text-primary" />
           </div>
-          <p className="text-sm text-muted-foreground text-center max-w-sm">
+          <p className="text-sm text-muted-foreground text-center max-w-sm px-2">
             Map your contacts across the world, track relationships, and never lose sight of your network.
           </p>
         </div>
       ),
       footer: (
         <DialogFooter>
-          <Button onClick={() => setStep(1)}>
+          <Button onClick={() => setStep(1)} className="w-full sm:w-auto">
             Get started
             <ArrowRight className="h-4 w-4" />
           </Button>
@@ -174,7 +216,7 @@ export default function WelcomeWizard({ onAddContact, onOpenImport, onComplete }
     },
     {
       title: 'Set your home base',
-      description: 'Where are you located? This creates your profile pin on the globe.',
+      description: 'Where are you located? This creates your pin on the globe.',
       content: (
         <div className="space-y-4 py-2">
           <CountrySelect
@@ -189,6 +231,7 @@ export default function WelcomeWizard({ onAddContact, onOpenImport, onComplete }
               value={city}
               onChange={(e) => setCity(e.target.value)}
               placeholder="e.g. Berlin"
+              className="h-10 sm:h-9"
             />
           </div>
           <div className="space-y-2">
@@ -197,7 +240,7 @@ export default function WelcomeWizard({ onAddContact, onOpenImport, onComplete }
               <PopoverTrigger asChild>
                 <button
                   type="button"
-                  className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 text-sm shadow-xs transition-[color,box-shadow] outline-none hover:bg-accent/50 cursor-pointer"
+                  className="flex h-10 sm:h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 text-sm shadow-xs transition-[color,box-shadow] outline-none hover:bg-accent/50 cursor-pointer"
                 >
                   <span className={selectedTzLabel ? 'truncate' : 'text-muted-foreground truncate'}>
                     {selectedTzLabel || 'Select timezone'}
@@ -213,15 +256,15 @@ export default function WelcomeWizard({ onAddContact, onOpenImport, onComplete }
                     value={tzSearch}
                     onChange={(e) => setTzSearch(e.target.value)}
                     placeholder="Search timezone..."
-                    className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground/40 h-9 px-2 outline-none"
+                    className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground/40 h-10 sm:h-9 px-2 outline-none"
                   />
                   {tzSearch && (
-                    <button type="button" onClick={() => setTzSearch('')} className="text-muted-foreground/50 hover:text-muted-foreground">
+                    <button type="button" onClick={() => setTzSearch('')} className="text-muted-foreground/50 hover:text-muted-foreground p-1">
                       <X className="h-3.5 w-3.5" />
                     </button>
                   )}
                 </div>
-                <ScrollArea className="h-[200px]">
+                <ScrollArea className="h-[240px] sm:h-[200px]">
                   <div className="p-1">
                     {filteredTz.map(({ tz, label, offset }) => {
                       const selected = timezone === tz
@@ -230,7 +273,7 @@ export default function WelcomeWizard({ onAddContact, onOpenImport, onComplete }
                           key={tz}
                           type="button"
                           onClick={() => { setTimezone(tz); setTzOpen(false); setTzSearch('') }}
-                          className={`flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-xs cursor-pointer transition-colors ${
+                          className={`flex w-full items-center gap-2 rounded-sm px-2 py-2.5 sm:py-1.5 text-xs cursor-pointer transition-colors ${
                             selected ? 'bg-accent text-foreground' : 'text-foreground hover:bg-accent/50'
                           }`}
                         >
@@ -271,7 +314,7 @@ export default function WelcomeWizard({ onAddContact, onOpenImport, onComplete }
         <div className="flex flex-col gap-3 py-4">
           <button
             onClick={handleCreateManually}
-            className={`${GLASS.control} rounded-lg p-4 text-left ${TRANSITION.color} hover:bg-accent group`}
+            className={`${GLASS.control} rounded-lg p-4 text-left ${TRANSITION.color} hover:bg-accent active:scale-[0.98] transition-transform`}
           >
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
@@ -285,7 +328,7 @@ export default function WelcomeWizard({ onAddContact, onOpenImport, onComplete }
           </button>
           <button
             onClick={handleImport}
-            className={`${GLASS.control} rounded-lg p-4 text-left ${TRANSITION.color} hover:bg-accent group`}
+            className={`${GLASS.control} rounded-lg p-4 text-left ${TRANSITION.color} hover:bg-accent active:scale-[0.98] transition-transform`}
           >
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
@@ -313,46 +356,43 @@ export default function WelcomeWizard({ onAddContact, onOpenImport, onComplete }
       ),
     },
     {
-      title: 'Quick UI overview',
-      description: 'Here is how Konterra is organized.',
+      title: isMobile ? 'How to navigate' : 'Quick UI overview',
+      description: isMobile ? 'Konterra has two views you switch between.' : 'Here is how Konterra is organized.',
       content: (
         <div className="space-y-3 py-2">
-          <div className="flex items-start gap-3">
-            <div className="h-9 w-9 rounded-md bg-muted flex items-center justify-center shrink-0">
-              <LayoutDashboard className="h-4 w-4 text-muted-foreground" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-foreground">Dashboard (left)</p>
-              <p className="text-xs text-muted-foreground">Browse, search, and manage your contacts list</p>
-            </div>
-          </div>
+          <UIOverviewItem
+            icon={<LayoutDashboard className="h-4 w-4 text-muted-foreground" />}
+            title={isMobile ? 'Dashboard' : 'Dashboard (left)'}
+            description={isMobile ? 'Your contacts list, search, and travel log' : 'Browse, search, and manage your contacts list'}
+          />
           <Separator />
-          <div className="flex items-start gap-3">
-            <div className="h-9 w-9 rounded-md bg-muted flex items-center justify-center shrink-0">
-              <Globe className="h-4 w-4 text-muted-foreground" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-foreground">Globe (right)</p>
-              <p className="text-xs text-muted-foreground">See your network plotted on a 3D globe, click pins to view details</p>
-            </div>
-          </div>
+          <UIOverviewItem
+            icon={<Globe className="h-4 w-4 text-muted-foreground" />}
+            title={isMobile ? 'Globe' : 'Globe (right)'}
+            description={isMobile ? 'Your network on a 3D globe with pins and arcs' : 'See your network plotted on a 3D globe, click pins to view details'}
+          />
           <Separator />
-          <div className="flex items-start gap-3">
-            <div className="h-9 w-9 rounded-md bg-muted flex items-center justify-center shrink-0">
-              <Settings className="h-4 w-4 text-muted-foreground" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-foreground">Settings (gear icon)</p>
-              <p className="text-xs text-muted-foreground">Display options, visited countries, import/export, and more</p>
-            </div>
-          </div>
+          {isMobile ? (
+            <UIOverviewItem
+              icon={<ArrowLeftRight className="h-4 w-4 text-primary" />}
+              title="Switch views"
+              description="Use the Globe button in the header or the Dashboard icon in the bottom bar"
+              highlight
+            />
+          ) : (
+            <UIOverviewItem
+              icon={<Settings className="h-4 w-4 text-muted-foreground" />}
+              title="Settings (gear icon)"
+              description="Display options, visited countries, import/export, and more"
+            />
+          )}
         </div>
       ),
       footer: (
         <DialogFooter>
-          <Button onClick={finish}>
+          <Button onClick={finish} className="w-full sm:w-auto">
             <Check className="h-4 w-4" />
-            Done
+            {isMobile ? 'Start exploring' : 'Done'}
           </Button>
         </DialogFooter>
       ),
@@ -362,20 +402,18 @@ export default function WelcomeWizard({ onAddContact, onOpenImport, onComplete }
   const current = steps[step]
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) { if (step >= 2) finish(); else setOpen(false) } }}>
+    <Dialog open={open} onOpenChange={(v) => { if (!v && step >= 2) finish() }}>
       <DialogContent
         showCloseButton={false}
-        className="sm:max-w-md"
+        className="sm:max-w-md max-h-[90dvh] overflow-y-auto"
         style={{ zIndex: Z.modal }}
       >
         <DialogHeader>
-          <div className="flex items-center justify-between">
-            <DialogTitle>{current.title}</DialogTitle>
-            <span className="text-xs text-muted-foreground">{step + 1} / {steps.length}</span>
-          </div>
-          <DialogDescription>{current.description}</DialogDescription>
+          <DialogTitle className="text-center sm:text-left">{current.title}</DialogTitle>
+          <DialogDescription className="text-center sm:text-left">{current.description}</DialogDescription>
         </DialogHeader>
         {current.content}
+        <StepDots current={step} total={steps.length} />
         {current.footer}
       </DialogContent>
     </Dialog>

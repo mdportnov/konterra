@@ -55,7 +55,7 @@ export function CountrySelect({ value, onChange, label, className }: CountrySele
         <PopoverTrigger asChild>
           <button
             type="button"
-            className="flex h-8 w-full items-center justify-between rounded-md border border-input bg-muted/50 px-3 text-sm cursor-pointer hover:bg-accent/50 transition-colors"
+            className="flex h-10 sm:h-8 w-full items-center justify-between rounded-md border border-input bg-muted/50 px-3 text-sm cursor-pointer hover:bg-accent/50 transition-colors"
           >
             <span className={value ? 'truncate' : 'text-muted-foreground/40 truncate'}>
               {value ? `${countryFlag(value)} ${value}` : 'Select country'}
@@ -63,7 +63,7 @@ export function CountrySelect({ value, onChange, label, className }: CountrySele
             <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0 ml-1" />
           </button>
         </PopoverTrigger>
-        <PopoverContent className="w-[220px] p-0" side="bottom" align="start">
+        <PopoverContent className="w-[var(--radix-popover-trigger-width)] min-w-[220px] p-0" side="bottom" align="start">
           <div className="flex items-center border-b border-border px-2">
             <Search className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />
             <input
@@ -71,15 +71,15 @@ export function CountrySelect({ value, onChange, label, className }: CountrySele
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search country..."
-              className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground/40 h-8 px-2 outline-none"
+              className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground/40 h-10 sm:h-8 px-2 outline-none"
             />
             {search && (
-              <button type="button" onClick={() => setSearch('')} className="text-muted-foreground/50 hover:text-muted-foreground">
+              <button type="button" onClick={() => setSearch('')} className="text-muted-foreground/50 hover:text-muted-foreground p-1">
                 <X className="h-3.5 w-3.5" />
               </button>
             )}
           </div>
-          <div className="max-h-[200px] overflow-y-auto p-1">
+          <div className="max-h-[240px] sm:max-h-[200px] overflow-y-auto p-1">
             {filtered.map((c) => {
               const selected = value === c
               return (
@@ -87,7 +87,7 @@ export function CountrySelect({ value, onChange, label, className }: CountrySele
                   key={c}
                   type="button"
                   onClick={() => { onChange(c); setOpen(false); setSearch('') }}
-                  className={`flex w-full items-center gap-1.5 rounded-sm px-2 py-1.5 text-xs text-left cursor-pointer transition-colors ${
+                  className={`flex w-full items-center gap-1.5 rounded-sm px-2 py-2.5 sm:py-1.5 text-xs text-left cursor-pointer transition-colors ${
                     selected ? 'bg-accent text-foreground' : 'text-foreground hover:bg-accent/50'
                   }`}
                 >

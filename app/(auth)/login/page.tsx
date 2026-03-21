@@ -201,7 +201,7 @@ function LoginContent() {
     <div className="min-h-dvh flex items-center justify-center relative">
       <NetworkBackground />
 
-      <div className="login-card relative z-10 w-full max-w-md mx-4 p-8 rounded-xl">
+      <div className="login-card relative z-10 w-full max-w-md mx-4 p-6 sm:p-8 rounded-xl">
         <div className="text-center mb-8">
           <h1 className="font-mono tracking-[0.3em] uppercase text-sm text-white/90">
             Konterra
@@ -270,6 +270,8 @@ function LoginContent() {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="Email address"
                   required
+                  autoComplete="email"
+                  inputMode="email"
                   className="login-input"
                 />
                 <div
@@ -286,6 +288,7 @@ function LoginContent() {
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Password"
                     required={signInStep === 'password'}
+                    autoComplete="current-password"
                     className="login-input w-full"
                   />
                 </div>
@@ -311,6 +314,8 @@ function LoginContent() {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="Email address"
                   required
+                  autoComplete="email"
+                  inputMode="email"
                   className="login-input"
                 />
                 <input
@@ -320,6 +325,7 @@ function LoginContent() {
                   placeholder="Full name"
                   required
                   minLength={2}
+                  autoComplete="name"
                   className="login-input"
                 />
                 <textarea
@@ -349,13 +355,15 @@ function LoginContent() {
             )}
 
             {mode === 'register' && (
-              <form onSubmit={handleRegister} className="space-y-4">
+              <form onSubmit={handleRegister} className="space-y-3 sm:space-y-4">
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="Email address"
                   required
+                  autoComplete="email"
+                  inputMode="email"
                   className="login-input"
                 />
                 <input
@@ -365,6 +373,7 @@ function LoginContent() {
                   placeholder="Full name"
                   required
                   minLength={2}
+                  autoComplete="name"
                   className="login-input"
                 />
                 <input
@@ -374,6 +383,7 @@ function LoginContent() {
                   placeholder="Password (min 8 characters)"
                   required
                   minLength={8}
+                  autoComplete="new-password"
                   className="login-input"
                 />
                 <input
@@ -383,6 +393,7 @@ function LoginContent() {
                   placeholder="Confirm password"
                   required
                   minLength={8}
+                  autoComplete="new-password"
                   className="login-input"
                 />
                 <button

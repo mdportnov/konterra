@@ -53,6 +53,8 @@ interface ContactListSectionProps {
   onSelectionChange?: (ids: Set<string>) => void
   onBulkDelete?: (ids: string[]) => void
   onReloadContacts?: () => void
+  onSwitchToGlobe?: () => void
+  isMobile?: boolean
 }
 
 export default function ContactListSection({
@@ -69,6 +71,8 @@ export default function ContactListSection({
   onSelectionChange,
   onBulkDelete,
   onReloadContacts,
+  onSwitchToGlobe,
+  isMobile,
 }: ContactListSectionProps) {
   const [searchInput, setSearchInput] = useState('')
   const [search, setSearch] = useState('')
@@ -390,6 +394,8 @@ export default function ContactListSection({
           recentInteractions={recentInteractions}
           onAddContact={onAddContact}
           onOpenProfile={onOpenProfile || (() => {})}
+          onSwitchToGlobe={onSwitchToGlobe}
+          isMobile={isMobile}
         />
       )}
       <StatsRow contacts={contacts} loading={contactsLoading} visitedCount={visitedCount} wishlistCount={wishlistCount} />

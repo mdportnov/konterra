@@ -1,11 +1,26 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState, useSyncExternalStore } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Check, Circle, UserPlus, MessageSquare, Link2, Tag, Home } from 'lucide-react'
+import { Check, UserPlus, MessageSquare, Link2, Tag, Home, Globe, X } from 'lucide-react'
 import { GLASS } from '@/lib/constants/ui'
 import type { Contact, ContactConnection } from '@/lib/db/schema'
+
+const GLOBE_HINT_DISMISSED_KEY = 'konterra-globe-hint-dismissed'
+
+function subscribeToStorage(callback: () => void) {
+  window.addEventListener('storage', callback)
+  return () => window.removeEventListener('storage', callback)
+}
+
+function getGlobeHintDismissed() {
+  return localStorage.getItem(GLOBE_HINT_DISMISSED_KEY) === '1'
+}
+
+function getGlobeHintDismissedServer() {
+  return true
+}
 
 interface GettingStartedCardProps {
   contacts: Contact[]
@@ -13,6 +28,8 @@ interface GettingStartedCardProps {
   recentInteractions: { contactName: string }[]
   onAddContact: () => void
   onOpenProfile: () => void
+  onSwitchToGlobe?: () => void
+  isMobile?: boolean
 }
 
 interface Step {
@@ -29,7 +46,13 @@ export default function GettingStartedCard({
   recentInteractions,
   onAddContact,
   onOpenProfile,
+  onSwitchToGlobe,
+  isMobile,
 }: GettingStartedCardProps) {
+  const globeHintDismissedFromStorage = useSyncExternalStore(subscribeToStorage, getGlobeHintDismissed, getGlobeHintDismissedServer)
+  const [globeHintLocallyDismissed, setGlobeHintLocallyDismissed] = useState(false)
+  const globeHintDismissed = globeHintDismissedFromStorage || globeHintLocallyDismissed
+
   const steps = useMemo<Step[]>(() => {
     const hasProfile = contacts.some((c) => c.isSelf)
     const nonSelfContacts = contacts.filter((c) => !c.isSelf)
@@ -77,6 +100,8 @@ export default function GettingStartedCard({
   const completed = steps.filter((s) => s.done).length
   const total = steps.length
   const pct = Math.round((completed / total) * 100)
+
+  const showGlobeHint = isMobile && onSwitchToGlobe && !globeHintDismissed
 
   return (
     <div className={`${GLASS.control} rounded-xl p-4 space-y-3`}>
@@ -133,6 +158,33 @@ export default function GettingStartedCard({
           )
         })}
       </div>
+
+      {showGlobeHint && (
+        <div className="relative flex items-center gap-2.5 rounded-lg bg-primary/5 border border-primary/10 px-3 py-2.5">
+          <button
+            onClick={() => {
+              if (onSwitchToGlobe) onSwitchToGlobe()
+              localStorage.setItem(GLOBE_HINT_DISMISSED_KEY, '1')
+              setGlobeHintLocallyDismissed(true)
+            }}
+            className="flex flex-1 items-center gap-2.5 transition-colors active:scale-[0.98]"
+          >
+            <div className="h-5 w-5 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+              <Globe className="h-3 w-3 text-primary" />
+            </div>
+            <span className="text-[11px] text-foreground">Explore the globe view</span>
+          </button>
+          <button
+            onClick={() => {
+              localStorage.setItem(GLOBE_HINT_DISMISSED_KEY, '1')
+              setGlobeHintLocallyDismissed(true)
+            }}
+            className="shrink-0 text-muted-foreground hover:text-foreground transition-colors p-0.5"
+          >
+            <X className="h-3 w-3" />
+          </button>
+        </div>
+      )}
     </div>
   )
 }
