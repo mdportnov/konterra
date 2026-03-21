@@ -52,6 +52,7 @@ interface ActiveInvite {
 }
 
 interface InvitedUser {
+  id: string
   name: string | null
   image: string | null
   createdAt: string | null
@@ -756,7 +757,10 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
                   <Ticket className="h-3.5 w-3.5 text-muted-foreground/60" />
                   <span className="text-xs font-medium text-muted-foreground/60 uppercase tracking-wider">Invites</span>
                 </div>
-                <span className="text-[10px] text-muted-foreground/60">{inviteUsedCount}/{inviteMaxInvites} used</span>
+                <span className="text-[10px] text-muted-foreground/60">
+                  {inviteUsedCount + activeInvites.length}/{inviteMaxInvites}
+                  {activeInvites.length > 0 ? ` (${activeInvites.length} pending)` : ' used'}
+                </span>
               </div>
 
               {inviteLoading ? (
@@ -765,8 +769,8 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
                 <div className="space-y-2">
                   {invitedUsers.length > 0 && (
                     <div className="space-y-1.5">
-                      {invitedUsers.map((iu, i) => (
-                        <div key={i} className="flex items-center gap-2 rounded-md border border-border bg-muted/30 px-3 py-2">
+                      {invitedUsers.map((iu) => (
+                        <div key={iu.id} className="flex items-center gap-2 rounded-md border border-border bg-muted/30 px-3 py-2">
                           <Avatar className="h-5 w-5">
                             <AvatarImage src={iu.image || undefined} />
                             <AvatarFallback className="text-[8px]">{iu.name?.charAt(0)?.toUpperCase() || '?'}</AvatarFallback>

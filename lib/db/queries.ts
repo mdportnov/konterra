@@ -1139,15 +1139,9 @@ export async function deleteSocialPreviewsByContactId(contactId: string) {
   await db.delete(socialPreviews).where(eq(socialPreviews.contactId, contactId))
 }
 
-export async function getInviteByCode(code: string) {
-  return db.query.invites.findFirst({
-    where: eq(invites.code, code),
-  })
-}
-
 export async function getInviterByCode(code: string) {
   const rows = await db
-    .select({ invite: invites, inviterName: users.name, inviterImage: users.image })
+    .select({ invite: invites, inviterName: users.name })
     .from(invites)
     .innerJoin(users, eq(users.id, invites.createdBy))
     .where(eq(invites.code, code))
@@ -1161,6 +1155,14 @@ export async function getActiveInvitesByUserId(userId: string) {
     .from(invites)
     .where(and(eq(invites.createdBy, userId), sql`${invites.usedBy} is null`, sql`${invites.expiresAt} > now()`))
     .orderBy(desc(invites.createdAt))
+}
+
+export async function getActiveInviteCount(userId: string): Promise<number> {
+  const [{ count }] = await db
+    .select({ count: sql<number>`cast(count(*) as int)` })
+    .from(invites)
+    .where(and(eq(invites.createdBy, userId), sql`${invites.usedBy} is null`, sql`${invites.expiresAt} > now()`))
+  return count
 }
 
 export async function deleteExpiredInvite(userId: string) {
@@ -1194,12 +1196,12 @@ export async function getInviteLimit(userId: string): Promise<number> {
 }
 
 export async function createInvite(userId: string, code: string, expiresAt: Date) {
-  const [usedCount, activeInvites, maxInvites] = await Promise.all([
+  const [usedCount, activeCount, maxInvites] = await Promise.all([
     getUsedInviteCount(userId),
-    getActiveInvitesByUserId(userId),
+    getActiveInviteCount(userId),
     getInviteLimit(userId),
   ])
-  if (usedCount + activeInvites.length >= maxInvites) return { error: 'limit_reached' as const }
+  if (usedCount + activeCount >= maxInvites) return { error: 'limit_reached' as const }
 
   await deleteExpiredInvite(userId)
   const rows = await db
@@ -1260,7 +1262,7 @@ export async function getReferrer(userId: string) {
 
 export async function getAllInvitedUsers(userId: string) {
   return db
-    .select({ name: users.name, image: users.image, createdAt: users.createdAt })
+    .select({ id: users.id, name: users.name, image: users.image, createdAt: users.createdAt })
     .from(users)
     .where(eq(users.invitedBy, userId))
     .orderBy(desc(users.createdAt))

@@ -169,10 +169,11 @@ function LoginContent() {
     setLoading(true)
     try {
       const normalizedEmail = email.toLowerCase().trim()
+      const trimmedName = name.trim()
       const res = await fetch('/api/public/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: normalizedEmail, name, password, inviteCode }),
+        body: JSON.stringify({ email: normalizedEmail, name: trimmedName, password, inviteCode }),
       })
       const data = await res.json()
       if (!res.ok) {
