@@ -171,8 +171,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
   }, [])
 
   const handleTripSaved = useCallback(() => {
-    data.reloadTrips()
-    data.reloadVisitedCountries()
+    Promise.all([data.reloadTrips(), data.reloadVisitedCountries()])
   }, [data.reloadTrips, data.reloadVisitedCountries])
 
   const handleDeleteTrip = useCallback(async (trip: Trip) => {
@@ -183,8 +182,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
       const { toast } = await import('sonner')
       toast.success('Trip deleted')
       tripSelection.clearSelectedTrip()
-      data.reloadTrips()
-      data.reloadVisitedCountries()
+      Promise.all([data.reloadTrips(), data.reloadVisitedCountries()])
     } catch {
       const { toast } = await import('sonner')
       toast.error('Failed to delete trip')
@@ -321,6 +319,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
         open={nav.activePanel === 'settings'}
         onClose={nav.handleCloseSettings}
         initialTab={nav.settingsTab}
+        onTabChange={nav.handleSettingsTabChange}
         displayOptions={displayOptions}
         onDisplayChange={setDisplayOptions}
         defaultTab={dashboardTab}
@@ -417,7 +416,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
       <TripImportDialog
         open={tripImportDialogOpen}
         onOpenChange={setTripImportDialogOpen}
-        onImportComplete={() => { data.reloadTrips(); data.reloadVisitedCountries() }}
+        onImportComplete={() => { Promise.all([data.reloadTrips(), data.reloadVisitedCountries()]) }}
       />
 
       <GlobeFilters

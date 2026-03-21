@@ -3,26 +3,34 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import type { Contact, ContactConnection, ContactCountryConnection } from '@/lib/db/schema'
 import type { ConnectedContact } from '@/components/globe/ContactDetail'
+import type { Tab } from '@/components/globe/settings'
+import { isTab } from '@/components/globe/settings'
 
 export type ActivePanel = 'edit' | 'settings' | 'insights' | null
 export type SidebarView = 'list' | 'detail'
 
-function slugToState(slug?: string[]): { panel: ActivePanel; sidebarView: SidebarView; contactId: string | null; isNew: boolean } {
-  if (!slug || slug.length === 0) return { panel: null, sidebarView: 'list', contactId: null, isNew: false }
-  if (slug[0] === 'settings') return { panel: 'settings', sidebarView: 'list', contactId: null, isNew: false }
-  if (slug[0] === 'contacts') return { panel: null, sidebarView: 'list', contactId: null, isNew: false }
-  if (slug[0] === 'insights') return { panel: 'insights', sidebarView: 'list', contactId: null, isNew: false }
-  if (slug[0] === 'contact') {
-    if (slug[1] === 'new') return { panel: 'edit', sidebarView: 'list', contactId: null, isNew: true }
-    if (slug[2] === 'edit') return { panel: 'edit', sidebarView: 'list', contactId: slug[1], isNew: false }
-    if (slug[1]) return { panel: null, sidebarView: 'detail', contactId: slug[1], isNew: false }
+function slugToState(slug?: string[]): { panel: ActivePanel; sidebarView: SidebarView; contactId: string | null; isNew: boolean; settingsTab: Tab } {
+  if (!slug || slug.length === 0) return { panel: null, sidebarView: 'list', contactId: null, isNew: false, settingsTab: 'settings' }
+  if (slug[0] === 'settings') {
+    const sub = slug[1]
+    const tab: Tab = sub && isTab(sub) ? sub : 'settings'
+    return { panel: 'settings', sidebarView: 'list', contactId: null, isNew: false, settingsTab: tab }
   }
-  return { panel: null, sidebarView: 'list', contactId: null, isNew: false }
+  if (slug[0] === 'contacts') return { panel: null, sidebarView: 'list', contactId: null, isNew: false, settingsTab: 'settings' }
+  if (slug[0] === 'insights') return { panel: 'insights', sidebarView: 'list', contactId: null, isNew: false, settingsTab: 'settings' }
+  if (slug[0] === 'contact') {
+    if (slug[1] === 'new') return { panel: 'edit', sidebarView: 'list', contactId: null, isNew: true, settingsTab: 'settings' }
+    if (slug[2] === 'edit') return { panel: 'edit', sidebarView: 'list', contactId: slug[1], isNew: false, settingsTab: 'settings' }
+    if (slug[1]) return { panel: null, sidebarView: 'detail', contactId: slug[1], isNew: false, settingsTab: 'settings' }
+  }
+  return { panel: null, sidebarView: 'list', contactId: null, isNew: false, settingsTab: 'settings' }
 }
 
-function stateToUrl(panel: ActivePanel, sidebarView: SidebarView, contactId?: string | null): string {
+function stateToUrl(panel: ActivePanel, sidebarView: SidebarView, contactId?: string | null, settingsTab?: Tab): string {
   if (panel === 'edit') return contactId ? `/app/contact/${contactId}/edit` : '/app/contact/new'
-  if (panel === 'settings') return '/app/settings'
+  if (panel === 'settings') {
+    return settingsTab && settingsTab !== 'settings' ? `/app/settings/${settingsTab}` : '/app/settings'
+  }
   if (panel === 'insights') return '/app/insights'
   if (sidebarView === 'detail' && contactId) return `/app/contact/${contactId}`
   return '/app'
@@ -67,6 +75,7 @@ export function usePanelNavigation(
   const [sidebarView, setSidebarView] = useState<SidebarView>(initParsed.sidebarView)
   const [editingContact, setEditingContact] = useState<Contact | null>(null)
   const [flyTarget, setFlyTarget] = useState<{ lat: number; lng: number; ts: number } | null>(null)
+  const [settingsTab, setSettingsTab] = useState<Tab>(initParsed.settingsTab)
 
   useEffect(() => {
     const onPopState = () => {
@@ -95,7 +104,11 @@ export function usePanelNavigation(
         setEditingContact(null)
         if (isMobile) setMobileView('globe')
       }
-      if (s.panel === 'settings' || s.panel === 'insights') {
+      if (s.panel === 'settings') {
+        setSettingsTab(s.settingsTab)
+        if (isMobile) setMobileView('globe')
+      }
+      if (s.panel === 'insights') {
         if (isMobile) setMobileView('globe')
       }
     }
@@ -189,8 +202,6 @@ export function usePanelNavigation(
     if (isMobile) setMobileView('dashboard')
   }, [isMobile, setMobileView])
 
-  const [settingsTab, setSettingsTab] = useState<'profile' | 'settings' | 'countries'>('settings')
-
   const handleOpenSettings = useCallback(() => {
     setSettingsTab('settings')
     setActivePanel('settings')
@@ -201,9 +212,14 @@ export function usePanelNavigation(
   const handleOpenProfile = useCallback(() => {
     setSettingsTab('profile')
     setActivePanel('settings')
-    pushUrl('/app/settings')
+    pushUrl('/app/settings/profile')
     if (isMobile) setMobileView('globe')
   }, [isMobile, setMobileView])
+
+  const handleSettingsTabChange = useCallback((tab: Tab) => {
+    setSettingsTab(tab)
+    replaceUrl(stateToUrl('settings', 'list', null, tab))
+  }, [])
 
   const handleCloseSettings = useCallback(() => {
     setActivePanel(null)
@@ -305,6 +321,7 @@ export function usePanelNavigation(
     settingsTab,
     handleOpenSettings,
     handleOpenProfile,
+    handleSettingsTabChange,
     handleCloseSettings,
     handleOpenInsights,
     handleCloseInsights,

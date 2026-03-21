@@ -115,42 +115,74 @@ export default function ContactDetailContent({
   const [editInteractionData, setEditInteractionData] = useState({ type: '', notes: '', date: '' })
   const [editingCountryTie, setEditingCountryTie] = useState<string | null>(null)
   const [editCountryTieNotes, setEditCountryTieNotes] = useState('')
-  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({ timeline: false, connections: false, favors: false, countryTies: false, profile: false, insights: false })
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>(() => {
+    try {
+      const stored = localStorage.getItem('konterra:detail-sections')
+      if (stored) return JSON.parse(stored)
+    } catch {}
+    return { timeline: false, connections: false, favors: false, countryTies: false, profile: false, insights: false }
+  })
   const [confirmDeleteConnId, setConfirmDeleteConnId] = useState<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)
+  const cacheRef = useRef<Map<string, { interactions: Interaction[]; connections: ContactConnection[]; favors: Favor[]; countryTies: ContactCountryConnection[] }>>(new Map())
 
   const toggleSection = useCallback((key: string) => {
-    setExpandedSections((prev) => ({ ...prev, [key]: !prev[key] }))
+    setExpandedSections((prev) => {
+      const next = { ...prev, [key]: !prev[key] }
+      try { localStorage.setItem('konterra:detail-sections', JSON.stringify(next)) } catch {}
+      return next
+    })
   }, [])
 
   useEffect(() => {
     abortRef.current?.abort()
+    const contactId = contact.id
+
+    const cached = cacheRef.current.get(contactId)
+    if (cached) {
+      setInteractions(cached.interactions)
+      setConnections(cached.connections)
+      setFavorsList(cached.favors)
+      setCountryTies(cached.countryTies)
+      setLoadingInteractions(false)
+      setLoadingConnections(false)
+      setLoadingFavors(false)
+      setLoadingCountryTies(false)
+      return
+    }
+
     const controller = new AbortController()
     abortRef.current = controller
-    const contactId = contact.id
 
     setLoadingInteractions(true)
     setLoadingConnections(true)
     setLoadingFavors(true)
     setLoadingCountryTies(true)
 
+    const results: { interactions?: Interaction[]; connections?: ContactConnection[]; favors?: Favor[]; countryTies?: ContactCountryConnection[] } = {}
+    const maybeCache = () => {
+      if (results.interactions && results.connections && results.favors && results.countryTies) {
+        cacheRef.current.set(contactId, { interactions: results.interactions, connections: results.connections, favors: results.favors, countryTies: results.countryTies })
+      }
+    }
+
     fetchContactInteractions(contactId, controller.signal)
-      .then((data) => { if (!controller.signal.aborted) setInteractions(data) })
+      .then((data) => { if (!controller.signal.aborted) { setInteractions(data); results.interactions = data; maybeCache() } })
       .catch((e) => { if (!controller.signal.aborted && e.name !== 'AbortError') toast.error('Failed to load interactions') })
       .finally(() => { if (!controller.signal.aborted) setLoadingInteractions(false) })
 
     fetchContactConnections(contactId, controller.signal)
-      .then((data) => { if (!controller.signal.aborted) setConnections(data) })
+      .then((data) => { if (!controller.signal.aborted) { setConnections(data); results.connections = data; maybeCache() } })
       .catch((e) => { if (!controller.signal.aborted && e.name !== 'AbortError') toast.error('Failed to load connections') })
       .finally(() => { if (!controller.signal.aborted) setLoadingConnections(false) })
 
     fetchContactFavors(contactId, controller.signal)
-      .then((data) => { if (!controller.signal.aborted) setFavorsList(data) })
+      .then((data) => { if (!controller.signal.aborted) { setFavorsList(data); results.favors = data; maybeCache() } })
       .catch((e) => { if (!controller.signal.aborted && e.name !== 'AbortError') toast.error('Failed to load favors') })
       .finally(() => { if (!controller.signal.aborted) setLoadingFavors(false) })
 
     fetchContactCountryConnections(contactId, controller.signal)
-      .then((data) => { if (!controller.signal.aborted) setCountryTies(data) })
+      .then((data) => { if (!controller.signal.aborted) { setCountryTies(data); results.countryTies = data; maybeCache() } })
       .catch((e) => { if (!controller.signal.aborted && e.name !== 'AbortError') toast.error('Failed to load country ties') })
       .finally(() => { if (!controller.signal.aborted) setLoadingCountryTies(false) })
 
@@ -190,6 +222,10 @@ export default function ContactDetailContent({
     })
   }
 
+  const invalidateCache = useCallback(() => {
+    cacheRef.current.delete(contact.id)
+  }, [contact.id])
+
   const handleAddInteraction = async () => {
     setSavingInteraction(true)
     try {
@@ -200,6 +236,7 @@ export default function ContactDetailContent({
       })
       if (res.ok) {
         const item = await res.json()
+        invalidateCache()
         setInteractions((prev) => [item, ...prev])
         setShowAddInteraction(false)
         setNewInteraction({ type: 'meeting', notes: '', date: new Date().toISOString().slice(0, 10) })
@@ -223,6 +260,7 @@ export default function ContactDetailContent({
       })
       if (res.ok) {
         const conn = await res.json()
+        invalidateCache()
         setConnections((prev) => [...prev, conn])
         setShowAddConnection(false)
         setNewConnection({ targetContactId: '', connectionType: 'knows', strength: 3, notes: '' })
@@ -248,6 +286,7 @@ export default function ContactDetailContent({
       })
       if (res.ok) {
         const favor = await res.json()
+        invalidateCache()
         setFavorsList((prev) => [favor, ...prev])
         setShowAddFavor(false)
         setNewFavor({ direction: 'given', type: 'introduction', description: '' })
@@ -271,6 +310,7 @@ export default function ContactDetailContent({
       })
       if (res.ok) {
         const item = await res.json()
+        invalidateCache()
         const updated = [...countryTies, item]
         setCountryTies(updated)
         setShowAddCountryTie(false)
@@ -288,6 +328,7 @@ export default function ContactDetailContent({
   const handleDeleteCountryTie = (connectionId: string) => {
     const removed = countryTies.find((t) => t.id === connectionId)
     if (!removed) return
+    invalidateCache()
     const updated = countryTies.filter((t) => t.id !== connectionId)
     setCountryTies(updated)
     onCountryConnectionsChange?.(contact.id, updated)
@@ -336,6 +377,7 @@ export default function ContactDetailContent({
       })
       if (res.ok) {
         const updated = await res.json()
+        invalidateCache()
         setInteractions((prev) => prev.map((i) => (i.id === interactionId ? updated : i)))
         setEditingInteraction(null)
         toast.success('Interaction updated')
@@ -348,6 +390,7 @@ export default function ContactDetailContent({
   const handleDeleteInteraction = (interactionId: string) => {
     const removed = interactions.find((i) => i.id === interactionId)
     if (!removed) return
+    invalidateCache()
     setInteractions((prev) => prev.filter((i) => i.id !== interactionId))
 
     let cancelled = false
@@ -387,6 +430,7 @@ export default function ContactDetailContent({
       })
       if (res.ok) {
         const updated = await res.json()
+        invalidateCache()
         setFavorsList((prev) => prev.map((f) => (f.id === favor.id ? updated : f)))
       }
     } catch {
@@ -397,6 +441,7 @@ export default function ContactDetailContent({
   const handleDeleteFavor = (favorId: string) => {
     const removed = favorsList.find((f) => f.id === favorId)
     if (!removed) return
+    invalidateCache()
     setFavorsList((prev) => prev.filter((f) => f.id !== favorId))
 
     let cancelled = false
@@ -428,6 +473,7 @@ export default function ContactDetailContent({
   const handleDeleteConnection = (connectionId: string) => {
     const removed = connections.find((c) => c.id === connectionId)
     if (!removed) return
+    invalidateCache()
     setConnections((prev) => prev.filter((c) => c.id !== connectionId))
 
     let cancelled = false
@@ -465,6 +511,7 @@ export default function ContactDetailContent({
       })
       if (res.ok) {
         const updated = await res.json()
+        invalidateCache()
         const newTies = countryTies.map((t) => (t.id === tieId ? updated : t))
         setCountryTies(newTies)
         setEditingCountryTie(null)

@@ -92,10 +92,7 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
   const [generatingInvite, setGeneratingInvite] = useState(false)
 
   useEffect(() => {
-    if (!open) {
-      fetched.current = false
-      return
-    }
+    if (!open) return
     if (fetched.current) return
     fetched.current = true
     setProfileError(false)
@@ -126,6 +123,10 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
       .catch(() => { setActiveInvites([]); setInvitedUsers([]) })
       .finally(() => setInviteLoading(false))
   }, [open])
+
+  useEffect(() => {
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
+  }, [])
 
   const searchCity = useCallback((query: string) => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
