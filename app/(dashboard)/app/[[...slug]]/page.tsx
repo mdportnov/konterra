@@ -294,7 +294,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
         selectedTripId={tripSelection.selectedTripId}
       />
 
-      {!data.loading && data.contacts.length === 0 && (
+      {!data.loading && data.contacts.filter(c => !c.isSelf).length === 0 && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ zIndex: Z.controls }}>
           <div className={`${GLASS.panel} rounded-2xl p-6 text-center pointer-events-auto max-w-xs`}>
             <p className="text-sm font-medium text-foreground mb-1">No contacts yet</p>
@@ -305,14 +305,6 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
             </div>
           </div>
         </div>
-      )}
-
-      {!data.loading && data.contacts.length === 0 && (
-        <WelcomeWizard
-          onAddContact={nav.handleAddContact}
-          onOpenImport={() => setImportDialogOpen(true)}
-          onComplete={data.reloadContacts}
-        />
       )}
 
       <ContactEditPanel
@@ -568,6 +560,13 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
             {globeSection}
           </div>
         </div>
+        {!data.loading && (
+          <WelcomeWizard
+            onAddContact={nav.handleAddContact}
+            onOpenImport={() => setImportDialogOpen(true)}
+            onComplete={data.reloadContacts}
+          />
+        )}
         {commandMenu}
       </div>
     )
@@ -608,6 +607,13 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
       <div className="relative flex-1 overflow-hidden globe-bg">
         {globeSection}
       </div>
+      {!data.loading && (
+        <WelcomeWizard
+          onAddContact={nav.handleAddContact}
+          onOpenImport={() => setImportDialogOpen(true)}
+          onComplete={data.reloadContacts}
+        />
+      )}
       {commandMenu}
     </div>
   )

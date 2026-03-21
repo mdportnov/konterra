@@ -43,7 +43,7 @@ function parseOffsetMinutes(offset: string): number {
 
 function StepDots({ current, total }: { current: number; total: number }) {
   return (
-    <div className="flex items-center justify-center gap-1.5 py-2">
+    <div className="flex items-center justify-center gap-1.5">
       {Array.from({ length: total }, (_, i) => (
         <div
           key={i}
@@ -56,6 +56,27 @@ function StepDots({ current, total }: { current: number; total: number }) {
           }`}
         />
       ))}
+    </div>
+  )
+}
+
+interface UIOverviewItemProps {
+  icon: React.ReactNode
+  title: string
+  description: string
+  highlight?: boolean
+}
+
+function UIOverviewItem({ icon, title, description, highlight }: UIOverviewItemProps) {
+  return (
+    <div className="flex items-start gap-3">
+      <div className={`h-9 w-9 rounded-md flex items-center justify-center shrink-0 ${highlight ? 'bg-primary/10' : 'bg-muted'}`}>
+        {icon}
+      </div>
+      <div>
+        <p className="text-sm font-medium text-foreground">{title}</p>
+        <p className="text-xs text-muted-foreground">{description}</p>
+      </div>
     </div>
   )
 }
@@ -170,16 +191,14 @@ export default function WelcomeWizard({ onAddContact, onOpenImport, onComplete }
 
   if (!open) return null
 
-  const TOTAL_STEPS = 4
-
   const steps = [
     {
       title: 'Welcome to Konterra',
       description: 'Your personal network, visualized on a globe. Let\'s get you set up in a few quick steps.',
       content: (
-        <div className="flex flex-col items-center gap-4 py-6 sm:py-6">
-          <div className="h-16 w-16 sm:h-16 sm:w-16 rounded-full bg-primary/10 flex items-center justify-center">
-            <Globe className="h-8 w-8 sm:h-8 sm:w-8 text-primary" />
+        <div className="flex flex-col items-center gap-4 py-6">
+          <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
+            <Globe className="h-8 w-8 text-primary" />
           </div>
           <p className="text-sm text-muted-foreground text-center max-w-sm px-2">
             Map your contacts across the world, track relationships, and never lose sight of your network.
@@ -197,7 +216,7 @@ export default function WelcomeWizard({ onAddContact, onOpenImport, onComplete }
     },
     {
       title: 'Set your home base',
-      description: 'Where are you located? This creates your profile pin on the globe.',
+      description: 'Where are you located? This creates your pin on the globe.',
       content: (
         <div className="space-y-4 py-2">
           <CountrySelect
@@ -295,7 +314,7 @@ export default function WelcomeWizard({ onAddContact, onOpenImport, onComplete }
         <div className="flex flex-col gap-3 py-4">
           <button
             onClick={handleCreateManually}
-            className={`${GLASS.control} rounded-lg p-4 text-left ${TRANSITION.color} hover:bg-accent group active:scale-[0.98] transition-transform`}
+            className={`${GLASS.control} rounded-lg p-4 text-left ${TRANSITION.color} hover:bg-accent active:scale-[0.98] transition-transform`}
           >
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
@@ -309,7 +328,7 @@ export default function WelcomeWizard({ onAddContact, onOpenImport, onComplete }
           </button>
           <button
             onClick={handleImport}
-            className={`${GLASS.control} rounded-lg p-4 text-left ${TRANSITION.color} hover:bg-accent group active:scale-[0.98] transition-transform`}
+            className={`${GLASS.control} rounded-lg p-4 text-left ${TRANSITION.color} hover:bg-accent active:scale-[0.98] transition-transform`}
           >
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
@@ -338,70 +357,35 @@ export default function WelcomeWizard({ onAddContact, onOpenImport, onComplete }
     },
     {
       title: isMobile ? 'How to navigate' : 'Quick UI overview',
-      description: isMobile ? 'Konterra has two main views you can switch between.' : 'Here is how Konterra is organized.',
-      content: isMobile ? (
+      description: isMobile ? 'Konterra has two views you switch between.' : 'Here is how Konterra is organized.',
+      content: (
         <div className="space-y-3 py-2">
-          <div className="flex items-start gap-3">
-            <div className="h-9 w-9 rounded-md bg-muted flex items-center justify-center shrink-0">
-              <LayoutDashboard className="h-4 w-4 text-muted-foreground" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-foreground">Dashboard</p>
-              <p className="text-xs text-muted-foreground">Your contacts list, search, and travel log</p>
-            </div>
-          </div>
+          <UIOverviewItem
+            icon={<LayoutDashboard className="h-4 w-4 text-muted-foreground" />}
+            title={isMobile ? 'Dashboard' : 'Dashboard (left)'}
+            description={isMobile ? 'Your contacts list, search, and travel log' : 'Browse, search, and manage your contacts list'}
+          />
           <Separator />
-          <div className="flex items-start gap-3">
-            <div className="h-9 w-9 rounded-md bg-muted flex items-center justify-center shrink-0">
-              <Globe className="h-4 w-4 text-muted-foreground" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-foreground">Globe</p>
-              <p className="text-xs text-muted-foreground">Your network on a 3D globe with pins and arcs</p>
-            </div>
-          </div>
+          <UIOverviewItem
+            icon={<Globe className="h-4 w-4 text-muted-foreground" />}
+            title={isMobile ? 'Globe' : 'Globe (right)'}
+            description={isMobile ? 'Your network on a 3D globe with pins and arcs' : 'See your network plotted on a 3D globe, click pins to view details'}
+          />
           <Separator />
-          <div className="flex items-start gap-3">
-            <div className="h-9 w-9 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
-              <ArrowLeftRight className="h-4 w-4 text-primary" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-foreground">Switch views</p>
-              <p className="text-xs text-muted-foreground">Tap the globe icon in the header or the dashboard icon in the bottom bar to switch</p>
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div className="space-y-3 py-2">
-          <div className="flex items-start gap-3">
-            <div className="h-9 w-9 rounded-md bg-muted flex items-center justify-center shrink-0">
-              <LayoutDashboard className="h-4 w-4 text-muted-foreground" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-foreground">Dashboard (left)</p>
-              <p className="text-xs text-muted-foreground">Browse, search, and manage your contacts list</p>
-            </div>
-          </div>
-          <Separator />
-          <div className="flex items-start gap-3">
-            <div className="h-9 w-9 rounded-md bg-muted flex items-center justify-center shrink-0">
-              <Globe className="h-4 w-4 text-muted-foreground" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-foreground">Globe (right)</p>
-              <p className="text-xs text-muted-foreground">See your network plotted on a 3D globe, click pins to view details</p>
-            </div>
-          </div>
-          <Separator />
-          <div className="flex items-start gap-3">
-            <div className="h-9 w-9 rounded-md bg-muted flex items-center justify-center shrink-0">
-              <Settings className="h-4 w-4 text-muted-foreground" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-foreground">Settings (gear icon)</p>
-              <p className="text-xs text-muted-foreground">Display options, visited countries, import/export, and more</p>
-            </div>
-          </div>
+          {isMobile ? (
+            <UIOverviewItem
+              icon={<ArrowLeftRight className="h-4 w-4 text-primary" />}
+              title="Switch views"
+              description="Use the Globe button in the header or the Dashboard icon in the bottom bar"
+              highlight
+            />
+          ) : (
+            <UIOverviewItem
+              icon={<Settings className="h-4 w-4 text-muted-foreground" />}
+              title="Settings (gear icon)"
+              description="Display options, visited countries, import/export, and more"
+            />
+          )}
         </div>
       ),
       footer: (
@@ -418,18 +402,18 @@ export default function WelcomeWizard({ onAddContact, onOpenImport, onComplete }
   const current = steps[step]
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) { if (step >= 2) finish(); else setOpen(false) } }}>
+    <Dialog open={open} onOpenChange={(v) => { if (!v && step >= 2) finish() }}>
       <DialogContent
         showCloseButton={false}
         className="sm:max-w-md max-h-[90dvh] overflow-y-auto"
         style={{ zIndex: Z.modal }}
       >
-        <StepDots current={step} total={TOTAL_STEPS} />
         <DialogHeader>
           <DialogTitle className="text-center sm:text-left">{current.title}</DialogTitle>
           <DialogDescription className="text-center sm:text-left">{current.description}</DialogDescription>
         </DialogHeader>
         {current.content}
+        <StepDots current={step} total={steps.length} />
         {current.footer}
       </DialogContent>
     </Dialog>

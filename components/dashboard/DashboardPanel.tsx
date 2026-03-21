@@ -143,6 +143,7 @@ export default function DashboardPanel({
             onBulkDelete={onBulkDelete}
             onReloadContacts={onReloadContacts}
             onSwitchToGlobe={onSwitchToGlobe}
+            isMobile={isMobile}
           />
         )}
       </ScrollArea>

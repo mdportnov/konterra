@@ -63,7 +63,7 @@ export function CountrySelect({ value, onChange, label, className }: CountrySele
             <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0 ml-1" />
           </button>
         </PopoverTrigger>
-        <PopoverContent className="w-[var(--radix-popover-trigger-width)] sm:w-[220px] p-0" side="bottom" align="start">
+        <PopoverContent className="w-[var(--radix-popover-trigger-width)] min-w-[220px] p-0" side="bottom" align="start">
           <div className="flex items-center border-b border-border px-2">
             <Search className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />
             <input
