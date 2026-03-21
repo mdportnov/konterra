@@ -1,6 +1,6 @@
 import { auth } from '@/auth'
 import { unauthorized, success, serverError } from '@/lib/api-utils'
-import { getActiveInviteByUserId, createInvite, getAllInvitedUsers, getUsedInviteCount, getInviteLimit } from '@/lib/db/queries'
+import { getActiveInvitesByUserId, createInvite, getAllInvitedUsers, getUsedInviteCount, getInviteLimit } from '@/lib/db/queries'
 import { randomBytes } from 'crypto'
 import { NextResponse } from 'next/server'
 
@@ -9,19 +9,15 @@ export async function GET() {
   if (!session?.user?.id) return unauthorized()
 
   try {
-    const [activeInvite, usedCount, maxInvites, invitedUsers] = await Promise.all([
-      getActiveInviteByUserId(session.user.id),
+    const [activeInvites, usedCount, maxInvites, invitedUsers] = await Promise.all([
+      getActiveInvitesByUserId(session.user.id),
       getUsedInviteCount(session.user.id),
       getInviteLimit(session.user.id),
       getAllInvitedUsers(session.user.id),
     ])
 
     return success({
-      activeInvite: activeInvite ? {
-        code: activeInvite.code,
-        expiresAt: activeInvite.expiresAt,
-        createdAt: activeInvite.createdAt,
-      } : null,
+      activeInvites,
       invitedUsers,
       usedCount,
       maxInvites,
@@ -45,10 +41,10 @@ export async function POST() {
       if (result.error === 'limit_reached') {
         return NextResponse.json({ error: 'Invite limit reached' }, { status: 403 })
       }
-      return NextResponse.json({ error: 'You already have an active invite' }, { status: 409 })
+      return NextResponse.json({ error: 'Failed to create invite' }, { status: 500 })
     }
 
-    return success({ code: result.invite.code, expiresAt: result.invite.expiresAt, createdAt: result.invite.createdAt, status: 'active' }, 201)
+    return success({ code: result.invite.code, expiresAt: result.invite.expiresAt, createdAt: result.invite.createdAt }, 201)
   } catch (err) {
     console.error('[POST /api/invite]', err)
     return serverError('Failed to create invite')

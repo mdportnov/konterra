@@ -48,6 +48,7 @@ function LoginContent() {
   const searchParams = useSearchParams()
 
   const inviteCode = searchParams.get('invite')
+  const [inviteLoading, setInviteLoading] = useState(!!inviteCode)
 
   useEffect(() => {
     if (!inviteCode) return
@@ -72,6 +73,7 @@ function LoginContent() {
         if (err instanceof DOMException && err.name === 'AbortError') return
         toast.error('Invalid invite link')
       })
+      .finally(() => setInviteLoading(false))
     return () => controller.abort()
   }, [inviteCode])
 
@@ -209,6 +211,13 @@ function LoginContent() {
           </p>
         </div>
 
+        {inviteLoading ? (
+          <div className="flex flex-col items-center justify-center py-12">
+            <div className="h-5 w-5 border-2 border-white/20 border-t-white/60 rounded-full animate-spin" />
+            <p className="font-mono text-xs text-white/40 mt-4">Validating invite...</p>
+          </div>
+        ) : (
+        <>
         {showTabs && (
           <div className="flex gap-0 mb-8 border-b border-white/10">
             <button
@@ -404,6 +413,8 @@ function LoginContent() {
             )}
           </div>
         </div>
+        </>
+        )}
 
         <p className="text-center font-mono text-[10px] text-white/25 mt-8">
           Access is by invitation only. All requests are manually reviewed.

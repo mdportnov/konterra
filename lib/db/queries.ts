@@ -1,6 +1,6 @@
 import { db } from './index'
 import { users, contacts, interactions, contactConnections, contactCountryConnections, introductions, favors, visitedCountries, waitlist, tags, trips, countryWishlist, appSettings, socialPreviews, invites } from './schema'
-import { and, arrayContains, desc, eq, inArray, isNotNull, or, sql } from 'drizzle-orm'
+import { and, arrayContains, desc, eq, inArray, or, sql } from 'drizzle-orm'
 import type { NewContact, NewContactConnection, NewContactCountryConnection, NewIntroduction, NewFavor, NewTrip, NewCountryWishlistEntry, NewSocialPreview } from './schema'
 import { DEFAULT_MAX_INVITES, SETTING_KEY_MAX_INVITES } from '@/lib/constants/invites'
 
@@ -895,7 +895,7 @@ export async function getAllUsers() {
       tripCount: sql<number>`cast((select count(*) from trips where trips.user_id = users.id) as int)`,
       visitedCountryCount: sql<number>`cast((select count(*) from visited_countries where visited_countries.user_id = users.id) as int)`,
       visitedCityCount: sql<number>`cast((select count(distinct trips.city) from trips where trips.user_id = users.id) as int)`,
-      usedInviteCount: sql<number>`cast((select count(*) from invites where invites.created_by = users.id and invites.used_by is not null) as int)`,
+      usedInviteCount: sql<number>`cast((select count(*) from users u2 where u2.invited_by = users.id) as int)`,
     })
     .from(users)
     .orderBy(desc(users.createdAt))
@@ -1155,17 +1155,12 @@ export async function getInviterByCode(code: string) {
   return rows[0] ?? null
 }
 
-export async function getActiveInviteByUserId(userId: string) {
-  return db.query.invites.findFirst({
-    where: and(eq(invites.createdBy, userId), sql`${invites.usedBy} is null`, sql`${invites.expiresAt} > now()`),
-  })
-}
-
-export async function getInviteByUserId(userId: string) {
-  return db.query.invites.findFirst({
-    where: eq(invites.createdBy, userId),
-    orderBy: desc(invites.createdAt),
-  })
+export async function getActiveInvitesByUserId(userId: string) {
+  return db
+    .select({ code: invites.code, expiresAt: invites.expiresAt, createdAt: invites.createdAt })
+    .from(invites)
+    .where(and(eq(invites.createdBy, userId), sql`${invites.usedBy} is null`, sql`${invites.expiresAt} > now()`))
+    .orderBy(desc(invites.createdAt))
 }
 
 export async function deleteExpiredInvite(userId: string) {
@@ -1177,8 +1172,8 @@ export async function deleteExpiredInvite(userId: string) {
 export async function getUsedInviteCount(userId: string): Promise<number> {
   const [{ count }] = await db
     .select({ count: sql<number>`cast(count(*) as int)` })
-    .from(invites)
-    .where(and(eq(invites.createdBy, userId), isNotNull(invites.usedBy)))
+    .from(users)
+    .where(eq(users.invitedBy, userId))
   return count
 }
 
@@ -1199,21 +1194,19 @@ export async function getInviteLimit(userId: string): Promise<number> {
 }
 
 export async function createInvite(userId: string, code: string, expiresAt: Date) {
-  const active = await getActiveInviteByUserId(userId)
-  if (active) return { error: 'active_exists' as const }
-
-  const [usedCount, maxInvites] = await Promise.all([
+  const [usedCount, activeInvites, maxInvites] = await Promise.all([
     getUsedInviteCount(userId),
+    getActiveInvitesByUserId(userId),
     getInviteLimit(userId),
   ])
-  if (usedCount >= maxInvites) return { error: 'limit_reached' as const }
+  if (usedCount + activeInvites.length >= maxInvites) return { error: 'limit_reached' as const }
 
   await deleteExpiredInvite(userId)
   const rows = await db
     .insert(invites)
     .values({ createdBy: userId, code, expiresAt })
     .returning()
-  return rows[0] ? { invite: rows[0] } : { error: 'active_exists' as const }
+  return rows[0] ? { invite: rows[0] } : { error: 'insert_failed' as const }
 }
 
 export async function registerViaInvite(data: { email: string; name: string; password: string }, code: string) {
@@ -1268,8 +1261,7 @@ export async function getReferrer(userId: string) {
 export async function getAllInvitedUsers(userId: string) {
   return db
     .select({ name: users.name, image: users.image, createdAt: users.createdAt })
-    .from(invites)
-    .innerJoin(users, eq(users.id, invites.usedBy))
-    .where(eq(invites.createdBy, userId))
+    .from(users)
+    .where(eq(users.invitedBy, userId))
     .orderBy(desc(users.createdAt))
 }

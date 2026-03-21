@@ -83,7 +83,7 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
   const [usernameValue, setUsernameValue] = useState('')
   const [savingUsername, setSavingUsername] = useState(false)
 
-  const [activeInvite, setActiveInvite] = useState<ActiveInvite | null>(null)
+  const [activeInvites, setActiveInvites] = useState<ActiveInvite[]>([])
   const [invitedUsers, setInvitedUsers] = useState<InvitedUser[]>([])
   const [inviteUsedCount, setInviteUsedCount] = useState(0)
   const [inviteMaxInvites, setInviteMaxInvites] = useState(3)
@@ -117,12 +117,12 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
     fetch('/api/invite')
       .then((r) => r.json())
       .then((data) => {
-        setActiveInvite(data.activeInvite ?? null)
+        setActiveInvites(data.activeInvites ?? [])
         setInvitedUsers(data.invitedUsers ?? [])
         setInviteUsedCount(data.usedCount ?? 0)
         setInviteMaxInvites(data.maxInvites ?? 3)
       })
-      .catch(() => { setActiveInvite(null); setInvitedUsers([]) })
+      .catch(() => { setActiveInvites([]); setInvitedUsers([]) })
       .finally(() => setInviteLoading(false))
   }, [open])
 
@@ -342,8 +342,15 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
         toast.error(data.error || 'Failed to generate invite')
         return
       }
-      setActiveInvite({ code: data.code, expiresAt: data.expiresAt, createdAt: data.createdAt })
-      toast.success('Invite link generated')
+      const invite = { code: data.code, expiresAt: data.expiresAt, createdAt: data.createdAt }
+      setActiveInvites((prev) => [invite, ...prev])
+      const url = `${window.location.origin}/login?invite=${data.code}`
+      try {
+        await navigator.clipboard.writeText(url)
+        toast.success('Invite link generated and copied')
+      } catch {
+        toast.success('Invite link generated')
+      }
     } catch {
       toast.error('Failed to generate invite')
     } finally {
@@ -351,11 +358,10 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
     }
   }
 
-  const inviteLimitReached = inviteUsedCount >= inviteMaxInvites
+  const inviteLimitReached = inviteUsedCount + activeInvites.length >= inviteMaxInvites
 
-  const handleCopyInvite = async () => {
-    if (!activeInvite?.code) return
-    const url = `${window.location.origin}/login?invite=${activeInvite.code}`
+  const handleCopyInvite = async (code: string) => {
+    const url = `${window.location.origin}/login?invite=${code}`
     try {
       await navigator.clipboard.writeText(url)
       toast.success('Invite link copied')
@@ -378,9 +384,8 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
   const isPublic = user?.profileVisibility === 'public'
   const hasUsername = !!user?.username
 
-  const inviteExpiresIn = activeInvite?.expiresAt
-    ? Math.max(0, Math.ceil((new Date(activeInvite.expiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
-    : null
+  const getExpiresInDays = (expiresAt: string) =>
+    Math.max(0, Math.ceil((new Date(expiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
 
   return (
     <div className="flex flex-col h-full">
@@ -777,25 +782,36 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
                     </div>
                   )}
 
-                  {activeInvite ? (
+                  {activeInvites.length > 0 && (
                     <div className="space-y-1.5">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full h-8 text-xs"
-                        onClick={handleCopyInvite}
-                      >
-                        <Copy className="h-3 w-3 mr-1.5" />
-                        Copy invite link
-                      </Button>
-                      <p className="text-[10px] text-muted-foreground/60 text-center">
-                        {inviteExpiresIn === 0 ? 'Expires today' : `Expires in ${inviteExpiresIn} ${inviteExpiresIn === 1 ? 'day' : 'days'}`}
-                      </p>
+                      {activeInvites.map((inv) => {
+                        const days = getExpiresInDays(inv.expiresAt)
+                        return (
+                          <div key={inv.code} className="space-y-1">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="w-full h-8 text-xs"
+                              onClick={() => handleCopyInvite(inv.code)}
+                            >
+                              <Copy className="h-3 w-3 mr-1.5" />
+                              Copy invite link
+                            </Button>
+                            <p className="text-[10px] text-muted-foreground/60 text-center">
+                              {days === 0 ? 'Expires today' : `Expires in ${days} ${days === 1 ? 'day' : 'days'}`}
+                            </p>
+                          </div>
+                        )
+                      })}
                     </div>
-                  ) : inviteLimitReached ? (
-                    <p className="text-xs text-muted-foreground/60 text-center py-1">
-                      All invites used
-                    </p>
+                  )}
+
+                  {inviteLimitReached ? (
+                    activeInvites.length === 0 && (
+                      <p className="text-xs text-muted-foreground/60 text-center py-1">
+                        All invites used
+                      </p>
+                    )
                   ) : (
                     <Button
                       variant="outline"
