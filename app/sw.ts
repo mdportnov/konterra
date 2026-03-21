@@ -39,11 +39,20 @@ const serwist = new Serwist({
       }),
     },
     {
+      matcher: ({ url, request }) =>
+        request.method === "GET" &&
+        /^\/api\/(contacts|connections|visited-countries|wishlist-countries|country-connections|tags|trips|interactions|favors)\b/.test(url.pathname),
+      handler: new StaleWhileRevalidate({
+        cacheName: "globe-api-data",
+        plugins: [new ExpirationPlugin({ maxEntries: 32, maxAgeSeconds: 7 * 24 * 60 * 60 })],
+      }),
+    },
+    {
       matcher: /\/api\//i,
       handler: new NetworkOnly(),
     },
     {
-      matcher: ({ request, url }) => request.mode === "navigate" && ["/", "/login", "/offline", "/privacy"].includes(url.pathname),
+      matcher: ({ request, url }) => request.mode === "navigate" && ["/", "/login", "/offline", "/privacy", "/app"].includes(url.pathname),
       handler: new NetworkFirst({
         cacheName: "pages",
         plugins: [new ExpirationPlugin({ maxEntries: 16, maxAgeSeconds: 30 * 24 * 60 * 60 })],
