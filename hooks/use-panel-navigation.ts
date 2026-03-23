@@ -11,10 +11,14 @@ export type SidebarView = 'list' | 'detail'
 
 function slugToState(slug?: string[]): { panel: ActivePanel; sidebarView: SidebarView; contactId: string | null; isNew: boolean; settingsTab: Tab } {
   if (!slug || slug.length === 0) return { panel: null, sidebarView: 'list', contactId: null, isNew: false, settingsTab: 'settings' }
+  if (slug[0] === 'profile') return { panel: 'settings', sidebarView: 'list', contactId: null, isNew: false, settingsTab: 'profile' }
+  if (slug[0] === 'countries') return { panel: 'settings', sidebarView: 'list', contactId: null, isNew: false, settingsTab: 'countries' }
   if (slug[0] === 'settings') {
     const sub = slug[1]
-    const tab: Tab = sub && isTab(sub) ? sub : 'settings'
-    return { panel: 'settings', sidebarView: 'list', contactId: null, isNew: false, settingsTab: tab }
+    if (sub === 'profile' || sub === 'countries') {
+      return { panel: 'settings', sidebarView: 'list', contactId: null, isNew: false, settingsTab: sub }
+    }
+    return { panel: 'settings', sidebarView: 'list', contactId: null, isNew: false, settingsTab: 'settings' }
   }
   if (slug[0] === 'contacts') return { panel: null, sidebarView: 'list', contactId: null, isNew: false, settingsTab: 'settings' }
   if (slug[0] === 'insights') return { panel: 'insights', sidebarView: 'list', contactId: null, isNew: false, settingsTab: 'settings' }
@@ -29,7 +33,9 @@ function slugToState(slug?: string[]): { panel: ActivePanel; sidebarView: Sideba
 function stateToUrl(panel: ActivePanel, sidebarView: SidebarView, contactId?: string | null, settingsTab?: Tab): string {
   if (panel === 'edit') return contactId ? `/app/contact/${contactId}/edit` : '/app/contact/new'
   if (panel === 'settings') {
-    return settingsTab && settingsTab !== 'settings' ? `/app/settings/${settingsTab}` : '/app/settings'
+    if (settingsTab === 'profile') return '/app/profile'
+    if (settingsTab === 'countries') return '/app/countries'
+    return '/app/settings'
   }
   if (panel === 'insights') return '/app/insights'
   if (sidebarView === 'detail' && contactId) return `/app/contact/${contactId}`
@@ -212,7 +218,7 @@ export function usePanelNavigation(
   const handleOpenProfile = useCallback(() => {
     setSettingsTab('profile')
     setActivePanel('settings')
-    pushUrl('/app/settings/profile')
+    pushUrl('/app/profile')
     if (isMobile) setMobileView('globe')
   }, [isMobile, setMobileView])
 
