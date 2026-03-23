@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
-import { LogOut, Loader2, Pencil, Check, X, Users, Globe, Link2, Shield, MapPin, Copy, ExternalLink, Ticket, UserPlus } from 'lucide-react'
+import { LogOut, Loader2, Pencil, Check, X, Users, Globe, Link2, Shield, MapPin, Copy, ExternalLink, Ticket, UserPlus, KeyRound } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
 import type { ProfileTabProps } from './types'
@@ -90,6 +90,13 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
   const [inviteMaxInvites, setInviteMaxInvites] = useState(3)
   const [inviteLoading, setInviteLoading] = useState(true)
   const [generatingInvite, setGeneratingInvite] = useState(false)
+
+  const [editingPassword, setEditingPassword] = useState(false)
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [savingPassword, setSavingPassword] = useState(false)
+  const [passwordError, setPasswordError] = useState('')
 
   useEffect(() => {
     if (!open) return
@@ -286,6 +293,59 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
       toast.error('Failed to update username')
     } finally {
       setSavingUsername(false)
+    }
+  }
+
+  const handleCancelPassword = () => {
+    setEditingPassword(false)
+    setCurrentPassword('')
+    setNewPassword('')
+    setConfirmPassword('')
+    setPasswordError('')
+  }
+
+  const handleSavePassword = async () => {
+    setPasswordError('')
+
+    if (!currentPassword) {
+      setPasswordError('Current password is required')
+      return
+    }
+    if (newPassword.length < 8) {
+      setPasswordError('New password must be at least 8 characters')
+      return
+    }
+    if (newPassword.length > 128) {
+      setPasswordError('New password must be at most 128 characters')
+      return
+    }
+    if (currentPassword === newPassword) {
+      setPasswordError('New password must be different from current password')
+      return
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError('Passwords do not match')
+      return
+    }
+
+    setSavingPassword(true)
+    try {
+      const res = await fetch('/api/me/password', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setPasswordError(data.error || 'Failed to update password')
+        return
+      }
+      handleCancelPassword()
+      toast.success('Password updated')
+    } catch {
+      setPasswordError('Failed to update password')
+    } finally {
+      setSavingPassword(false)
     }
   }
 
@@ -833,6 +893,80 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
               )}
             </div>
           )}
+
+          <Separator className="bg-border" />
+
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <KeyRound className="h-3.5 w-3.5 text-muted-foreground/60" />
+                <span className="text-xs font-medium text-muted-foreground/60 uppercase tracking-wider">Password</span>
+              </div>
+              {!editingPassword && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => setEditingPassword(true)}>
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Change password</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+            </div>
+            {editingPassword ? (
+              <div className="space-y-2">
+                <Input
+                  type="password"
+                  placeholder="Current password"
+                  value={currentPassword}
+                  onChange={(e) => { setCurrentPassword(e.target.value); setPasswordError('') }}
+                  className="h-8 text-sm"
+                  autoFocus
+                />
+                <Input
+                  type="password"
+                  placeholder="New password (min 8 characters)"
+                  value={newPassword}
+                  onChange={(e) => { setNewPassword(e.target.value); setPasswordError('') }}
+                  className="h-8 text-sm"
+                />
+                <Input
+                  type="password"
+                  placeholder="Confirm new password"
+                  value={confirmPassword}
+                  onChange={(e) => { setConfirmPassword(e.target.value); setPasswordError('') }}
+                  className="h-8 text-sm"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleSavePassword()
+                    if (e.key === 'Escape') handleCancelPassword()
+                  }}
+                />
+                {passwordError && (
+                  <p className="text-xs text-destructive">{passwordError}</p>
+                )}
+                <div className="flex gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={handleSavePassword}
+                    disabled={savingPassword}
+                  >
+                    {savingPassword ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Check className="h-3 w-3 mr-1" />}
+                    Save
+                  </Button>
+                  <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={handleCancelPassword}>
+                    <X className="h-3 w-3 mr-1" />
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">********</p>
+            )}
+          </div>
         </div>
       </ScrollArea>
       <div className="p-6 pt-0 space-y-2">

@@ -35,6 +35,14 @@ export async function getUserById(id: string) {
   })
 }
 
+export async function getUserPasswordHash(id: string) {
+  const row = await db.query.users.findFirst({
+    where: eq(users.id, id),
+    columns: { password: true },
+  })
+  return row?.password ?? null
+}
+
 export async function getUserProfile(id: string) {
   return db.query.users.findFirst({
     where: eq(users.id, id),

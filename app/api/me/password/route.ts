@@ -1,0 +1,52 @@
+import { auth } from '@/auth'
+import { unauthorized, badRequest, success, serverError } from '@/lib/api-utils'
+import { safeParseBody } from '@/lib/validation'
+import { getUserPasswordHash, updateUser } from '@/lib/db/queries'
+import { compare, hash } from 'bcryptjs'
+
+export async function PATCH(req: Request) {
+  const session = await auth()
+  if (!session?.user?.id) return unauthorized()
+
+  const body = await safeParseBody(req)
+  if (!body) return badRequest('Invalid JSON body')
+
+  const { currentPassword, newPassword } = body as Record<string, unknown>
+
+  if (!currentPassword || typeof currentPassword !== 'string') {
+    return badRequest('Current password is required')
+  }
+
+  if (!newPassword || typeof newPassword !== 'string') {
+    return badRequest('New password is required')
+  }
+
+  if (newPassword.length < 8) {
+    return badRequest('New password must be at least 8 characters')
+  }
+
+  if (newPassword.length > 128) {
+    return badRequest('New password must be at most 128 characters')
+  }
+
+  if (currentPassword === newPassword) {
+    return badRequest('New password must be different from current password')
+  }
+
+  try {
+    const storedHash = await getUserPasswordHash(session.user.id)
+    if (!storedHash) return serverError('User not found')
+
+    const isValid = await compare(currentPassword, storedHash)
+    if (!isValid) {
+      return badRequest('Current password is incorrect')
+    }
+
+    const hashedPassword = await hash(newPassword, 12)
+    await updateUser(session.user.id, { password: hashedPassword })
+
+    return success({ message: 'Password updated successfully' })
+  } catch {
+    return serverError('Failed to update password')
+  }
+}
