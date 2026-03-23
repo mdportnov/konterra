@@ -9,10 +9,10 @@ import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Separator } from '@/components/ui/separator'
-import { LogOut, Loader2, Pencil, Check, X, Users, Globe, Link2, Shield, MapPin, Copy, ExternalLink, Ticket, UserPlus, KeyRound } from 'lucide-react'
+import { LogOut, Loader2, Pencil, Check, X, Users, Globe, Link2, Shield, MapPin, Copy, ExternalLink, Ticket, UserPlus, KeyRound, Info } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
+import { PROFILE_NUDGE_KEY } from '@/lib/local-storage'
 import { PASSWORD_MIN_LENGTH, PASSWORD_MAX_LENGTH } from '@/lib/validation'
 import type { ProfileTabProps } from './types'
 
@@ -59,6 +59,10 @@ interface InvitedUser {
   createdAt: string | null
 }
 
+const CARD = 'rounded-lg border border-border bg-muted/20 p-4'
+const SECTION_HEADER = 'flex items-center gap-1.5'
+const SECTION_LABEL = 'text-[11px] font-medium text-muted-foreground/70 uppercase tracking-wider'
+
 export function ProfileTab({ open, contactCount, connectionCount, visitedCountryCount, visitedCityCount }: ProfileTabProps) {
   const [user, setUser] = useState<SessionUser | null>(null)
   const [signingOut, setSigningOut] = useState(false)
@@ -91,6 +95,10 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
   const [inviteMaxInvites, setInviteMaxInvites] = useState(3)
   const [inviteLoading, setInviteLoading] = useState(true)
   const [generatingInvite, setGeneratingInvite] = useState(false)
+
+  const [nudgeDismissed, setNudgeDismissed] = useState(() => {
+    try { return localStorage.getItem(PROFILE_NUDGE_KEY) === '1' } catch { return false }
+  })
 
   const [editingPassword, setEditingPassword] = useState(false)
   const [currentPassword, setCurrentPassword] = useState('')
@@ -447,13 +455,46 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
   const isPublic = user?.profileVisibility === 'public'
   const hasUsername = !!user?.username
 
+  const completeness = user ? [
+    !!user.name,
+    !!user.bio,
+    !!user.username,
+    !!homebase?.city,
+  ].filter(Boolean).length * 25 : 0
+
   const getExpiresInDays = (expiresAt: string) =>
     Math.max(0, Math.ceil((new Date(expiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
 
   return (
     <div className="flex flex-col h-full">
       <ScrollArea className="flex-1">
-        <div className="p-6 space-y-6">
+        <div className="p-6 space-y-4">
+          {!nudgeDismissed && user && (() => {
+            const missing: string[] = []
+            if (!user.bio) missing.push('bio')
+            if (!user.username) missing.push('username')
+            if (!homebase?.city) missing.push('homebase')
+            if (missing.length === 0) return null
+            return (
+              <div className="rounded-lg border border-orange-500/20 bg-orange-500/5 px-4 py-3 flex items-center gap-3">
+                <Info className="h-4 w-4 text-orange-500 shrink-0" />
+                <p className="text-xs text-foreground flex-1">
+                  Complete your profile — add {missing.join(missing.length === 2 ? ' and ' : ', ').replace(/, ([^,]*)$/, ', and $1')}.
+                </p>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 shrink-0"
+                  onClick={() => {
+                    try { localStorage.setItem(PROFILE_NUDGE_KEY, '1') } catch {}
+                    setNudgeDismissed(true)
+                  }}
+                >
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            )
+          })()}
           <div className="flex flex-col items-center gap-3 pt-2">
             {!user ? (
               profileError ? (
@@ -478,6 +519,15 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
                     {initials}
                   </AvatarFallback>
                 </Avatar>
+                {completeness < 100 && (
+                  <div className="flex items-center gap-1.5" role="progressbar" aria-valuenow={completeness} aria-valuemin={0} aria-valuemax={100} aria-label={`Profile ${completeness}% complete`}>
+                    <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true">
+                      <circle cx="14" cy="14" r="10" fill="none" strokeWidth="3" stroke="currentColor" className="text-muted-foreground/20" />
+                      <circle cx="14" cy="14" r="10" fill="none" strokeWidth="3" stroke="currentColor" className="text-orange-500" strokeDasharray="62.83" strokeDashoffset={62.83 * (1 - completeness / 100)} strokeLinecap="round" transform="rotate(-90 14 14)" />
+                    </svg>
+                    <span className="text-[10px] text-muted-foreground/60">{completeness}% complete</span>
+                  </div>
+                )}
                 {editingName ? (
                   <div className="flex items-center gap-1 w-full max-w-[240px]">
                     <Input
@@ -570,15 +620,13 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
             )}
           </div>
 
-          <Separator className="bg-border" />
-
           {user && (
-            <div className="space-y-4">
-              <div className="space-y-2">
+            <div className={CARD}>
+              <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
+                  <div className={SECTION_HEADER}>
                     <ExternalLink className="h-3.5 w-3.5 text-muted-foreground/60" />
-                    <span className="text-xs font-medium text-muted-foreground/60 uppercase tracking-wider">Username</span>
+                    <span className={SECTION_LABEL}>Public Profile</span>
                   </div>
                   {!editingUsername && (
                     <TooltipProvider>
@@ -593,6 +641,7 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
                     </TooltipProvider>
                   )}
                 </div>
+
                 {editingUsername ? (
                   <div className="space-y-2">
                     <div className="flex items-center gap-1">
@@ -631,176 +680,174 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
                     {user.username ? `konterra.app/u/${user.username}` : 'Not set'}
                   </p>
                 )}
-              </div>
 
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <p className="text-sm font-medium text-foreground">Public Profile</p>
-                  <p className="text-xs text-muted-foreground">
-                    {!hasUsername ? 'Set a username first' : 'Allow anyone to view your profile'}
-                  </p>
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <p className="text-sm font-medium text-foreground">Public Profile</p>
+                    <p className="text-xs text-muted-foreground">
+                      {!hasUsername ? 'Set a username first' : 'Allow anyone to view your profile'}
+                    </p>
+                  </div>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div>
+                          <Switch
+                            checked={isPublic}
+                            onCheckedChange={handleTogglePublic}
+                            disabled={!hasUsername}
+                          />
+                        </div>
+                      </TooltipTrigger>
+                      {!hasUsername && <TooltipContent>Set a username to enable</TooltipContent>}
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div>
-                        <Switch
-                          checked={isPublic}
-                          onCheckedChange={handleTogglePublic}
-                          disabled={!hasUsername}
-                        />
-                      </div>
-                    </TooltipTrigger>
-                    {!hasUsername && <TooltipContent>Set a username to enable</TooltipContent>}
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
 
-              {isPublic && (
-                <>
-                  <div className="space-y-1.5">
-                    <p className="text-xs font-medium text-muted-foreground/60 uppercase tracking-wider">Privacy Level</p>
-                    <Select
-                      value={user.profilePrivacyLevel || 'countries_only'}
-                      onValueChange={handlePrivacyLevelChange}
-                    >
-                      <SelectTrigger className="h-8 text-sm">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="countries_only">Countries only</SelectItem>
-                        <SelectItem value="full_travel">Full travel history</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <p className="text-sm font-medium text-foreground">Globe auto-rotation</p>
-                      <p className="text-xs text-muted-foreground">Rotate globe on your public profile</p>
+                {isPublic && (
+                  <>
+                    <div className="space-y-1.5">
+                      <p className="text-[11px] font-medium text-muted-foreground/70 uppercase tracking-wider">Privacy Level</p>
+                      <Select
+                        value={user.profilePrivacyLevel || 'countries_only'}
+                        onValueChange={handlePrivacyLevelChange}
+                      >
+                        <SelectTrigger className="h-8 text-sm">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="countries_only">Countries only</SelectItem>
+                          <SelectItem value="full_travel">Full travel history</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
-                    <Switch
-                      checked={user.globeAutoRotate !== false}
-                      onCheckedChange={async (checked) => {
-                        try {
-                          const res = await fetch('/api/profile', {
-                            method: 'PATCH',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ globeAutoRotate: checked }),
-                          })
-                          const data = await res.json()
-                          if (!res.ok) {
-                            toast.error(data.error || 'Failed to update')
-                            return
-                          }
-                          setUser((prev) => prev ? { ...prev, globeAutoRotate: data.globeAutoRotate } : prev)
-                        } catch {
-                          toast.error('Failed to update auto-rotation')
-                        }
-                      }}
-                    />
-                  </div>
 
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full h-8 text-xs"
-                    onClick={handleCopyLink}
-                  >
-                    <Copy className="h-3 w-3 mr-1.5" />
-                    Copy profile link
-                  </Button>
-                </>
-              )}
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <p className="text-sm font-medium text-foreground">Globe auto-rotation</p>
+                        <p className="text-xs text-muted-foreground">Rotate globe on your public profile</p>
+                      </div>
+                      <Switch
+                        checked={user.globeAutoRotate !== false}
+                        onCheckedChange={async (checked) => {
+                          try {
+                            const res = await fetch('/api/profile', {
+                              method: 'PATCH',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ globeAutoRotate: checked }),
+                            })
+                            const data = await res.json()
+                            if (!res.ok) {
+                              toast.error(data.error || 'Failed to update')
+                              return
+                            }
+                            setUser((prev) => prev ? { ...prev, globeAutoRotate: data.globeAutoRotate } : prev)
+                          } catch {
+                            toast.error('Failed to update auto-rotation')
+                          }
+                        }}
+                      />
+                    </div>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full h-8 text-xs"
+                      onClick={handleCopyLink}
+                    >
+                      <Copy className="h-3 w-3 mr-1.5" />
+                      Copy profile link
+                    </Button>
+                  </>
+                )}
+              </div>
             </div>
           )}
 
-          <Separator className="bg-border" />
-
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5">
-                <MapPin className="h-3.5 w-3.5 text-muted-foreground/60" />
-                <span className="text-xs font-medium text-muted-foreground/60 uppercase tracking-wider">Homebase</span>
+          <div className={CARD}>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className={SECTION_HEADER}>
+                  <MapPin className="h-3.5 w-3.5 text-muted-foreground/60" />
+                  <span className={SECTION_LABEL}>Homebase</span>
+                </div>
+                {!editingHomebase && !homebaseLoading && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={handleEditHomebase}>
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Edit homebase</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
               </div>
-              {!editingHomebase && !homebaseLoading && (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={handleEditHomebase}>
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Edit homebase</TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+              {homebaseLoading ? (
+                <Skeleton className="h-5 w-40" />
+              ) : editingHomebase ? (
+                <div className="space-y-2">
+                  <div className="relative">
+                    <Input
+                      value={cityInput}
+                      onChange={(e) => handleCityInputChange(e.target.value)}
+                      placeholder="Search city..."
+                      className="h-8 text-sm"
+                      autoFocus
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && cityInput.trim()) handleSaveHomebase()
+                        if (e.key === 'Escape') handleCancelHomebase()
+                      }}
+                    />
+                    {suggestions.length > 0 && (
+                      <div className="absolute top-full left-0 right-0 mt-1 bg-popover border border-border rounded-md shadow-md z-50 overflow-hidden">
+                        {suggestions.map((s, i) => (
+                          <button
+                            key={i}
+                            className="w-full text-left px-3 py-2 text-sm hover:bg-accent transition-colors"
+                            onClick={() => handleSelectSuggestion(s)}
+                          >
+                            {s.formatted}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs"
+                      onClick={handleSaveHomebase}
+                      disabled={savingHomebase || !cityInput.trim()}
+                    >
+                      {savingHomebase ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Check className="h-3 w-3 mr-1" />}
+                      Save
+                    </Button>
+                    <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={handleCancelHomebase}>
+                      <X className="h-3 w-3 mr-1" />
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <p className="text-sm text-muted-foreground">
+                    {homebaseDisplay || 'Not set'}
+                    {homebase?.timezone && <span className="text-xs text-muted-foreground/50 ml-1">({homebase.timezone})</span>}
+                  </p>
+                  {homebase?.currentCity && homebase.currentCity !== homebase.city && (
+                    <p className="text-xs text-muted-foreground/60 mt-1">
+                      Currently in: {[homebase.currentCity, homebase.currentCountry].filter(Boolean).join(', ')}
+                    </p>
+                  )}
+                </>
               )}
             </div>
-            {homebaseLoading ? (
-              <Skeleton className="h-5 w-40" />
-            ) : editingHomebase ? (
-              <div className="space-y-2">
-                <div className="relative">
-                  <Input
-                    value={cityInput}
-                    onChange={(e) => handleCityInputChange(e.target.value)}
-                    placeholder="Search city..."
-                    className="h-8 text-sm"
-                    autoFocus
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && cityInput.trim()) handleSaveHomebase()
-                      if (e.key === 'Escape') handleCancelHomebase()
-                    }}
-                  />
-                  {suggestions.length > 0 && (
-                    <div className="absolute top-full left-0 right-0 mt-1 bg-popover border border-border rounded-md shadow-md z-50 overflow-hidden">
-                      {suggestions.map((s, i) => (
-                        <button
-                          key={i}
-                          className="w-full text-left px-3 py-2 text-sm hover:bg-accent transition-colors"
-                          onClick={() => handleSelectSuggestion(s)}
-                        >
-                          {s.formatted}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <div className="flex gap-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 text-xs"
-                    onClick={handleSaveHomebase}
-                    disabled={savingHomebase || !cityInput.trim()}
-                  >
-                    {savingHomebase ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Check className="h-3 w-3 mr-1" />}
-                    Save
-                  </Button>
-                  <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={handleCancelHomebase}>
-                    <X className="h-3 w-3 mr-1" />
-                    Cancel
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <>
-                <p className="text-sm text-muted-foreground">
-                  {homebaseDisplay || 'Not set'}
-                  {homebase?.timezone && <span className="text-xs text-muted-foreground/50 ml-1">({homebase.timezone})</span>}
-                </p>
-                {homebase?.currentCity && homebase.currentCity !== homebase.city && (
-                  <p className="text-xs text-muted-foreground/60 mt-1">
-                    Currently in: {[homebase.currentCity, homebase.currentCountry].filter(Boolean).join(', ')}
-                  </p>
-                )}
-              </>
-            )}
           </div>
 
-          <Separator className="bg-border" />
-
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-2">
             {stats.map(({ label, value, icon: Icon }) => (
               <div key={label} className="rounded-lg border border-border bg-muted/30 p-3 text-center space-y-1">
                 <Icon className="h-4 w-4 mx-auto text-muted-foreground/60" />
@@ -810,178 +857,178 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
             ))}
           </div>
 
-          <Separator className="bg-border" />
-
           {user && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
-                  <Ticket className="h-3.5 w-3.5 text-muted-foreground/60" />
-                  <span className="text-xs font-medium text-muted-foreground/60 uppercase tracking-wider">Invites</span>
+            <div className={CARD}>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className={SECTION_HEADER}>
+                    <Ticket className="h-3.5 w-3.5 text-muted-foreground/60" />
+                    <span className={SECTION_LABEL}>Invites</span>
+                  </div>
+                  <span className="text-[10px] text-muted-foreground/60">
+                    {inviteUsedCount + activeInvites.length}/{inviteMaxInvites}
+                    {activeInvites.length > 0 ? ` (${activeInvites.length} pending)` : ' used'}
+                  </span>
                 </div>
-                <span className="text-[10px] text-muted-foreground/60">
-                  {inviteUsedCount + activeInvites.length}/{inviteMaxInvites}
-                  {activeInvites.length > 0 ? ` (${activeInvites.length} pending)` : ' used'}
-                </span>
-              </div>
 
-              {inviteLoading ? (
-                <Skeleton className="h-8 w-full" />
-              ) : (
-                <div className="space-y-2">
-                  {invitedUsers.length > 0 && (
-                    <div className="space-y-1.5">
-                      {invitedUsers.map((iu) => (
-                        <div key={iu.id} className="flex items-center gap-2 rounded-md border border-border bg-muted/30 px-3 py-2">
-                          <Avatar className="h-5 w-5">
-                            <AvatarImage src={iu.image || undefined} />
-                            <AvatarFallback className="text-[8px]">{iu.name?.charAt(0)?.toUpperCase() || '?'}</AvatarFallback>
-                          </Avatar>
-                          <span className="text-sm text-foreground font-medium truncate flex-1">{iu.name || 'Unknown'}</span>
-                          {iu.createdAt && (
-                            <span className="text-[10px] text-muted-foreground/50 shrink-0">
-                              {new Date(iu.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                            </span>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {activeInvites.length > 0 && (
-                    <div className="space-y-1.5">
-                      {activeInvites.map((inv) => {
-                        const days = getExpiresInDays(inv.expiresAt)
-                        return (
-                          <div key={inv.code} className="space-y-1">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="w-full h-8 text-xs"
-                              onClick={() => handleCopyInvite(inv.code)}
-                            >
-                              <Copy className="h-3 w-3 mr-1.5" />
-                              Copy invite link
-                            </Button>
-                            <p className="text-[10px] text-muted-foreground/60 text-center">
-                              {days === 0 ? 'Expires today' : `Expires in ${days} ${days === 1 ? 'day' : 'days'}`}
-                            </p>
+                {inviteLoading ? (
+                  <Skeleton className="h-8 w-full" />
+                ) : (
+                  <div className="space-y-2">
+                    {invitedUsers.length > 0 && (
+                      <div className="space-y-1.5">
+                        {invitedUsers.map((iu) => (
+                          <div key={iu.id} className="flex items-center gap-2 rounded-md border border-border bg-muted/30 px-3 py-2">
+                            <Avatar className="h-5 w-5">
+                              <AvatarImage src={iu.image || undefined} />
+                              <AvatarFallback className="text-[8px]">{iu.name?.charAt(0)?.toUpperCase() || '?'}</AvatarFallback>
+                            </Avatar>
+                            <span className="text-sm text-foreground font-medium truncate flex-1">{iu.name || 'Unknown'}</span>
+                            {iu.createdAt && (
+                              <span className="text-[10px] text-muted-foreground/50 shrink-0">
+                                {new Date(iu.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                              </span>
+                            )}
                           </div>
-                        )
-                      })}
-                    </div>
-                  )}
+                        ))}
+                      </div>
+                    )}
 
-                  {inviteLimitReached ? (
-                    activeInvites.length === 0 && (
-                      <p className="text-xs text-muted-foreground/60 text-center py-1">
-                        All invites used
-                      </p>
-                    )
-                  ) : (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full h-8 text-xs"
-                      onClick={handleGenerateInvite}
-                      disabled={generatingInvite}
-                    >
-                      {generatingInvite ? <Loader2 className="h-3 w-3 animate-spin mr-1.5" /> : <UserPlus className="h-3 w-3 mr-1.5" />}
-                      Generate Invite Link
-                    </Button>
-                  )}
-                </div>
-              )}
+                    {activeInvites.length > 0 && (
+                      <div className="space-y-1.5">
+                        {activeInvites.map((inv) => {
+                          const days = getExpiresInDays(inv.expiresAt)
+                          return (
+                            <div key={inv.code} className="space-y-1">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="w-full h-8 text-xs"
+                                onClick={() => handleCopyInvite(inv.code)}
+                              >
+                                <Copy className="h-3 w-3 mr-1.5" />
+                                Copy invite link
+                              </Button>
+                              <p className="text-[10px] text-muted-foreground/60 text-center">
+                                {days === 0 ? 'Expires today' : `Expires in ${days} ${days === 1 ? 'day' : 'days'}`}
+                              </p>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+
+                    {inviteLimitReached ? (
+                      activeInvites.length === 0 && (
+                        <p className="text-xs text-muted-foreground/60 text-center py-1">
+                          All invites used
+                        </p>
+                      )
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full h-8 text-xs"
+                        onClick={handleGenerateInvite}
+                        disabled={generatingInvite}
+                      >
+                        {generatingInvite ? <Loader2 className="h-3 w-3 animate-spin mr-1.5" /> : <UserPlus className="h-3 w-3 mr-1.5" />}
+                        Generate Invite Link
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
-          <Separator className="bg-border" />
-
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5">
-                <KeyRound className="h-3.5 w-3.5 text-muted-foreground/60" />
-                <span className="text-xs font-medium text-muted-foreground/60 uppercase tracking-wider">Password</span>
+          <div className={CARD}>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className={SECTION_HEADER}>
+                  <KeyRound className="h-3.5 w-3.5 text-muted-foreground/60" />
+                  <span className={SECTION_LABEL}>Security</span>
+                </div>
+                {!editingPassword && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => setEditingPassword(true)}>
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Change password</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
               </div>
-              {!editingPassword && (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => setEditingPassword(true)}>
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Change password</TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+              {editingPassword ? (
+                <div className="space-y-2">
+                  <Input
+                    type="password"
+                    placeholder="Current password"
+                    value={currentPassword}
+                    onChange={(e) => { setCurrentPassword(e.target.value); setPasswordError('') }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleSavePassword()
+                      if (e.key === 'Escape') handleCancelPassword()
+                    }}
+                    autoComplete="current-password"
+                    className="h-8 text-sm"
+                    autoFocus
+                  />
+                  <Input
+                    type="password"
+                    placeholder={`New password (min ${PASSWORD_MIN_LENGTH} characters)`}
+                    value={newPassword}
+                    onChange={(e) => { setNewPassword(e.target.value); setPasswordError('') }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleSavePassword()
+                      if (e.key === 'Escape') handleCancelPassword()
+                    }}
+                    autoComplete="new-password"
+                    className="h-8 text-sm"
+                  />
+                  <Input
+                    type="password"
+                    placeholder="Confirm new password"
+                    value={confirmPassword}
+                    onChange={(e) => { setConfirmPassword(e.target.value); setPasswordError('') }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleSavePassword()
+                      if (e.key === 'Escape') handleCancelPassword()
+                    }}
+                    autoComplete="new-password"
+                    className="h-8 text-sm"
+                  />
+                  {passwordError && (
+                    <p className="text-xs text-destructive">{passwordError}</p>
+                  )}
+                  <div className="flex gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs"
+                      onClick={handleSavePassword}
+                      disabled={savingPassword}
+                    >
+                      {savingPassword ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Check className="h-3 w-3 mr-1" />}
+                      Save
+                    </Button>
+                    <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={handleCancelPassword}>
+                      <X className="h-3 w-3 mr-1" />
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">********</p>
               )}
             </div>
-            {editingPassword ? (
-              <div className="space-y-2">
-                <Input
-                  type="password"
-                  placeholder="Current password"
-                  value={currentPassword}
-                  onChange={(e) => { setCurrentPassword(e.target.value); setPasswordError('') }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleSavePassword()
-                    if (e.key === 'Escape') handleCancelPassword()
-                  }}
-                  autoComplete="current-password"
-                  className="h-8 text-sm"
-                  autoFocus
-                />
-                <Input
-                  type="password"
-                  placeholder={`New password (min ${PASSWORD_MIN_LENGTH} characters)`}
-                  value={newPassword}
-                  onChange={(e) => { setNewPassword(e.target.value); setPasswordError('') }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleSavePassword()
-                    if (e.key === 'Escape') handleCancelPassword()
-                  }}
-                  autoComplete="new-password"
-                  className="h-8 text-sm"
-                />
-                <Input
-                  type="password"
-                  placeholder="Confirm new password"
-                  value={confirmPassword}
-                  onChange={(e) => { setConfirmPassword(e.target.value); setPasswordError('') }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleSavePassword()
-                    if (e.key === 'Escape') handleCancelPassword()
-                  }}
-                  autoComplete="new-password"
-                  className="h-8 text-sm"
-                />
-                {passwordError && (
-                  <p className="text-xs text-destructive">{passwordError}</p>
-                )}
-                <div className="flex gap-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 text-xs"
-                    onClick={handleSavePassword}
-                    disabled={savingPassword}
-                  >
-                    {savingPassword ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Check className="h-3 w-3 mr-1" />}
-                    Save
-                  </Button>
-                  <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={handleCancelPassword}>
-                    <X className="h-3 w-3 mr-1" />
-                    Cancel
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">********</p>
-            )}
           </div>
         </div>
       </ScrollArea>
-      <div className="p-6 pt-0 space-y-2">
+      <div className="p-6 pt-3 space-y-2">
         {user && (user.role === 'admin' || user.role === 'moderator') && (
           <Button
             variant="outline"

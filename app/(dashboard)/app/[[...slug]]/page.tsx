@@ -12,6 +12,7 @@ import WishlistDetailPanel from '@/components/globe/WishlistDetailPanel'
 import ImportDialog from '@/components/import/ImportDialog'
 import TripImportDialog from '@/components/import/TripImportDialog'
 import CommandMenu from '@/components/command-menu'
+import KeyboardShortcutsDialog from '@/components/KeyboardShortcutsDialog'
 import WelcomeWizard from '@/components/onboarding/WelcomeWizard'
 import DuplicatesDialog from '@/components/dedup/DuplicatesDialog'
 import ExportDialog from '@/components/export/ExportDialog'
@@ -33,8 +34,9 @@ import { usePanelNavigation } from '@/hooks/use-panel-navigation'
 import { useTripSelection } from '@/hooks/use-trip-selection'
 import { usePopupState } from '@/hooks/use-popup-state'
 import { useDashboardRouting } from '@/hooks/use-dashboard-routing'
+import { useHotkey } from '@/hooks/use-hotkey'
 import { toast } from 'sonner'
-import { ChevronRight } from 'lucide-react'
+import { ChevronRight, Globe } from 'lucide-react'
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
 
 import { useSession } from 'next-auth/react'
@@ -59,6 +61,9 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
   const [wishlistDetailCountry, setWishlistDetailCountry] = useState<string | null>(null)
   const [wishlistDetailOpen, setWishlistDetailOpen] = useState(false)
   const [commandMenuOpen, setCommandMenuOpen] = useState(false)
+  const [shortcutsOpen, setShortcutsOpen] = useState(false)
+
+  useHotkey('?', () => setShortcutsOpen(true))
 
   const data = useGlobeData()
   const filters = useContactFilters(data.contacts, data.userTags)
@@ -111,14 +116,46 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
   }, [data.setContacts, data.setConnections, data.setCountryConnections, data.reloadContacts])
 
   const handleContactSaved = useCallback((saved: Contact) => {
+    const isNew = !data.contacts.some((c) => c.id === saved.id)
     nav.handleContactSaved(saved, data.setContacts)
-  }, [nav.handleContactSaved, data.setContacts])
+    if (isNew) {
+      toast('Contact added', {
+        description: 'Log how you met?',
+        action: {
+          label: 'Log interaction',
+          onClick: () => {
+            try {
+              const sections = JSON.parse(localStorage.getItem('konterra:detail-sections') || '{}')
+              sections.timeline = true
+              localStorage.setItem('konterra:detail-sections', JSON.stringify(sections))
+            } catch {}
+            nav.handleContactClick(saved)
+          },
+        },
+        duration: 6000,
+      })
+    }
+  }, [nav.handleContactSaved, data.setContacts, data.contacts, nav.handleContactClick])
 
   const handleDeleteContact = useCallback((contactId: string) => {
     nav.handleDeleteContact(contactId, data.setContacts, data.setConnections, data.setCountryConnections)
   }, [nav.handleDeleteContact, data.setContacts, data.setConnections, data.setCountryConnections])
 
   const addContactCb = useCallback(() => nav.handleAddContact(), [nav.handleAddContact])
+
+  const handleQuickAddContact = useCallback(async (quickData: { name: string; country?: string }) => {
+    const res = await fetch('/api/contacts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: quickData.name, country: quickData.country || undefined }),
+    })
+    if (!res.ok) {
+      toast.error('Failed to create contact')
+      return
+    }
+    const saved = await res.json()
+    handleContactSaved(saved)
+  }, [handleContactSaved])
 
   const handleAddTrip = useCallback((prefill?: { arrivalDate?: string; departureDate?: string; city?: string; country?: string }) => {
     setEditingTrip(null)
@@ -294,11 +331,23 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
 
       {!data.loading && data.contacts.filter(c => !c.isSelf).length === 0 && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ zIndex: Z.controls }}>
-          <div className={`${GLASS.panel} rounded-2xl p-6 text-center pointer-events-auto max-w-xs`}>
-            <p className="text-sm font-medium text-foreground mb-1">No contacts yet</p>
-            <p className="text-xs text-muted-foreground mb-4">Add your first contact or import from a file.</p>
+          <div className="absolute inset-0 overflow-hidden">
+            <div className="absolute top-[30%] left-[25%] h-2 w-2 rounded-full bg-orange-500/20 animate-pulse" />
+            <div className="absolute top-[45%] right-[30%] h-1.5 w-1.5 rounded-full bg-orange-500/15 animate-pulse [animation-delay:0.5s]" />
+            <div className="absolute bottom-[35%] left-[40%] h-2.5 w-2.5 rounded-full bg-orange-500/10 animate-pulse [animation-delay:1s]" />
+          </div>
+          <svg className="absolute inset-0 w-full h-full opacity-[0.07]" viewBox="0 0 400 400">
+            <path d="M100,200 Q200,100 300,180" fill="none" stroke="currentColor" strokeWidth="1" className="text-orange-500 animate-pulse" />
+            <path d="M150,280 Q250,200 320,260" fill="none" stroke="currentColor" strokeWidth="1" className="text-orange-500 animate-pulse [animation-delay:0.7s]" />
+          </svg>
+          <div className={`${GLASS.panel} rounded-2xl p-6 text-center pointer-events-auto max-w-xs relative`}>
+            <div className="h-10 w-10 rounded-full bg-orange-500/10 flex items-center justify-center mx-auto mb-3">
+              <Globe className="h-5 w-5 text-orange-500/60" />
+            </div>
+            <p className="text-sm font-medium text-foreground mb-1">Your globe awaits</p>
+            <p className="text-xs text-muted-foreground mb-4">Add contacts and trips to see your network come alive on the globe.</p>
             <div className="flex gap-2 justify-center">
-              <button onClick={() => nav.handleAddContact()} className="px-3 py-1.5 rounded-md bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors">Create contact</button>
+              <button onClick={() => nav.handleAddContact()} className="px-3 py-1.5 rounded-md bg-orange-500 text-white text-xs font-medium hover:bg-orange-600 transition-colors">Create contact</button>
               <button onClick={() => setImportDialogOpen(true)} className="px-3 py-1.5 rounded-md bg-accent text-foreground text-xs font-medium hover:bg-accent/80 transition-colors">Import</button>
             </div>
           </div>
@@ -393,6 +442,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
 
       <GlobeControls
         onAddContact={nav.handleAddContact}
+        onQuickAddContact={handleQuickAddContact}
         onSearch={() => setCommandMenuOpen(true)}
         onInsights={nav.handleOpenInsights}
         onSettings={nav.handleOpenSettings}
@@ -529,6 +579,8 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
     />
   )
 
+  const shortcutsDialog = <KeyboardShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
+
   if (isMobile) {
     return (
       <div className="fixed inset-0 overflow-hidden bg-background">
@@ -567,6 +619,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
           />
         )}
         {commandMenu}
+        {shortcutsDialog}
       </div>
     )
   }
@@ -614,6 +667,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
         />
       )}
       {commandMenu}
+      {shortcutsDialog}
     </div>
   )
 }

@@ -1178,7 +1178,11 @@ export default function ContactDetailContent({
               )
             })}
             {interactions.length === 0 && (
-              <p className="text-[11px] text-muted-foreground/60 py-1">No interactions yet</p>
+              <div className="rounded-lg border border-dashed border-orange-500/30 bg-orange-500/5 p-4 text-center">
+                <MessageSquare className="h-5 w-5 text-orange-500/60 mx-auto mb-2" />
+                <p className="text-xs text-muted-foreground">No interactions yet</p>
+                <p className="text-[10px] text-muted-foreground/60">Log your first meeting, call, or message</p>
+              </div>
             )}
             {!showAllInteractions && interactions.length > 10 && (
               <button

@@ -127,22 +127,24 @@ export function CountriesTab({ visitedCountries, onToggleVisitedCountry, wishlis
           </ToggleGroup>
         )}
 
-        <div className="flex flex-wrap gap-1.5">
-          {orderedContinents.map((continent) => {
-            const stats = continentStats.get(continent)
-            if (!stats) return null
-            const count = viewMode === 'wishlist' ? stats.wishlisted : stats.visited
-            if (count === 0) return null
-            return (
-              <Badge
-                key={continent}
-                variant="outline"
-                className="text-[10px] border-border text-muted-foreground"
-              >
-                {continent}: {count}
-              </Badge>
-            )
-          })}
+        <div className="rounded-lg border border-border bg-muted/20 p-3">
+          <div className="flex flex-wrap gap-1.5">
+            {orderedContinents.map((continent) => {
+              const stats = continentStats.get(continent)
+              if (!stats) return null
+              const count = viewMode === 'wishlist' ? stats.wishlisted : stats.visited
+              if (count === 0) return null
+              return (
+                <Badge
+                  key={continent}
+                  variant="outline"
+                  className="text-[10px] border-border text-muted-foreground"
+                >
+                  {continent}: {count}
+                </Badge>
+              )
+            })}
+          </div>
         </div>
 
         <div className="relative">

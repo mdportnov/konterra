@@ -1,14 +1,18 @@
 'use client'
 
+import { useState, useRef, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
 import { Separator } from '@/components/ui/separator'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Settings, Plus, LayoutDashboard, Search, Sparkles } from 'lucide-react'
 import { GLASS, Z } from '@/lib/constants/ui'
 
 interface GlobeControlsProps {
-  onAddContact?: () => void
+  onAddContact?: (prefill?: Record<string, string>) => void
+  onQuickAddContact?: (data: { name: string; country?: string }) => void
   onSearch?: () => void
   onInsights?: () => void
   onSettings?: () => void
@@ -18,9 +22,44 @@ interface GlobeControlsProps {
   user?: { name?: string | null; email?: string | null; image?: string | null } | null
 }
 
-export default function GlobeControls({ onAddContact, onSearch, onInsights, onSettings, onProfile, isMobile, onSwitchToDashboard, user }: GlobeControlsProps) {
+export default function GlobeControls({ onAddContact, onQuickAddContact, onSearch, onInsights, onSettings, onProfile, isMobile, onSwitchToDashboard, user }: GlobeControlsProps) {
   const btnSize = isMobile ? 'h-10 w-10' : 'h-8 w-8'
   const iconSize = isMobile ? 'h-5 w-5' : 'h-4 w-4'
+  const [quickAddOpen, setQuickAddOpen] = useState(false)
+  const [quickName, setQuickName] = useState('')
+  const [quickCountry, setQuickCountry] = useState('')
+  const [quickAddLoading, setQuickAddLoading] = useState(false)
+  const nameInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (quickAddOpen) {
+      setTimeout(() => nameInputRef.current?.focus(), 0)
+    } else {
+      setQuickName('')
+      setQuickCountry('')
+    }
+  }, [quickAddOpen])
+
+  const handleQuickAdd = async () => {
+    const trimmed = quickName.trim()
+    if (!trimmed) return
+    setQuickAddLoading(true)
+    try {
+      await onQuickAddContact?.({ name: trimmed, country: quickCountry.trim() || undefined })
+      setQuickAddOpen(false)
+    } catch {
+    } finally {
+      setQuickAddLoading(false)
+    }
+  }
+
+  const handleMoreDetails = () => {
+    const prefill: Record<string, string> = {}
+    if (quickName.trim()) prefill.name = quickName.trim()
+    if (quickCountry.trim()) prefill.country = quickCountry.trim()
+    setQuickAddOpen(false)
+    onAddContact?.(prefill)
+  }
 
   const initials = user?.name
     ?.split(' ')
@@ -68,19 +107,60 @@ export default function GlobeControls({ onAddContact, onSearch, onInsights, onSe
           <TooltipContent>Search</TooltipContent>
         </Tooltip>
 
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              size="icon"
-              variant="ghost"
-              className={`${btnSize} !text-muted-foreground hover:!text-foreground hover:!bg-accent`}
-              onClick={onAddContact}
+        <Popover open={quickAddOpen} onOpenChange={setQuickAddOpen}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <PopoverTrigger asChild>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className={`${btnSize} !text-muted-foreground hover:!text-foreground hover:!bg-accent`}
+                >
+                  <Plus className={iconSize} />
+                </Button>
+              </PopoverTrigger>
+            </TooltipTrigger>
+            <TooltipContent>Add Contact</TooltipContent>
+          </Tooltip>
+          <PopoverContent
+            className="w-64 p-3 space-y-2"
+            side="top"
+            align="center"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !quickAddLoading) handleQuickAdd()
+            }}
+          >
+            <Input
+              ref={nameInputRef}
+              value={quickName}
+              onChange={(e) => setQuickName(e.target.value)}
+              placeholder="Contact name"
+              className="h-8 text-sm"
+            />
+            <Input
+              value={quickCountry}
+              onChange={(e) => setQuickCountry(e.target.value)}
+              placeholder="Country (optional)"
+              className="h-8 text-sm"
+            />
+            <button
+              type="button"
+              className="text-xs text-muted-foreground hover:text-foreground cursor-pointer"
+              onClick={handleMoreDetails}
             >
-              <Plus className={iconSize} />
+              Add more details...
+            </button>
+            <Button
+              variant="default"
+              size="sm"
+              className="w-full h-8 text-xs bg-orange-500 hover:bg-orange-600 text-white"
+              disabled={!quickName.trim() || quickAddLoading}
+              onClick={handleQuickAdd}
+            >
+              Add
             </Button>
-          </TooltipTrigger>
-          <TooltipContent>Add Contact</TooltipContent>
-        </Tooltip>
+          </PopoverContent>
+        </Popover>
 
         <Tooltip>
           <TooltipTrigger asChild>

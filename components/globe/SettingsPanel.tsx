@@ -86,7 +86,7 @@ export default function SettingsPanel({
       onClose={onClose}
     >
       <div className="flex flex-col h-full">
-        <div className="px-6 pt-6 pb-3 space-y-4">
+        <div className="px-6 pt-6 pb-2 space-y-4">
           <div className="flex items-center gap-2">
             {isMobile && (
               <Button size="icon" variant="ghost" className="h-8 w-8 -ml-2 text-muted-foreground" onClick={onClose}>

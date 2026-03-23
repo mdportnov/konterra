@@ -14,7 +14,7 @@ import { useHotkey } from '@/hooks/use-hotkey'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuLabel } from '@/components/ui/dropdown-menu'
 import { useSavedViews } from '@/hooks/use-saved-views'
 import { countryFlag } from '@/lib/country-flags'
-import GettingStartedCard from './GettingStartedCard'
+import GettingStartedCard, { computeAllStepsDone, isChecklistPermanentlyDone } from './GettingStartedCard'
 import StatsRow from './widgets/StatsRow'
 import TopCountriesChart from './widgets/TopCountriesChart'
 import ActivityTimeline from './widgets/ActivityTimeline'
@@ -384,10 +384,23 @@ export default function ContactListSection({
   const selfContact = contacts.find((c) => c.isSelf)
   const nonSelfContacts = contacts.filter((c) => !c.isSelf)
 
+  const [checklistDismissed, setChecklistDismissed] = useState(() => {
+    try { return isChecklistPermanentlyDone() } catch { return false }
+  })
+  const allStepsDone = computeAllStepsDone(contacts, connections, recentInteractions)
+
+  useEffect(() => {
+    if (allStepsDone && !checklistDismissed) {
+      setChecklistDismissed(true)
+    }
+  }, [allStepsDone, checklistDismissed])
+
+  const showChecklist = !contactsLoading && !checklistDismissed && !allStepsDone
+
   return (
     <div className="p-4 md:p-5 space-y-5 md:space-y-6">
       {selfContact && <SelfProfileCard contact={selfContact} onOpenProfile={onOpenProfile || (() => {})} />}
-      {!contactsLoading && contacts.length < 3 && (
+      {showChecklist && (
         <GettingStartedCard
           contacts={contacts}
           connections={connections}

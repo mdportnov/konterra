@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState, useCallback, memo } from 'react'
+import { useMemo, useState, useCallback, memo, useSyncExternalStore } from 'react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -10,9 +10,18 @@ import { AlertTriangle, Clock, Cake, MessageSquare, X, AlarmClockOff, Check } fr
 import { InlineDatePicker } from '@/components/globe/contact-edit/form-fields'
 import { toast } from 'sonner'
 import { staleContacts, overdueFollowUps, upcomingBirthdays } from '@/lib/metrics'
+import { subscribeToStorage, RECONNECT_DAYS_KEY } from '@/lib/local-storage'
 import type { Contact } from '@/lib/db/schema'
 
 const INTERACTION_TYPES = ['meeting', 'call', 'message', 'email', 'event', 'introduction', 'deal', 'note'] as const
+
+function getReconnectDays() {
+  return parseInt(localStorage.getItem(RECONNECT_DAYS_KEY) || '90', 10)
+}
+
+function getReconnectDaysServer() {
+  return 90
+}
 
 interface ReconnectAlertsProps {
   contacts: Contact[]
@@ -49,7 +58,8 @@ function daysUntilBirthday(birthday: Date | string): number {
 }
 
 export default memo(function ReconnectAlerts({ contacts, onContactClick, onInteractionLogged, onContactUpdated, loading }: ReconnectAlertsProps) {
-  const stale = useMemo(() => staleContacts(contacts, 90).slice(0, 8), [contacts])
+  const reconnectDays = useSyncExternalStore(subscribeToStorage, getReconnectDays, getReconnectDaysServer)
+  const stale = useMemo(() => staleContacts(contacts, reconnectDays).slice(0, 8), [contacts, reconnectDays])
   const overdue = useMemo(() => overdueFollowUps(contacts), [contacts])
   const birthdays = useMemo(() => upcomingBirthdays(contacts, 7), [contacts])
   const [quickAdd, setQuickAdd] = useState<string | null>(null)

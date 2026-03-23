@@ -1,18 +1,14 @@
 'use client'
 
-import { useMemo, useState, useSyncExternalStore } from 'react'
+import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Check, UserPlus, MessageSquare, Link2, Tag, Home, Globe, X } from 'lucide-react'
 import { GLASS } from '@/lib/constants/ui'
+import { subscribeToStorage, CHECKLIST_DONE_KEY } from '@/lib/local-storage'
 import type { Contact, ContactConnection } from '@/lib/db/schema'
 
 const GLOBE_HINT_DISMISSED_KEY = 'konterra-globe-hint-dismissed'
-
-function subscribeToStorage(callback: () => void) {
-  window.addEventListener('storage', callback)
-  return () => window.removeEventListener('storage', callback)
-}
 
 function getGlobeHintDismissed() {
   return localStorage.getItem(GLOBE_HINT_DISMISSED_KEY) === '1'
@@ -20,6 +16,23 @@ function getGlobeHintDismissed() {
 
 function getGlobeHintDismissedServer() {
   return true
+}
+
+export function isChecklistPermanentlyDone(): boolean {
+  try { return localStorage.getItem(CHECKLIST_DONE_KEY) === '1' } catch { return false }
+}
+
+export function computeAllStepsDone(
+  contacts: Contact[],
+  connections: ContactConnection[],
+  recentInteractions: { contactName: string }[],
+): boolean {
+  const hasProfile = contacts.some((c) => c.isSelf)
+  const hasContact = contacts.filter((c) => !c.isSelf).length > 0
+  const hasInteraction = recentInteractions.length > 0
+  const hasConnection = connections.length > 0
+  const hasTag = contacts.some((c) => c.tags && c.tags.length > 0)
+  return hasProfile && hasContact && hasInteraction && hasConnection && hasTag
 }
 
 interface GettingStartedCardProps {
@@ -99,7 +112,14 @@ export default function GettingStartedCard({
 
   const completed = steps.filter((s) => s.done).length
   const total = steps.length
+  const allDone = completed === total
   const pct = Math.round((completed / total) * 100)
+
+  useEffect(() => {
+    if (allDone) {
+      try { localStorage.setItem(CHECKLIST_DONE_KEY, '1') } catch {}
+    }
+  }, [allDone])
 
   const showGlobeHint = isMobile && onSwitchToGlobe && !globeHintDismissed
 

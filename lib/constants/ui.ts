@@ -1,7 +1,7 @@
 export const GLASS = {
   panel: 'bg-card/80 backdrop-blur-xl border border-border',
   control: 'bg-card/70 backdrop-blur-xl border border-border',
-  heavy: 'bg-card/90 backdrop-blur-2xl border border-border',
+  heavy: 'bg-card/95 backdrop-blur-2xl border border-border',
 } as const
 
 
