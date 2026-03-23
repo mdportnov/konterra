@@ -1,6 +1,6 @@
 import { auth } from '@/auth'
 import { unauthorized, badRequest, success, serverError } from '@/lib/api-utils'
-import { safeParseBody } from '@/lib/validation'
+import { safeParseBody, PASSWORD_MIN_LENGTH, PASSWORD_MAX_LENGTH } from '@/lib/validation'
 import { getUserPasswordHash, updateUser } from '@/lib/db/queries'
 import { compare, hash } from 'bcryptjs'
 
@@ -21,12 +21,12 @@ export async function PATCH(req: Request) {
     return badRequest('New password is required')
   }
 
-  if (newPassword.length < 8) {
-    return badRequest('New password must be at least 8 characters')
+  if (newPassword.length < PASSWORD_MIN_LENGTH) {
+    return badRequest(`New password must be at least ${PASSWORD_MIN_LENGTH} characters`)
   }
 
-  if (newPassword.length > 128) {
-    return badRequest('New password must be at most 128 characters')
+  if (newPassword.length > PASSWORD_MAX_LENGTH) {
+    return badRequest(`New password must be at most ${PASSWORD_MAX_LENGTH} characters`)
   }
 
   if (currentPassword === newPassword) {
@@ -35,7 +35,7 @@ export async function PATCH(req: Request) {
 
   try {
     const storedHash = await getUserPasswordHash(session.user.id)
-    if (!storedHash) return serverError('User not found')
+    if (!storedHash) return badRequest('Password change not available')
 
     const isValid = await compare(currentPassword, storedHash)
     if (!isValid) {

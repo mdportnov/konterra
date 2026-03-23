@@ -18,6 +18,9 @@ export const INTERACTION_TYPES = ['meeting', 'call', 'message', 'email', 'event'
 export const INTRODUCTION_STATUSES = ['planned', 'introduced', 'connected', 'failed', 'completed', 'made'] as const
 export const IMPORT_SOURCES = ['manual', 'konterra-json', 'google-csv', 'telegram-json', 'vcard', 'linkedin-csv'] as const
 
+export const PASSWORD_MIN_LENGTH = 8
+export const PASSWORD_MAX_LENGTH = 128
+
 export const IMPORT_SOURCE_LABELS: Record<string, string> = {
   'manual': 'Manual',
   'konterra-json': 'Konterra',

@@ -13,6 +13,7 @@ import { Separator } from '@/components/ui/separator'
 import { LogOut, Loader2, Pencil, Check, X, Users, Globe, Link2, Shield, MapPin, Copy, ExternalLink, Ticket, UserPlus, KeyRound } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
+import { PASSWORD_MIN_LENGTH, PASSWORD_MAX_LENGTH } from '@/lib/validation'
 import type { ProfileTabProps } from './types'
 
 interface SessionUser {
@@ -311,12 +312,12 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
       setPasswordError('Current password is required')
       return
     }
-    if (newPassword.length < 8) {
-      setPasswordError('New password must be at least 8 characters')
+    if (newPassword.length < PASSWORD_MIN_LENGTH) {
+      setPasswordError(`New password must be at least ${PASSWORD_MIN_LENGTH} characters`)
       return
     }
-    if (newPassword.length > 128) {
-      setPasswordError('New password must be at most 128 characters')
+    if (newPassword.length > PASSWORD_MAX_LENGTH) {
+      setPasswordError(`New password must be at most ${PASSWORD_MAX_LENGTH} characters`)
       return
     }
     if (currentPassword === newPassword) {
@@ -922,14 +923,24 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
                   placeholder="Current password"
                   value={currentPassword}
                   onChange={(e) => { setCurrentPassword(e.target.value); setPasswordError('') }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleSavePassword()
+                    if (e.key === 'Escape') handleCancelPassword()
+                  }}
+                  autoComplete="current-password"
                   className="h-8 text-sm"
                   autoFocus
                 />
                 <Input
                   type="password"
-                  placeholder="New password (min 8 characters)"
+                  placeholder={`New password (min ${PASSWORD_MIN_LENGTH} characters)`}
                   value={newPassword}
                   onChange={(e) => { setNewPassword(e.target.value); setPasswordError('') }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleSavePassword()
+                    if (e.key === 'Escape') handleCancelPassword()
+                  }}
+                  autoComplete="new-password"
                   className="h-8 text-sm"
                 />
                 <Input
@@ -937,11 +948,12 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
                   placeholder="Confirm new password"
                   value={confirmPassword}
                   onChange={(e) => { setConfirmPassword(e.target.value); setPasswordError('') }}
-                  className="h-8 text-sm"
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') handleSavePassword()
                     if (e.key === 'Escape') handleCancelPassword()
                   }}
+                  autoComplete="new-password"
+                  className="h-8 text-sm"
                 />
                 {passwordError && (
                   <p className="text-xs text-destructive">{passwordError}</p>
