@@ -171,6 +171,9 @@ export function useGlobeData() {
   }, [tripsLoading, trips, runTripBatchGeocode])
 
   const visitedToggleInFlight = useRef(new Set<string>())
+  const wishlistToggleInFlight = useRef(new Set<string>())
+  const wishlistRef = useRef(wishlistCountries)
+  wishlistRef.current = wishlistCountries
 
   const handleCountryVisitToggle = useCallback((country: string) => {
     if (visitedToggleInFlight.current.has(country)) return
@@ -185,6 +188,15 @@ export function useGlobeData() {
       return next
     })
 
+    const wishlistEntry = !wasVisited ? wishlistRef.current.get(country) : null
+    if (wishlistEntry) {
+      setWishlistCountries((prev) => {
+        const next = new Map(prev)
+        next.delete(country)
+        return next
+      })
+    }
+
     fetch('/api/visited-countries', {
       method: wasVisited ? 'DELETE' : 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -192,6 +204,15 @@ export function useGlobeData() {
     })
       .then((res) => {
         if (!res.ok) throw new Error()
+        if (wishlistEntry) {
+          const url = wishlistEntry.id ? `/api/wishlist-countries/${wishlistEntry.id}` : '/api/wishlist-countries'
+          const body = wishlistEntry.id ? undefined : JSON.stringify({ country })
+          return fetch(url, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            ...(body ? { body } : {}),
+          })
+        }
       })
       .catch(() => {
         setVisitedCountries((prev) => {
@@ -200,16 +221,19 @@ export function useGlobeData() {
           else rollback.delete(country)
           return rollback
         })
+        if (wishlistEntry) {
+          setWishlistCountries((prev) => {
+            const rollback = new Map(prev)
+            rollback.set(country, wishlistEntry)
+            return rollback
+          })
+        }
         toast.error('Failed to update visited country')
       })
       .finally(() => {
         visitedToggleInFlight.current.delete(country)
       })
   }, [])
-
-  const wishlistToggleInFlight = useRef(new Set<string>())
-  const wishlistRef = useRef(wishlistCountries)
-  wishlistRef.current = wishlistCountries
 
   const handleWishlistToggle = useCallback((country: string) => {
     if (wishlistToggleInFlight.current.has(country)) return

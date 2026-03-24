@@ -95,14 +95,8 @@ export function useDashboardRouting({ initialSlug, setDisplayOptions }: UseDashb
 
   const handleLayerToggle = useCallback((layer: GlobeLayer) => {
     trackOptions((prev) => {
-      let showNetwork = prev.showNetwork
-      let showTravel = prev.showTravel
-      if (layer === 'network') showNetwork = !showNetwork
-      else showTravel = !showTravel
-      if (!showNetwork && !showTravel) {
-        if (layer === 'network') showTravel = true
-        else showNetwork = true
-      }
+      const showNetwork = layer === 'network'
+      const showTravel = layer === 'travel'
       return { ...prev, showNetwork, showTravel }
     })
     queueMicrotask(() => {

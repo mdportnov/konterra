@@ -213,7 +213,7 @@ export default function CountryPopup({ country, contacts, x, y, open, onSelect, 
               <Switch checked={!!visited} onCheckedChange={onToggleVisited} />
             </div>
           )}
-          {onToggleWishlist && (
+          {onToggleWishlist && !visited && (
             <div className="flex items-center justify-between px-4 py-2">
               <div className="flex items-center gap-1.5">
                 <Heart className={`h-3 w-3 ${wishlisted ? 'fill-rose-500 text-rose-500' : 'text-muted-foreground/60'}`} />
@@ -225,7 +225,7 @@ export default function CountryPopup({ country, contacts, x, y, open, onSelect, 
         </div>
       )}
 
-      {wishlisted && wishlistEntry && onOpenWishlistDetail && (
+      {wishlisted && !visited && wishlistEntry && onOpenWishlistDetail && (
         <button
           onClick={onOpenWishlistDetail}
           className="flex items-center justify-between px-4 py-2.5 border-b border-border shrink-0 hover:bg-accent/40 transition-colors cursor-pointer text-left"
