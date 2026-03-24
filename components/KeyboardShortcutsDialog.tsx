@@ -17,6 +17,8 @@ const shortcuts = [
   { key: '/', label: 'Search contacts' },
   { key: '\u2318K', label: 'Command menu' },
   { key: 'Escape', label: 'Close panel' },
+  { key: '[', label: 'Toggle left sidebar' },
+  { key: ']', label: 'Close right panel' },
   { key: '?', label: 'Show this dialog' },
 ]
 

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import type { Trip } from '@/lib/db/schema'
-import { GLASS, Z } from '@/lib/constants/ui'
+import { GLASS, Z, PANEL_WIDTH } from '@/lib/constants/ui'
 import { TENSE_COLORS } from '@/lib/constants/globe-colors'
 import { countryFlag } from '@/lib/country-flags'
 import { ChevronLeft, ChevronRight, X, Calendar, Clock, MapPin, Plus, Pencil, Trash2 } from 'lucide-react'
@@ -17,6 +17,7 @@ interface TripPopupProps {
   onAddTrip?: (prefill?: { arrivalDate?: string; departureDate?: string }) => void
   onEditTrip?: (trip: Trip) => void
   onDeleteTrip?: (trip: Trip) => void
+  rightPanelOpen?: boolean
 }
 
 function formatDate(date: Date | null | undefined): string | null {
@@ -43,7 +44,7 @@ function gapDaysBetween(prev: Trip | null, next: Trip | null): number | null {
   return gap > 1 ? gap : null
 }
 
-export default function TripPopup({ trip, prevTrip, nextTrip, onNavigate, onClose, onAddTrip, onEditTrip, onDeleteTrip }: TripPopupProps) {
+export default function TripPopup({ trip, prevTrip, nextTrip, onNavigate, onClose, onAddTrip, onEditTrip, onDeleteTrip, rightPanelOpen }: TripPopupProps) {
   const [visible, setVisible] = useState(false)
   const [shouldRender, setShouldRender] = useState(false)
 
@@ -86,12 +87,13 @@ export default function TripPopup({ trip, prevTrip, nextTrip, onNavigate, onClos
   return (
     <div
       data-globe-popup
-      className={`absolute right-6 ${GLASS.panel} rounded-xl shadow-lg p-3 w-[320px]`}
+      className={`absolute ${GLASS.panel} rounded-xl shadow-lg p-3 w-[320px]`}
       style={{
         bottom: 'calc(max(1.25rem, env(safe-area-inset-bottom, 0px)) + 60px)',
+        right: rightPanelOpen ? PANEL_WIDTH.detail + 24 : 24,
         opacity: visible ? 1 : 0,
         transform: visible ? 'translateY(0)' : 'translateY(8px)',
-        transition: 'opacity 200ms cubic-bezier(0.32,0.72,0,1), transform 200ms cubic-bezier(0.32,0.72,0,1)',
+        transition: 'opacity 200ms cubic-bezier(0.32,0.72,0,1), transform 200ms cubic-bezier(0.32,0.72,0,1), right 300ms cubic-bezier(0.32,0.72,0,1)',
         pointerEvents: visible ? 'auto' : 'none',
         willChange: visible ? 'transform, opacity' : 'auto',
         zIndex: Z.overlay,

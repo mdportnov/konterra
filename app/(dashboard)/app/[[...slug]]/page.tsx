@@ -69,6 +69,14 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
   const filters = useContactFilters(data.contacts, data.userTags)
   const nav = usePanelNavigation(slug, data.contacts, data.connections, isMobile, setMobileView)
 
+  useHotkey('[', () => setSidebarOpen(prev => !prev))
+  useHotkey(']', () => {
+    if (wishlistDetailOpen) { setWishlistDetailOpen(false); return }
+    if (nav.activePanel === 'settings') { nav.handleCloseSettings(); return }
+    if (nav.activePanel === 'insights') { nav.handleCloseInsights(); return }
+    if (nav.activePanel === 'edit') { nav.handleCancelEdit(); return }
+  })
+
   const { dashboardTab, setDashboardTab, handleLayerToggle } = useDashboardRouting({
     initialSlug: slug,
     setDisplayOptions,
@@ -266,6 +274,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
   }, [wishlistDetailCountry, data.countryConnections, data.contacts, wishlistDetailContacts])
 
   const wishlistDetailEffectiveOpen = wishlistDetailOpen && !!wishlistDetailCountry && data.wishlistCountries.has(wishlistDetailCountry)
+  const rightPanelOpen = nav.activePanel !== null || wishlistDetailEffectiveOpen
 
   useEffect(() => {
     if (!data.loading) nav.resolveInitialContact(data.contacts)
@@ -498,6 +507,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
         onAddTrip={handleAddTrip}
         onEditTrip={handleEditTrip}
         onDeleteTrip={handleDeleteTrip}
+        rightPanelOpen={rightPanelOpen}
       />
 
       {popups.countryPopup && (
