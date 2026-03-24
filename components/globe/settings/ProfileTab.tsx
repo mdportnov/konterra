@@ -9,7 +9,7 @@ import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { LogOut, Loader2, Pencil, Check, X, Users, Globe, Link2, Shield, MapPin, Copy, ExternalLink, Ticket, UserPlus, Info } from 'lucide-react'
+import { LogOut, Loader2, Pencil, Check, X, Users, Globe, Link2, Shield, MapPin, Copy, ExternalLink, Ticket, UserPlus, Info, Navigation, Home, RotateCw } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
 import { PROFILE_NUDGE_KEY } from '@/lib/local-storage'
@@ -79,6 +79,7 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const [profileError, setProfileError] = useState(false)
+  const [gpsStatus, setGpsStatus] = useState<'idle' | 'detecting' | 'done' | 'denied'>('idle')
 
   const [editingBio, setEditingBio] = useState(false)
   const [bioValue, setBioValue] = useState('')
@@ -150,6 +151,37 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
       } catch { /* ignore */ }
     }, 300)
   }, [])
+
+  const requestGps = useCallback(() => {
+    if (!navigator.geolocation) { setGpsStatus('denied'); return }
+    setGpsStatus('detecting')
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const res = await fetch('/api/me/location', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ lat: pos.coords.latitude, lng: pos.coords.longitude, source: 'gps' }),
+          })
+          if (!res.ok) throw new Error()
+          const data = await res.json()
+          setHomebase((prev) => prev ? { ...prev, currentCity: data.currentCity, currentCountry: data.currentCountry } : prev)
+          setGpsStatus('done')
+        } catch {
+          setGpsStatus('done')
+          toast.error('Failed to detect location')
+        }
+      },
+      () => { setGpsStatus('denied') },
+      { enableHighAccuracy: false, timeout: 10000 }
+    )
+  }, [])
+
+  useEffect(() => {
+    if (!homebaseLoading && homebase && !homebase.currentCity && gpsStatus === 'idle') {
+      requestGps()
+    }
+  }, [homebaseLoading, homebase, gpsStatus, requestGps])
 
   const handleCityInputChange = (val: string) => {
     setCityInput(val)
@@ -705,84 +737,122 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
 
           <div className={CARD}>
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className={SECTION_HEADER}>
-                  <MapPin className="h-3.5 w-3.5 text-muted-foreground/60" />
-                  <span className={SECTION_LABEL}>Homebase</span>
-                </div>
-                {!editingHomebase && !homebaseLoading && (
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={handleEditHomebase}>
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Edit homebase</TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                )}
+              <div className={SECTION_HEADER}>
+                <MapPin className="h-3.5 w-3.5 text-muted-foreground/60" />
+                <span className={SECTION_LABEL}>Location</span>
               </div>
-              {homebaseLoading ? (
-                <Skeleton className="h-5 w-40" />
-              ) : editingHomebase ? (
-                <div className="space-y-2">
-                  <div className="relative">
-                    <Input
-                      value={cityInput}
-                      onChange={(e) => handleCityInputChange(e.target.value)}
-                      placeholder="Search city..."
-                      className="h-8 text-sm"
-                      autoFocus
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && cityInput.trim()) handleSaveHomebase()
-                        if (e.key === 'Escape') handleCancelHomebase()
-                      }}
-                    />
-                    {suggestions.length > 0 && (
-                      <div className="absolute top-full left-0 right-0 mt-1 bg-popover border border-border rounded-md shadow-md z-50 overflow-hidden">
-                        {suggestions.map((s, i) => (
-                          <button
-                            key={i}
-                            className="w-full text-left px-3 py-2 text-sm hover:bg-accent transition-colors"
-                            onClick={() => handleSelectSuggestion(s)}
-                          >
-                            {s.formatted}
-                          </button>
-                        ))}
-                      </div>
+
+              <div className="flex items-center justify-between min-h-[28px]">
+                <div className="flex items-center gap-2">
+                  <Navigation className="h-3.5 w-3.5 text-muted-foreground/60 shrink-0" />
+                  <span className="text-xs text-muted-foreground/70">Current location</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  {homebaseLoading || gpsStatus === 'detecting' ? (
+                    <div className="flex items-center gap-1.5">
+                      <Loader2 className="h-3 w-3 animate-spin text-muted-foreground/60" />
+                      <span className="text-sm text-muted-foreground">Detecting...</span>
+                    </div>
+                  ) : homebase?.currentCity ? (
+                    <span className="text-sm text-muted-foreground">
+                      {[homebase.currentCity, homebase.currentCountry].filter(Boolean).join(', ')}
+                    </span>
+                  ) : (
+                    <span className="text-sm text-muted-foreground/50">Unavailable</span>
+                  )}
+                  {!homebaseLoading && gpsStatus !== 'detecting' && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={requestGps}>
+                            <RotateCw className="h-3 w-3" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Refresh location</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                </div>
+              </div>
+
+              <div className="border-t border-border" />
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between min-h-[28px]">
+                  <div className="flex items-center gap-2">
+                    <Home className="h-3.5 w-3.5 text-muted-foreground/60 shrink-0" />
+                    <span className="text-xs text-muted-foreground/70">Homebase</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    {homebaseLoading ? (
+                      <Skeleton className="h-4 w-28" />
+                    ) : (
+                      <span className="text-sm text-muted-foreground">
+                        {homebaseDisplay || 'Not set'}
+                        {homebase?.timezone && <span className="text-xs text-muted-foreground/50 ml-1">({homebase.timezone})</span>}
+                      </span>
+                    )}
+                    {!editingHomebase && !homebaseLoading && (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={handleEditHomebase}>
+                              <Pencil className="h-3 w-3" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Edit homebase</TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     )}
                   </div>
-                  <div className="flex gap-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 text-xs"
-                      onClick={handleSaveHomebase}
-                      disabled={savingHomebase || !cityInput.trim()}
-                    >
-                      {savingHomebase ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Check className="h-3 w-3 mr-1" />}
-                      Save
-                    </Button>
-                    <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={handleCancelHomebase}>
-                      <X className="h-3 w-3 mr-1" />
-                      Cancel
-                    </Button>
-                  </div>
                 </div>
-              ) : (
-                <>
-                  <p className="text-sm text-muted-foreground">
-                    {homebaseDisplay || 'Not set'}
-                    {homebase?.timezone && <span className="text-xs text-muted-foreground/50 ml-1">({homebase.timezone})</span>}
-                  </p>
-                  {homebase?.currentCity && homebase.currentCity !== homebase.city && (
-                    <p className="text-xs text-muted-foreground/60 mt-1">
-                      Currently in: {[homebase.currentCity, homebase.currentCountry].filter(Boolean).join(', ')}
-                    </p>
-                  )}
-                </>
-              )}
+                {editingHomebase && (
+                  <div className="space-y-2 pl-5.5">
+                    <div className="relative">
+                      <Input
+                        value={cityInput}
+                        onChange={(e) => handleCityInputChange(e.target.value)}
+                        placeholder="Search city..."
+                        className="h-8 text-sm"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && cityInput.trim()) handleSaveHomebase()
+                          if (e.key === 'Escape') handleCancelHomebase()
+                        }}
+                      />
+                      {suggestions.length > 0 && (
+                        <div className="absolute top-full left-0 right-0 mt-1 bg-popover border border-border rounded-md shadow-md z-50 overflow-hidden">
+                          {suggestions.map((s, i) => (
+                            <button
+                              key={i}
+                              className="w-full text-left px-3 py-2 text-sm hover:bg-accent transition-colors"
+                              onClick={() => handleSelectSuggestion(s)}
+                            >
+                              {s.formatted}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={handleSaveHomebase}
+                        disabled={savingHomebase || !cityInput.trim()}
+                      >
+                        {savingHomebase ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Check className="h-3 w-3 mr-1" />}
+                        Save
+                      </Button>
+                      <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={handleCancelHomebase}>
+                        <X className="h-3 w-3 mr-1" />
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
