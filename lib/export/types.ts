@@ -1,4 +1,28 @@
-export type ExportFormat = 'konterra' | 'csv' | 'vcard'
+export type ExportFormat = 'konterra' | 'csv' | 'vcard' | 'travel-json' | 'travel-csv'
+
+export type TravelSection = 'trips' | 'visited' | 'wishlist'
+
+export interface KonterraTravelExport {
+  version: 1
+  exportedAt: string
+  trips?: {
+    arrivalDate: string
+    departureDate: string | null
+    durationDays: number | null
+    city: string
+    country: string
+    lat: number | null
+    lng: number | null
+    notes: string | null
+  }[]
+  visitedCountries?: string[]
+  wishlist?: {
+    country: string
+    priority: string
+    status: string
+    notes: string | null
+  }[]
+}
 
 export interface KonterraContactRef {
   _ref: string

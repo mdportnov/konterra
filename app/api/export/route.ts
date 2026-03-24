@@ -10,13 +10,17 @@ import {
   getAllCountryConnections,
   getTagsByUserId,
   getVisitedCountries,
+  getTripsByUserId,
+  getWishlistCountries,
 } from '@/lib/db/queries'
 import { serializeKonterra } from '@/lib/export/serialize-konterra'
 import { serializeCSV } from '@/lib/export/serialize-csv'
 import { serializeVCards } from '@/lib/export/serialize-vcard'
-import type { ExportFormat } from '@/lib/export/types'
+import { serializeTravelJSON, serializeTravelCSV } from '@/lib/export/serialize-travel'
+import type { ExportFormat, TravelSection } from '@/lib/export/types'
 
-const VALID_FORMATS: ExportFormat[] = ['konterra', 'csv', 'vcard']
+const VALID_FORMATS: ExportFormat[] = ['konterra', 'csv', 'vcard', 'travel-json', 'travel-csv']
+const VALID_SECTIONS: TravelSection[] = ['trips', 'visited', 'wishlist']
 
 export async function GET(req: Request) {
   const session = await auth()
@@ -50,6 +54,38 @@ export async function GET(req: Request) {
         headers: {
           'Content-Type': 'application/json',
           'Content-Disposition': `attachment; filename="konterra-export-${now}.konterra.json"`,
+        },
+      })
+    }
+
+    if (format === 'travel-json') {
+      const raw = searchParams.get('sections')
+      const sections = new Set<TravelSection>(
+        raw ? (raw.split(',').filter((s) => VALID_SECTIONS.includes(s as TravelSection)) as TravelSection[]) : VALID_SECTIONS,
+      )
+
+      const [tripsData, visited, wishlist] = await Promise.all([
+        sections.has('trips') ? getTripsByUserId(userId) : Promise.resolve([]),
+        sections.has('visited') ? getVisitedCountries(userId) : Promise.resolve([]),
+        sections.has('wishlist') ? getWishlistCountries(userId) : Promise.resolve([]),
+      ])
+
+      const body = serializeTravelJSON(tripsData, visited, wishlist, sections)
+      return new NextResponse(body, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Disposition': `attachment; filename="travel-export-${now}.json"`,
+        },
+      })
+    }
+
+    if (format === 'travel-csv') {
+      const tripsData = await getTripsByUserId(userId)
+      const body = serializeTravelCSV(tripsData)
+      return new NextResponse(body, {
+        headers: {
+          'Content-Type': 'text/csv; charset=utf-8',
+          'Content-Disposition': `attachment; filename="trips-${now}.csv"`,
         },
       })
     }

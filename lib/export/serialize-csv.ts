@@ -1,21 +1,8 @@
 import type { Contact } from '@/lib/db/schema'
-
-function escapeCSV(value: string): string {
-  if (value.includes(',') || value.includes('"') || value.includes('\n')) {
-    return '"' + value.replace(/"/g, '""') + '"'
-  }
-  return value
-}
+import { escapeCSV, fmtDate, CSV_BOM } from './csv-utils'
 
 function fmt(v: string | null | undefined): string {
   return v ?? ''
-}
-
-function fmtDate(d: Date | null | undefined): string {
-  if (!d) return ''
-  const date = d instanceof Date ? d : new Date(d)
-  if (isNaN(date.getTime())) return ''
-  return date.toISOString().split('T')[0]
 }
 
 const HEADERS = [
@@ -69,5 +56,5 @@ export function serializeCSV(contacts: Contact[]): string {
     rows.push(row.map(escapeCSV).join(','))
   }
 
-  return rows.join('\n')
+  return CSV_BOM + rows.join('\n')
 }
