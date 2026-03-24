@@ -742,19 +742,19 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
                 <span className={SECTION_LABEL}>Location</span>
               </div>
 
-              <div className="flex items-center justify-between min-h-[28px]">
+              <div className="space-y-1">
                 <div className="flex items-center gap-2">
                   <Navigation className="h-3.5 w-3.5 text-muted-foreground/60 shrink-0" />
                   <span className="text-xs text-muted-foreground/70">Current location</span>
                 </div>
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5 pl-5.5">
                   {homebaseLoading || gpsStatus === 'detecting' ? (
                     <div className="flex items-center gap-1.5">
                       <Loader2 className="h-3 w-3 animate-spin text-muted-foreground/60" />
                       <span className="text-sm text-muted-foreground">Detecting...</span>
                     </div>
                   ) : homebase?.currentCity ? (
-                    <span className="text-sm text-muted-foreground">
+                    <span className="text-sm text-muted-foreground truncate">
                       {[homebase.currentCity, homebase.currentCountry].filter(Boolean).join(', ')}
                     </span>
                   ) : (
@@ -778,20 +778,12 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
               <div className="border-t border-border" />
 
               <div className="space-y-2">
-                <div className="flex items-center justify-between min-h-[28px]">
-                  <div className="flex items-center gap-2">
-                    <Home className="h-3.5 w-3.5 text-muted-foreground/60 shrink-0" />
-                    <span className="text-xs text-muted-foreground/70">Homebase</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    {homebaseLoading ? (
-                      <Skeleton className="h-4 w-28" />
-                    ) : (
-                      <span className="text-sm text-muted-foreground">
-                        {homebaseDisplay || 'Not set'}
-                        {homebase?.timezone && <span className="text-xs text-muted-foreground/50 ml-1">({homebase.timezone})</span>}
-                      </span>
-                    )}
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Home className="h-3.5 w-3.5 text-muted-foreground/60 shrink-0" />
+                      <span className="text-xs text-muted-foreground/70">Homebase</span>
+                    </div>
                     {!editingHomebase && !homebaseLoading && (
                       <TooltipProvider>
                         <Tooltip>
@@ -805,6 +797,14 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
                       </TooltipProvider>
                     )}
                   </div>
+                  {homebaseLoading ? (
+                    <Skeleton className="h-4 w-28 ml-5.5" />
+                  ) : (
+                    <p className="text-sm text-muted-foreground pl-5.5 truncate">
+                      {homebaseDisplay || 'Not set'}
+                      {homebase?.timezone && <span className="text-xs text-muted-foreground/50 ml-1">({homebase.timezone})</span>}
+                    </p>
+                  )}
                 </div>
                 {editingHomebase && (
                   <div className="space-y-2 pl-5.5">
