@@ -9,11 +9,10 @@ import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { LogOut, Loader2, Pencil, Check, X, Users, Globe, Link2, Shield, MapPin, Copy, ExternalLink, Ticket, UserPlus, KeyRound, Info } from 'lucide-react'
+import { LogOut, Loader2, Pencil, Check, X, Users, Globe, Link2, Shield, MapPin, Copy, ExternalLink, Ticket, UserPlus, Info } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
 import { PROFILE_NUDGE_KEY } from '@/lib/local-storage'
-import { PASSWORD_MIN_LENGTH, PASSWORD_MAX_LENGTH } from '@/lib/validation'
 import type { ProfileTabProps } from './types'
 
 interface SessionUser {
@@ -99,13 +98,6 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
   const [nudgeDismissed, setNudgeDismissed] = useState(() => {
     try { return localStorage.getItem(PROFILE_NUDGE_KEY) === '1' } catch { return false }
   })
-
-  const [editingPassword, setEditingPassword] = useState(false)
-  const [currentPassword, setCurrentPassword] = useState('')
-  const [newPassword, setNewPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [savingPassword, setSavingPassword] = useState(false)
-  const [passwordError, setPasswordError] = useState('')
 
   useEffect(() => {
     if (!open) return
@@ -302,59 +294,6 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
       toast.error('Failed to update username')
     } finally {
       setSavingUsername(false)
-    }
-  }
-
-  const handleCancelPassword = () => {
-    setEditingPassword(false)
-    setCurrentPassword('')
-    setNewPassword('')
-    setConfirmPassword('')
-    setPasswordError('')
-  }
-
-  const handleSavePassword = async () => {
-    setPasswordError('')
-
-    if (!currentPassword) {
-      setPasswordError('Current password is required')
-      return
-    }
-    if (newPassword.length < PASSWORD_MIN_LENGTH) {
-      setPasswordError(`New password must be at least ${PASSWORD_MIN_LENGTH} characters`)
-      return
-    }
-    if (newPassword.length > PASSWORD_MAX_LENGTH) {
-      setPasswordError(`New password must be at most ${PASSWORD_MAX_LENGTH} characters`)
-      return
-    }
-    if (currentPassword === newPassword) {
-      setPasswordError('New password must be different from current password')
-      return
-    }
-    if (newPassword !== confirmPassword) {
-      setPasswordError('Passwords do not match')
-      return
-    }
-
-    setSavingPassword(true)
-    try {
-      const res = await fetch('/api/me/password', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ currentPassword, newPassword }),
-      })
-      const data = await res.json()
-      if (!res.ok) {
-        setPasswordError(data.error || 'Failed to update password')
-        return
-      }
-      handleCancelPassword()
-      toast.success('Password updated')
-    } catch {
-      setPasswordError('Failed to update password')
-    } finally {
-      setSavingPassword(false)
     }
   }
 
@@ -942,90 +881,6 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
             </div>
           )}
 
-          <div className={CARD}>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className={SECTION_HEADER}>
-                  <KeyRound className="h-3.5 w-3.5 text-muted-foreground/60" />
-                  <span className={SECTION_LABEL}>Security</span>
-                </div>
-                {!editingPassword && (
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => setEditingPassword(true)}>
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Change password</TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                )}
-              </div>
-              {editingPassword ? (
-                <div className="space-y-2">
-                  <Input
-                    type="password"
-                    placeholder="Current password"
-                    value={currentPassword}
-                    onChange={(e) => { setCurrentPassword(e.target.value); setPasswordError('') }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') handleSavePassword()
-                      if (e.key === 'Escape') handleCancelPassword()
-                    }}
-                    autoComplete="current-password"
-                    className="h-8 text-sm"
-                    autoFocus
-                  />
-                  <Input
-                    type="password"
-                    placeholder={`New password (min ${PASSWORD_MIN_LENGTH} characters)`}
-                    value={newPassword}
-                    onChange={(e) => { setNewPassword(e.target.value); setPasswordError('') }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') handleSavePassword()
-                      if (e.key === 'Escape') handleCancelPassword()
-                    }}
-                    autoComplete="new-password"
-                    className="h-8 text-sm"
-                  />
-                  <Input
-                    type="password"
-                    placeholder="Confirm new password"
-                    value={confirmPassword}
-                    onChange={(e) => { setConfirmPassword(e.target.value); setPasswordError('') }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') handleSavePassword()
-                      if (e.key === 'Escape') handleCancelPassword()
-                    }}
-                    autoComplete="new-password"
-                    className="h-8 text-sm"
-                  />
-                  {passwordError && (
-                    <p className="text-xs text-destructive">{passwordError}</p>
-                  )}
-                  <div className="flex gap-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 text-xs"
-                      onClick={handleSavePassword}
-                      disabled={savingPassword}
-                    >
-                      {savingPassword ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Check className="h-3 w-3 mr-1" />}
-                      Save
-                    </Button>
-                    <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={handleCancelPassword}>
-                      <X className="h-3 w-3 mr-1" />
-                      Cancel
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">********</p>
-              )}
-            </div>
-          </div>
         </div>
       </ScrollArea>
       <div className="p-6 pt-3 space-y-2">
