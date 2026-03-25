@@ -9,9 +9,15 @@ interface TravelSectionProps {
   onAddTrip?: (prefill?: { arrivalDate?: string; departureDate?: string }) => void
   onEditTrip?: (trip: Trip) => void
   onDeleteTrip?: (trip: Trip) => void
+  compareMode?: boolean
+  selectedCompareIds?: Set<string>
+  onToggleCompareTrip?: (id: string) => void
+  canOpenCompare?: boolean
+  onOpenCompare?: () => void
+  onToggleCompareMode?: () => void
 }
 
-export default function TravelSection({ trips, tripsLoading, onImportTrips, onTripClick, onAddTrip, onEditTrip, onDeleteTrip }: TravelSectionProps) {
+export default function TravelSection({ trips, tripsLoading, onImportTrips, onTripClick, onAddTrip, onEditTrip, onDeleteTrip, compareMode, selectedCompareIds, onToggleCompareTrip, canOpenCompare, onOpenCompare, onToggleCompareMode }: TravelSectionProps) {
   return (
     <div className="p-4 md:p-5">
       <TravelJourney
@@ -22,6 +28,12 @@ export default function TravelSection({ trips, tripsLoading, onImportTrips, onTr
         onAddTrip={onAddTrip}
         onEditTrip={onEditTrip}
         onDeleteTrip={onDeleteTrip}
+        compareMode={compareMode}
+        selectedCompareIds={selectedCompareIds}
+        onToggleCompareTrip={onToggleCompareTrip}
+        canOpenCompare={canOpenCompare}
+        onOpenCompare={onOpenCompare}
+        onToggleCompareMode={onToggleCompareMode}
       />
     </div>
   )

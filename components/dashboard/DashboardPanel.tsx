@@ -43,6 +43,12 @@ interface DashboardPanelProps {
   onAddTrip?: (prefill?: { arrivalDate?: string; departureDate?: string }) => void
   onEditTrip?: (trip: Trip) => void
   onDeleteTrip?: (trip: Trip) => void
+  compareMode?: boolean
+  selectedCompareIds?: Set<string>
+  onToggleCompareTrip?: (id: string) => void
+  canOpenCompare?: boolean
+  onOpenCompare?: () => void
+  onToggleCompareMode?: () => void
   dashboardTab?: 'connections' | 'travel'
   onDashboardTabChange?: (tab: 'connections' | 'travel') => void
 }
@@ -80,6 +86,12 @@ export default function DashboardPanel({
   onAddTrip,
   onEditTrip,
   onDeleteTrip,
+  compareMode,
+  selectedCompareIds,
+  onToggleCompareTrip,
+  canOpenCompare,
+  onOpenCompare,
+  onToggleCompareMode,
   dashboardTab: dashboardTabProp,
   onDashboardTabChange,
 }: DashboardPanelProps) {
@@ -126,6 +138,12 @@ export default function DashboardPanel({
             onAddTrip={onAddTrip}
             onEditTrip={onEditTrip}
             onDeleteTrip={onDeleteTrip}
+            compareMode={compareMode}
+            selectedCompareIds={selectedCompareIds}
+            onToggleCompareTrip={onToggleCompareTrip}
+            canOpenCompare={canOpenCompare}
+            onOpenCompare={onOpenCompare}
+            onToggleCompareMode={onToggleCompareMode}
           />
         ) : (
           <ContactListSection

@@ -20,6 +20,7 @@ import ConnectionInsightsPanel from '@/components/insights/ConnectionInsightsPan
 import CountryPopup from '@/components/globe/CountryPopup'
 import TripPopup from '@/components/globe/TripPopup'
 import TripEditDialog from '@/components/globe/TripEditDialog'
+import TripGapComparePanel from '@/components/globe/TripGapComparePanel'
 import TripCountryPopup from '@/components/globe/TripCountryPopup'
 import { PANEL_WIDTH, GLASS, Z, TRANSITION } from '@/lib/constants/ui'
 import { displayDefaults } from '@/types/display'
@@ -32,6 +33,7 @@ import { useGlobeData } from '@/hooks/use-globe-data'
 import { useContactFilters } from '@/hooks/use-contact-filters'
 import { usePanelNavigation } from '@/hooks/use-panel-navigation'
 import { useTripSelection } from '@/hooks/use-trip-selection'
+import { useTripCompare } from '@/hooks/use-trip-compare'
 import { usePopupState } from '@/hooks/use-popup-state'
 import { useDashboardRouting } from '@/hooks/use-dashboard-routing'
 import { useHotkey } from '@/hooks/use-hotkey'
@@ -86,6 +88,18 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
     trips: data.trips,
     setFlyTarget: nav.setFlyTarget,
   })
+
+  const tripCompare = useTripCompare({ trips: data.trips })
+
+  const handleOpenTripCompare = useCallback(() => {
+    if (nav.activePanel) {
+      if (nav.activePanel === 'settings') nav.handleCloseSettings()
+      else if (nav.activePanel === 'insights') nav.handleCloseInsights()
+      else if (nav.activePanel === 'edit') nav.handleCancelEdit()
+    }
+    if (wishlistDetailOpen) setWishlistDetailOpen(false)
+    tripCompare.openPanel()
+  }, [nav, wishlistDetailOpen, tripCompare])
 
   const popups = usePopupState({
     contacts: data.contacts,
@@ -274,7 +288,13 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
   }, [wishlistDetailCountry, data.countryConnections, data.contacts, wishlistDetailContacts])
 
   const wishlistDetailEffectiveOpen = wishlistDetailOpen && !!wishlistDetailCountry && data.wishlistCountries.has(wishlistDetailCountry)
-  const rightPanelOpen = nav.activePanel !== null || wishlistDetailEffectiveOpen
+  const rightPanelOpen = nav.activePanel !== null || wishlistDetailEffectiveOpen || tripCompare.panelOpen
+
+  useEffect(() => {
+    if (tripCompare.panelOpen && (nav.activePanel !== null || wishlistDetailEffectiveOpen)) {
+      tripCompare.dismissPanel()
+    }
+  }, [nav.activePanel, wishlistDetailEffectiveOpen, tripCompare.panelOpen, tripCompare.dismissPanel])
 
   useEffect(() => {
     if (!data.loading) nav.resolveInitialContact(data.contacts)
@@ -314,6 +334,12 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
     onAddTrip: handleAddTrip,
     onEditTrip: handleEditTrip,
     onDeleteTrip: handleDeleteTrip,
+    compareMode: tripCompare.compareMode,
+    selectedCompareIds: tripCompare.selectedIds,
+    onToggleCompareTrip: tripCompare.toggleTrip,
+    canOpenCompare: tripCompare.canOpenCompare,
+    onOpenCompare: handleOpenTripCompare,
+    onToggleCompareMode: tripCompare.toggleCompareMode,
     dashboardTab,
     onDashboardTabChange: setDashboardTab,
   } as const
@@ -408,6 +434,14 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
         onUpdate={data.handleWishlistUpdate}
         onRemove={data.handleWishlistToggle}
         onContactClick={nav.handleContactClick}
+      />
+
+      <TripGapComparePanel
+        open={tripCompare.panelOpen}
+        onClose={tripCompare.closePanel}
+        selectedTrips={tripCompare.selectedTrips}
+        gaps={tripCompare.gaps}
+        stats={tripCompare.stats}
       />
 
       <ImportDialog

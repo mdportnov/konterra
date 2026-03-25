@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { Plane, Upload, Calendar, Clock, ArrowRight, Plus, AlertTriangle, Search, X, Pencil, Trash2 } from 'lucide-react'
+import { Plane, Upload, Calendar, Clock, ArrowRight, Plus, AlertTriangle, Search, X, Pencil, Trash2, ArrowLeftRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { GLASS } from '@/lib/constants/ui'
@@ -17,6 +18,12 @@ interface TravelJourneyProps {
   onAddTrip?: (prefill?: { arrivalDate?: string; departureDate?: string }) => void
   onEditTrip?: (trip: Trip) => void
   onDeleteTrip?: (trip: Trip) => void
+  compareMode?: boolean
+  selectedCompareIds?: Set<string>
+  onToggleCompareTrip?: (id: string) => void
+  canOpenCompare?: boolean
+  onOpenCompare?: () => void
+  onToggleCompareMode?: () => void
 }
 
 function formatDate(d: Date | string | null): string {
@@ -43,7 +50,7 @@ function computeGap(laterTrip: Trip, earlierTrip: Trip): number {
   return Math.round((startDate.getTime() - endDate.getTime()) / 86400000)
 }
 
-export default function TravelJourney({ trips, loading, onImport, onTripClick, onAddTrip, onEditTrip, onDeleteTrip }: TravelJourneyProps) {
+export default function TravelJourney({ trips, loading, onImport, onTripClick, onAddTrip, onEditTrip, onDeleteTrip, compareMode, selectedCompareIds, onToggleCompareTrip, canOpenCompare, onOpenCompare, onToggleCompareMode }: TravelJourneyProps) {
   const now = useMemo(() => new Date(), [])
   const [search, setSearch] = useState('')
 
@@ -140,6 +147,21 @@ export default function TravelJourney({ trips, loading, onImport, onTripClick, o
           Travel Journey
         </span>
         <div className="flex items-center gap-1">
+          {trips.length >= 2 && onToggleCompareMode && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={onToggleCompareMode}
+                    className={`h-6 w-6 flex items-center justify-center rounded transition-colors ${compareMode ? 'text-orange-500 bg-orange-500/10' : 'text-muted-foreground hover:text-foreground hover:bg-accent'}`}
+                  >
+                    <ArrowLeftRight className="h-3 w-3" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent className="text-xs">{compareMode ? 'Exit compare' : 'Compare trips'}</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
           {onAddTrip && (
             <TooltipProvider>
               <Tooltip>
@@ -233,9 +255,17 @@ export default function TravelJourney({ trips, loading, onImport, onTripClick, o
                     className={`w-full text-left pl-5 pr-2 py-1.5 rounded-md transition-colors relative group ${isFuture ? 'hover:bg-green-500/5' : 'hover:bg-blue-500/5'}`}
                   >
                     <div className={`absolute left-[-3px] top-[11px] w-2 h-2 rounded-full border-2 border-background ring-1 ${isFuture ? 'bg-green-400 ring-green-400/40' : 'bg-blue-400 ring-blue-400/40'}`} />
+                    {compareMode && onToggleCompareTrip && (
+                      <div className="absolute left-5 top-1/2 -translate-y-1/2">
+                        <Checkbox
+                          checked={selectedCompareIds?.has(trip.id) ?? false}
+                          onCheckedChange={() => onToggleCompareTrip(trip.id)}
+                        />
+                      </div>
+                    )}
                     <button
-                      onClick={() => onTripClick?.(trip)}
-                      className="w-full text-left"
+                      onClick={() => compareMode && onToggleCompareTrip ? onToggleCompareTrip(trip.id) : onTripClick?.(trip)}
+                      className={`w-full text-left ${compareMode ? 'pl-6' : ''}`}
                     >
                       <div className="flex-1 min-w-0 pr-12">
                         <p className="text-xs font-medium text-foreground truncate">
@@ -347,6 +377,15 @@ export default function TravelJourney({ trips, loading, onImport, onTripClick, o
           </div>
         ))}
       </div>
+
+      {compareMode && canOpenCompare && onOpenCompare && (
+        <div className="sticky bottom-0 left-0 right-0 p-3 bg-background/90 backdrop-blur-sm border-t border-border">
+          <Button size="sm" className="w-full text-xs" onClick={onOpenCompare}>
+            <ArrowLeftRight className="h-3 w-3 mr-1.5" />
+            Compare {selectedCompareIds?.size ?? 0} trips
+          </Button>
+        </div>
+      )}
     </div>
   )
 }
