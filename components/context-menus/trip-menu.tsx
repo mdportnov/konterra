@@ -1,6 +1,6 @@
 'use client'
 
-import { Pencil, Trash2, Copy, Plus, MapPin, Calendar, ArrowLeftRight, Files } from 'lucide-react'
+import { Pencil, Trash2, Copy, Plus, MapPin, Calendar, ArrowLeftRight, Files, ClipboardList } from 'lucide-react'
 import {
   ContextMenu,
   ContextMenuTrigger,
@@ -58,6 +58,13 @@ export default function TripContextMenu({
   const copyDates = async () => {
     const ok = await copyToClipboard(formatDateRange(trip))
     toast[ok ? 'success' : 'error'](ok ? 'Dates copied' : 'Copy failed')
+  }
+
+  const copyFullInfo = async () => {
+    const parts = [`${trip.city}, ${trip.country}`, formatDateRange(trip)]
+    if (trip.durationDays != null) parts.push(`${trip.durationDays}d`)
+    const ok = await copyToClipboard(parts.join(' · '))
+    toast[ok ? 'success' : 'error'](ok ? 'Info copied' : 'Copy failed')
   }
 
   const handleAddNext = () => {
@@ -118,6 +125,11 @@ export default function TripContextMenu({
             <ContextMenuItem onClick={copyDates}>
               <Calendar className="h-3.5 w-3.5" />
               Dates
+            </ContextMenuItem>
+            <ContextMenuSeparator />
+            <ContextMenuItem onClick={copyFullInfo}>
+              <ClipboardList className="h-3.5 w-3.5" />
+              Full info
             </ContextMenuItem>
           </ContextMenuSubContent>
         </ContextMenuSub>
