@@ -30,6 +30,28 @@ export const IMPORT_SOURCE_LABELS: Record<string, string> = {
   'linkedin-csv': 'LinkedIn',
 }
 
+export const COMMUNICATION_STYLE_LABELS: Record<string, string> = {
+  'direct': 'Direct',
+  'diplomatic': 'Diplomatic',
+  'analytical': 'Analytical',
+  'expressive': 'Expressive',
+}
+
+export const PREFERRED_CHANNEL_LABELS: Record<string, string> = {
+  'email': 'Email',
+  'call': 'Call',
+  'text': 'Text',
+  'in-person': 'In Person',
+  'linkedin': 'LinkedIn',
+}
+
+export const FINANCIAL_CAPACITY_LABELS: Record<string, string> = {
+  'bootstrapper': 'Bootstrapper',
+  'funded': 'Funded',
+  'wealthy': 'Wealthy',
+  'institutional': 'Institutional',
+}
+
 export function validateEnum(value: unknown, allowed: readonly string[], fieldName: string): string | null {
   if (!value) return null
   if (typeof value !== 'string' || !allowed.includes(value)) return `Invalid ${fieldName}`

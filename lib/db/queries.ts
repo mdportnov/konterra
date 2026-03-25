@@ -190,12 +190,14 @@ export async function createInteraction(data: {
     })
     if (contact) {
       const current = contact.lastContactedAt?.getTime() || 0
+      const set: Record<string, unknown> = { nextFollowUp: null, updatedAt: new Date() }
       if (data.date.getTime() > current) {
-        await tx
-          .update(contacts)
-          .set({ lastContactedAt: data.date, updatedAt: new Date() })
-          .where(eq(contacts.id, data.contactId))
+        set.lastContactedAt = data.date
       }
+      await tx
+        .update(contacts)
+        .set(set)
+        .where(eq(contacts.id, data.contactId))
     }
     return interaction
   })

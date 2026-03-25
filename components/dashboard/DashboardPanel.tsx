@@ -161,6 +161,8 @@ export default function DashboardPanel({
             onBulkDelete={onBulkDelete}
             onReloadContacts={onReloadContacts}
             onSwitchToGlobe={onSwitchToGlobe}
+            onEditContact={onEditContact}
+            onDeleteContact={onDeleteContact}
             isMobile={isMobile}
           />
         )}

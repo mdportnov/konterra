@@ -65,9 +65,8 @@ export default memo(function ReconnectAlerts({ contacts, onContactClick, onInter
   const [quickAdd, setQuickAdd] = useState<string | null>(null)
   const [quickForm, setQuickForm] = useState({ type: 'call', notes: '', date: new Date().toISOString().slice(0, 10) })
   const [saving, setSaving] = useState(false)
-  const [pendingDone, setPendingDone] = useState<string | null>(null)
 
-  const handleQuickLog = useCallback(async (contactId: string, clearFollowUp?: boolean) => {
+  const handleQuickLog = useCallback(async (contactId: string) => {
     setSaving(true)
     try {
       const res = await fetch(`/api/contacts/${contactId}/interactions`, {
@@ -76,17 +75,9 @@ export default memo(function ReconnectAlerts({ contacts, onContactClick, onInter
         body: JSON.stringify({ ...quickForm, date: new Date(quickForm.date + 'T12:00:00').toISOString() }),
       })
       if (res.ok) {
-        if (clearFollowUp) {
-          await fetch(`/api/contacts/${contactId}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ nextFollowUp: null }),
-          })
-          onContactUpdated?.(contactId)
-        }
+        onContactUpdated?.(contactId)
         toast.success('Interaction logged')
         setQuickAdd(null)
-        setPendingDone(null)
         setQuickForm({ type: 'call', notes: '', date: new Date().toISOString().slice(0, 10) })
         onInteractionLogged?.(contactId)
       }
@@ -203,14 +194,14 @@ export default memo(function ReconnectAlerts({ contacts, onContactClick, onInter
                   <AlarmClockOff className="h-3.5 w-3.5" />
                 </button>
                 <button
-                  onClick={() => { setPendingDone(c.id); setQuickAdd(quickAdd === c.id ? null : c.id) }}
+                  onClick={() => { setQuickAdd(quickAdd === c.id ? null : c.id) }}
                   className="opacity-0 group-hover:opacity-100 text-muted-foreground/40 hover:text-green-500 transition-[opacity,color] duration-150 shrink-0 cursor-pointer"
                   title="Done"
                 >
                   <Check className="h-3.5 w-3.5" />
                 </button>
                 <button
-                  onClick={() => { setPendingDone(null); setQuickAdd(quickAdd === c.id ? null : c.id) }}
+                  onClick={() => { setQuickAdd(quickAdd === c.id ? null : c.id) }}
                   className="opacity-0 group-hover:opacity-100 text-muted-foreground/40 hover:text-orange-500 transition-[opacity,color] duration-150 shrink-0 cursor-pointer"
                   title="Log interaction"
                 >
@@ -224,11 +215,11 @@ export default memo(function ReconnectAlerts({ contacts, onContactClick, onInter
                       {INTERACTION_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
                     </select>
                     <InlineDatePicker value={quickForm.date} max={new Date().toISOString().slice(0, 10)} onChange={(v) => setQuickForm((p) => ({ ...p, date: v }))} className="h-6 text-[10px]" />
-                    <button onClick={() => { setQuickAdd(null); setPendingDone(null) }} className="ml-auto text-muted-foreground/40 hover:text-foreground cursor-pointer"><X className="h-3 w-3" /></button>
+                    <button onClick={() => setQuickAdd(null)} className="ml-auto text-muted-foreground/40 hover:text-foreground cursor-pointer"><X className="h-3 w-3" /></button>
                   </div>
                   <Input value={quickForm.notes} onChange={(e) => setQuickForm((p) => ({ ...p, notes: e.target.value }))} placeholder="Notes (optional)..." className="h-6 text-[10px] bg-muted/50" />
-                  <Button size="sm" className="h-6 text-[10px] w-full bg-orange-500 hover:bg-orange-600 text-white" disabled={saving} onClick={() => handleQuickLog(c.id, pendingDone === c.id)}>
-                    {saving ? 'Saving...' : pendingDone === c.id ? 'Log & clear follow-up' : 'Log interaction'}
+                  <Button size="sm" className="h-6 text-[10px] w-full bg-orange-500 hover:bg-orange-600 text-white" disabled={saving} onClick={() => handleQuickLog(c.id)}>
+                    {saving ? 'Saving...' : 'Log interaction'}
                   </Button>
                 </div>
               )}

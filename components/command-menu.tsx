@@ -171,7 +171,7 @@ export default function CommandMenu({
                 return (
                   <CommandItem
                     key={contact.id}
-                    value={`contact-${contact.id}-${contact.name}-${contact.company || ''}-${contact.city || ''}-${contact.country || ''}`}
+                    value={`contact-${contact.id}-${contact.name}-${contact.company || ''}-${contact.city || ''}-${contact.country || ''}-${contact.communicationStyle || ''}-${contact.preferredChannel || ''}-${contact.financialCapacity || ''}`}
                     onSelect={() => runAction(() => onContactClick(contact))}
                   >
                     <User className="text-muted-foreground" />

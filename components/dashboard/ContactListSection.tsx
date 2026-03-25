@@ -17,6 +17,7 @@ import { countryFlag } from '@/lib/country-flags'
 import GettingStartedCard, { computeAllStepsDone, isChecklistPermanentlyDone } from './GettingStartedCard'
 import StatsRow from './widgets/StatsRow'
 import TopCountriesChart from './widgets/TopCountriesChart'
+import MeetingOrigins from './widgets/MeetingOrigins'
 import ActivityTimeline from './widgets/ActivityTimeline'
 import ReconnectAlerts from './widgets/ReconnectAlerts'
 import NetworkHealth from './widgets/NetworkHealth'
@@ -25,6 +26,7 @@ import ConnectionInsightsSummary from './widgets/ConnectionInsightsSummary'
 import { fetchRecentInteractions, fetchAllFavors, bulkDeleteContacts, bulkTagContacts } from '@/lib/api'
 import { IMPORT_SOURCE_LABELS } from '@/lib/validation'
 import ContactContextMenu from '@/components/context-menus/contact-menu'
+import SwipeableContactItem from '@/components/dashboard/SwipeableContactItem'
 import type { Contact, ContactConnection, Interaction, Favor } from '@/lib/db/schema'
 
 type SortKey = 'name' | 'rating' | 'lastContacted' | 'updatedAt'
@@ -55,6 +57,8 @@ interface ContactListSectionProps {
   onBulkDelete?: (ids: string[]) => void
   onReloadContacts?: () => void
   onSwitchToGlobe?: () => void
+  onEditContact?: (contact: Contact) => void
+  onDeleteContact?: (contactId: string) => void
   isMobile?: boolean
 }
 
@@ -73,6 +77,8 @@ export default function ContactListSection({
   onBulkDelete,
   onReloadContacts,
   onSwitchToGlobe,
+  onEditContact,
+  onDeleteContact,
   isMobile,
 }: ContactListSectionProps) {
   const [searchInput, setSearchInput] = useState('')
@@ -429,6 +435,7 @@ export default function ContactListSection({
         />
       )}
       <TopCountriesChart contacts={contacts} loading={contactsLoading} />
+      <MeetingOrigins contacts={contacts} loading={contactsLoading} />
       <ActivityTimeline
         interactions={recentInteractions}
         onContactClick={(contactId) => {
@@ -735,6 +742,8 @@ export default function ContactListSection({
             selectedContact={selectedContact}
             onContactClick={handleContactClickWithSelect}
             onToggleSelect={toggleSelectContact}
+            onEditContact={onEditContact}
+            onDeleteContact={onDeleteContact}
           />
         )}
         {!contactsLoading && filteredContacts.length === 0 && (
@@ -992,6 +1001,8 @@ function ContactListView({
   selectedContact,
   onContactClick,
   onToggleSelect,
+  onEditContact,
+  onDeleteContact,
 }: {
   contacts: Contact[]
   viewMode: ViewMode
@@ -1000,6 +1011,8 @@ function ContactListView({
   selectedContact: Contact | null
   onContactClick: (c: Contact) => void
   onToggleSelect: (id: string) => void
+  onEditContact?: (c: Contact) => void
+  onDeleteContact?: (id: string) => void
 }) {
   if (viewMode === 'grid') {
     return (
@@ -1013,14 +1026,21 @@ function ContactListView({
             selectMode={selectMode}
           >
             <div style={{ display: 'contents' }}>
-              <ContactCard
-                contact={contact}
-                selectMode={selectMode}
-                isChecked={selectedIds.has(contact.id)}
-                isSelected={selectedContact?.id === contact.id}
-                onClick={() => onContactClick(contact)}
-                onToggleSelect={() => onToggleSelect(contact.id)}
-              />
+              <SwipeableContactItem
+                contactId={contact.id}
+                onLog={() => onContactClick(contact)}
+                onEdit={onEditContact ? () => onEditContact(contact) : undefined}
+                onDelete={onDeleteContact ? () => onDeleteContact(contact.id) : undefined}
+              >
+                <ContactCard
+                  contact={contact}
+                  selectMode={selectMode}
+                  isChecked={selectedIds.has(contact.id)}
+                  isSelected={selectedContact?.id === contact.id}
+                  onClick={() => onContactClick(contact)}
+                  onToggleSelect={() => onToggleSelect(contact.id)}
+                />
+              </SwipeableContactItem>
             </div>
           </ContactContextMenu>
         ))}
@@ -1046,14 +1066,21 @@ function ContactListView({
             selectMode={selectMode}
           >
             <div style={{ display: 'contents' }}>
-              <ContactCompactRow
-                contact={contact}
-                selectMode={selectMode}
-                isChecked={selectedIds.has(contact.id)}
-                isSelected={selectedContact?.id === contact.id}
-                onClick={() => onContactClick(contact)}
-                onToggleSelect={() => onToggleSelect(contact.id)}
-              />
+              <SwipeableContactItem
+                contactId={contact.id}
+                onLog={() => onContactClick(contact)}
+                onEdit={onEditContact ? () => onEditContact(contact) : undefined}
+                onDelete={onDeleteContact ? () => onDeleteContact(contact.id) : undefined}
+              >
+                <ContactCompactRow
+                  contact={contact}
+                  selectMode={selectMode}
+                  isChecked={selectedIds.has(contact.id)}
+                  isSelected={selectedContact?.id === contact.id}
+                  onClick={() => onContactClick(contact)}
+                  onToggleSelect={() => onToggleSelect(contact.id)}
+                />
+              </SwipeableContactItem>
             </div>
           </ContactContextMenu>
         ))}
@@ -1072,13 +1099,20 @@ function ContactListView({
           selectMode={selectMode}
         >
           <div style={{ display: 'contents' }}>
-            <ContactRow
-              contact={contact}
-              selectMode={selectMode}
-              isChecked={selectedIds.has(contact.id)}
-              onSelect={onContactClick}
-              onToggleSelect={() => onToggleSelect(contact.id)}
-            />
+            <SwipeableContactItem
+              contactId={contact.id}
+              onLog={() => onContactClick(contact)}
+              onEdit={onEditContact ? () => onEditContact(contact) : undefined}
+              onDelete={onDeleteContact ? () => onDeleteContact(contact.id) : undefined}
+            >
+              <ContactRow
+                contact={contact}
+                selectMode={selectMode}
+                isChecked={selectedIds.has(contact.id)}
+                onSelect={onContactClick}
+                onToggleSelect={() => onToggleSelect(contact.id)}
+              />
+            </SwipeableContactItem>
           </div>
         </ContactContextMenu>
       ))}

@@ -9,6 +9,7 @@ import { countryNames, buildCountryLabels, normalizeToGlobeName } from './data/c
 import type { DisplayOptions } from '@/types/display'
 import { Info, ChevronUp } from 'lucide-react'
 import ClusterPopup from './ClusterPopup'
+import GlobeRegionSelect from './GlobeRegionSelect'
 import { useTheme } from '@/components/providers'
 import { GLASS, Z } from '@/lib/constants/ui'
 import { TRAVEL_COLORS, NETWORK_COLORS, CONNECTION_COLORS, POLYGON_COLORS, RING_COLORS, HEXBIN_COLORS } from '@/lib/constants/globe-colors'
@@ -63,6 +64,9 @@ interface GlobeCanvasProps {
   trips?: Trip[]
   selectedTripId?: string | null
   readOnly?: boolean
+  regionSelectActive?: boolean
+  onRegionSelect?: (ids: string[]) => void
+  onRegionSelectDeactivate?: () => void
 }
 
 const EMPTY_ARCS: GlobeArc[] = []
@@ -85,6 +89,9 @@ export default memo(function GlobeCanvas({
   trips = [],
   selectedTripId,
   readOnly = false,
+  regionSelectActive = false,
+  onRegionSelect,
+  onRegionSelectDeactivate,
 }: GlobeCanvasProps) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const globeRef = useRef<any>(null)
@@ -244,6 +251,19 @@ export default memo(function GlobeCanvas({
     const controls = globeRef.current.controls()
     if (controls) controls.autoRotate = display.autoRotate
   }, [display.autoRotate])
+
+  useEffect(() => {
+    if (!globeRef.current || !globeReady.current) return
+    const controls = globeRef.current.controls()
+    if (controls) controls.enabled = !regionSelectActive
+  }, [regionSelectActive])
+
+  const getScreenCoords = useCallback((lat: number, lng: number) => {
+    if (!globeRef.current) return null
+    const coords = globeRef.current.getScreenCoords(lat, lng, 0.015)
+    if (!coords || coords.x == null || coords.y == null) return null
+    return { x: coords.x, y: coords.y }
+  }, [])
 
   useEffect(() => {
     if (selectedContact?.lat != null && selectedContact?.lng != null && globeRef.current) {
@@ -1057,6 +1077,13 @@ export default memo(function GlobeCanvas({
           onClose={closeCluster}
         />
       )}
+      <GlobeRegionSelect
+        active={regionSelectActive}
+        contacts={contacts}
+        getScreenCoords={getScreenCoords}
+        onSelect={onRegionSelect ?? (() => {})}
+        onDeactivate={onRegionSelectDeactivate ?? (() => {})}
+      />
     </div>
   )
 })

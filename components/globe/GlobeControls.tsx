@@ -7,7 +7,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
 import { Separator } from '@/components/ui/separator'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Settings, Plus, LayoutDashboard, Search, Sparkles } from 'lucide-react'
+import { Settings, Plus, LayoutDashboard, Search, Sparkles, BoxSelect } from 'lucide-react'
 import { GLASS, Z } from '@/lib/constants/ui'
 
 interface GlobeControlsProps {
@@ -20,9 +20,11 @@ interface GlobeControlsProps {
   isMobile?: boolean
   onSwitchToDashboard?: () => void
   user?: { name?: string | null; email?: string | null; image?: string | null } | null
+  regionSelectActive?: boolean
+  onToggleRegionSelect?: () => void
 }
 
-export default function GlobeControls({ onAddContact, onQuickAddContact, onSearch, onInsights, onSettings, onProfile, isMobile, onSwitchToDashboard, user }: GlobeControlsProps) {
+export default function GlobeControls({ onAddContact, onQuickAddContact, onSearch, onInsights, onSettings, onProfile, isMobile, onSwitchToDashboard, user, regionSelectActive, onToggleRegionSelect }: GlobeControlsProps) {
   const btnSize = isMobile ? 'h-10 w-10' : 'h-8 w-8'
   const iconSize = isMobile ? 'h-5 w-5' : 'h-4 w-4'
   const [quickAddOpen, setQuickAddOpen] = useState(false)
@@ -106,6 +108,22 @@ export default function GlobeControls({ onAddContact, onQuickAddContact, onSearc
           </TooltipTrigger>
           <TooltipContent>Search</TooltipContent>
         </Tooltip>
+
+        {onToggleRegionSelect && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                size="icon"
+                variant="ghost"
+                className={`${btnSize} ${regionSelectActive ? '!text-orange-500 !bg-orange-500/15' : '!text-muted-foreground hover:!text-foreground hover:!bg-accent'}`}
+                onClick={onToggleRegionSelect}
+              >
+                <BoxSelect className={iconSize} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{regionSelectActive ? 'Cancel selection' : 'Select region'}</TooltipContent>
+          </Tooltip>
+        )}
 
         <Popover open={quickAddOpen} onOpenChange={setQuickAddOpen}>
           <Tooltip>

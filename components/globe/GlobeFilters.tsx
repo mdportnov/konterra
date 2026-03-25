@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useState, useCallback, useMemo, useEffect } from 'react'
-import { Filter, X, Star, Plus } from 'lucide-react'
+import { Filter, X, Star, Plus, ChevronDown } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -14,7 +14,7 @@ import { useClickOutside } from '@/hooks/use-click-outside'
 import { useHotkey } from '@/hooks/use-hotkey'
 import { toast } from 'sonner'
 import type { Tag } from '@/lib/db/schema'
-import { IMPORT_SOURCE_LABELS } from '@/lib/validation'
+import { IMPORT_SOURCE_LABELS, COMMUNICATION_STYLE_LABELS, PREFERRED_CHANNEL_LABELS, FINANCIAL_CAPACITY_LABELS } from '@/lib/validation'
 
 const RATING_LEVELS = [5, 4, 3, 2, 1] as const
 
@@ -33,6 +33,21 @@ interface GlobeFiltersProps {
   importSources: string[]
   activeImportSources: Set<string>
   onImportSourcesChange: (sources: Set<string>) => void
+  commStyles: string[]
+  activeCommStyles: Set<string>
+  onCommStylesChange: (styles: Set<string>) => void
+  channels: string[]
+  activeChannels: Set<string>
+  onChannelsChange: (channels: Set<string>) => void
+  influenceLevels: number[]
+  activeInfluenceLevels: Set<number>
+  onInfluenceLevelsChange: (levels: Set<number>) => void
+  trustLevels: number[]
+  activeTrustLevels: Set<number>
+  onTrustLevelsChange: (levels: Set<number>) => void
+  finCapacities: string[]
+  activeFinCapacities: Set<string>
+  onFinCapacitiesChange: (capacities: Set<string>) => void
   userTags?: Tag[]
   onTagCreated?: (tag: Tag) => void
   onTagDeleted?: (tagId: string, tagName: string) => void
@@ -53,6 +68,21 @@ export default function GlobeFilters({
   importSources,
   activeImportSources,
   onImportSourcesChange,
+  commStyles,
+  activeCommStyles,
+  onCommStylesChange,
+  channels,
+  activeChannels,
+  onChannelsChange,
+  influenceLevels,
+  activeInfluenceLevels,
+  onInfluenceLevelsChange,
+  trustLevels,
+  activeTrustLevels,
+  onTrustLevelsChange,
+  finCapacities,
+  activeFinCapacities,
+  onFinCapacitiesChange,
   userTags = [],
   onTagCreated,
   onTagDeleted,
@@ -63,6 +93,7 @@ export default function GlobeFilters({
   const [managingTags, setManagingTags] = useState(false)
   const [newTagName, setNewTagName] = useState('')
   const [creatingTag, setCreatingTag] = useState(false)
+  const [profileExpanded, setProfileExpanded] = useState(false)
   const panelRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -137,6 +168,59 @@ export default function GlobeFilters({
     [activeImportSources, onImportSourcesChange]
   )
 
+  const toggleCommStyle = useCallback(
+    (v: string) => {
+      const next = new Set(activeCommStyles)
+      if (next.has(v)) next.delete(v)
+      else next.add(v)
+      onCommStylesChange(next)
+    },
+    [activeCommStyles, onCommStylesChange]
+  )
+
+  const toggleChannel = useCallback(
+    (v: string) => {
+      const next = new Set(activeChannels)
+      if (next.has(v)) next.delete(v)
+      else next.add(v)
+      onChannelsChange(next)
+    },
+    [activeChannels, onChannelsChange]
+  )
+
+  const toggleInfluenceLevel = useCallback(
+    (v: number) => {
+      const next = new Set(activeInfluenceLevels)
+      if (next.has(v)) next.delete(v)
+      else next.add(v)
+      onInfluenceLevelsChange(next)
+    },
+    [activeInfluenceLevels, onInfluenceLevelsChange]
+  )
+
+  const toggleTrustLevel = useCallback(
+    (v: number) => {
+      const next = new Set(activeTrustLevels)
+      if (next.has(v)) next.delete(v)
+      else next.add(v)
+      onTrustLevelsChange(next)
+    },
+    [activeTrustLevels, onTrustLevelsChange]
+  )
+
+  const toggleFinCapacity = useCallback(
+    (v: string) => {
+      const next = new Set(activeFinCapacities)
+      if (next.has(v)) next.delete(v)
+      else next.add(v)
+      onFinCapacitiesChange(next)
+    },
+    [activeFinCapacities, onFinCapacitiesChange]
+  )
+
+  const profileFilterCount = activeCommStyles.size + activeChannels.size + activeInfluenceLevels.size + activeTrustLevels.size + activeFinCapacities.size
+  const hasProfileFilters = commStyles.length > 0 || channels.length > 0 || influenceLevels.length > 0 || trustLevels.length > 0 || finCapacities.length > 0
+
   const activeFilterCount = useMemo(() => {
     let count = 0
     if (ratings.size < 5) count += 5 - ratings.size
@@ -144,8 +228,9 @@ export default function GlobeFilters({
     count += activeRelTypes.size
     count += activeCountries.size
     count += activeImportSources.size
+    count += profileFilterCount
     return count
-  }, [ratings, activeTags, activeRelTypes, activeCountries, activeImportSources])
+  }, [ratings, activeTags, activeRelTypes, activeCountries, activeImportSources, profileFilterCount])
 
   const handleCreateTag = useCallback(async () => {
     const name = newTagName.trim()
@@ -196,7 +281,12 @@ export default function GlobeFilters({
     onRelTypesChange(new Set())
     onCountriesChange(new Set())
     onImportSourcesChange(new Set())
-  }, [onRatingsChange, onTagsChange, onRelTypesChange, onCountriesChange, onImportSourcesChange])
+    onCommStylesChange(new Set())
+    onChannelsChange(new Set())
+    onInfluenceLevelsChange(new Set())
+    onTrustLevelsChange(new Set())
+    onFinCapacitiesChange(new Set())
+  }, [onRatingsChange, onTagsChange, onRelTypesChange, onCountriesChange, onImportSourcesChange, onCommStylesChange, onChannelsChange, onInfluenceLevelsChange, onTrustLevelsChange, onFinCapacitiesChange])
 
   const noneActive = ratings.size === 0
 
@@ -466,6 +556,187 @@ export default function GlobeFilters({
                     </Badge>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {hasProfileFilters && (
+              <div>
+                <button
+                  onClick={() => setProfileExpanded(!profileExpanded)}
+                  className="flex items-center gap-1 mb-1.5 w-full"
+                >
+                  <ChevronDown className={`h-3 w-3 text-muted-foreground transition-transform duration-200 ${profileExpanded ? '' : '-rotate-90'}`} />
+                  <span className="text-[10px] text-muted-foreground">Contact Profile</span>
+                  {profileFilterCount > 0 && (
+                    <Badge className="bg-violet-500/20 text-violet-500 border-violet-500/30 text-[9px] px-1 py-0 h-3.5 leading-none ml-auto">
+                      {profileFilterCount}
+                    </Badge>
+                  )}
+                </button>
+
+                {profileExpanded && (
+                  <div className="space-y-2.5 pl-1">
+                    {commStyles.length > 0 && (
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-[10px] text-muted-foreground/70">Communication</span>
+                          {activeCommStyles.size > 0 && (
+                            <button
+                              onClick={() => onCommStylesChange(new Set())}
+                              className="text-[10px] text-muted-foreground/60 hover:text-muted-foreground transition-colors"
+                            >
+                              Clear
+                            </button>
+                          )}
+                        </div>
+                        <div className="flex flex-wrap gap-1">
+                          {commStyles.map((v) => (
+                            <Badge
+                              key={v}
+                              variant={activeCommStyles.has(v) ? 'default' : 'outline'}
+                              className={`cursor-pointer text-[10px] ${
+                                activeCommStyles.has(v)
+                                  ? 'bg-violet-500/20 text-violet-600 dark:text-violet-300 border-violet-500/30 hover:bg-violet-500/30'
+                                  : 'border-border text-muted-foreground/50 hover:bg-muted hover:text-muted-foreground'
+                              }`}
+                              onClick={() => toggleCommStyle(v)}
+                            >
+                              {COMMUNICATION_STYLE_LABELS[v] || v}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {channels.length > 0 && (
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-[10px] text-muted-foreground/70">Channel</span>
+                          {activeChannels.size > 0 && (
+                            <button
+                              onClick={() => onChannelsChange(new Set())}
+                              className="text-[10px] text-muted-foreground/60 hover:text-muted-foreground transition-colors"
+                            >
+                              Clear
+                            </button>
+                          )}
+                        </div>
+                        <div className="flex flex-wrap gap-1">
+                          {channels.map((v) => (
+                            <Badge
+                              key={v}
+                              variant={activeChannels.has(v) ? 'default' : 'outline'}
+                              className={`cursor-pointer text-[10px] ${
+                                activeChannels.has(v)
+                                  ? 'bg-violet-500/20 text-violet-600 dark:text-violet-300 border-violet-500/30 hover:bg-violet-500/30'
+                                  : 'border-border text-muted-foreground/50 hover:bg-muted hover:text-muted-foreground'
+                              }`}
+                              onClick={() => toggleChannel(v)}
+                            >
+                              {PREFERRED_CHANNEL_LABELS[v] || v}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {influenceLevels.length > 0 && (
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-[10px] text-muted-foreground/70">Influence (0-10)</span>
+                          {activeInfluenceLevels.size > 0 && (
+                            <button
+                              onClick={() => onInfluenceLevelsChange(new Set())}
+                              className="text-[10px] text-muted-foreground/60 hover:text-muted-foreground transition-colors"
+                            >
+                              Clear
+                            </button>
+                          )}
+                        </div>
+                        <div className="flex flex-wrap gap-1">
+                          {influenceLevels.map((v) => (
+                            <Badge
+                              key={v}
+                              variant={activeInfluenceLevels.has(v) ? 'default' : 'outline'}
+                              className={`cursor-pointer text-[10px] ${
+                                activeInfluenceLevels.has(v)
+                                  ? 'bg-violet-500/20 text-violet-600 dark:text-violet-300 border-violet-500/30 hover:bg-violet-500/30'
+                                  : 'border-border text-muted-foreground/50 hover:bg-muted hover:text-muted-foreground'
+                              }`}
+                              onClick={() => toggleInfluenceLevel(v)}
+                            >
+                              {v}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {trustLevels.length > 0 && (
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-[10px] text-muted-foreground/70">Trust (0-5)</span>
+                          {activeTrustLevels.size > 0 && (
+                            <button
+                              onClick={() => onTrustLevelsChange(new Set())}
+                              className="text-[10px] text-muted-foreground/60 hover:text-muted-foreground transition-colors"
+                            >
+                              Clear
+                            </button>
+                          )}
+                        </div>
+                        <div className="flex flex-wrap gap-1">
+                          {trustLevels.map((v) => (
+                            <Badge
+                              key={v}
+                              variant={activeTrustLevels.has(v) ? 'default' : 'outline'}
+                              className={`cursor-pointer text-[10px] ${
+                                activeTrustLevels.has(v)
+                                  ? 'bg-violet-500/20 text-violet-600 dark:text-violet-300 border-violet-500/30 hover:bg-violet-500/30'
+                                  : 'border-border text-muted-foreground/50 hover:bg-muted hover:text-muted-foreground'
+                              }`}
+                              onClick={() => toggleTrustLevel(v)}
+                            >
+                              {v}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {finCapacities.length > 0 && (
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-[10px] text-muted-foreground/70">Financial</span>
+                          {activeFinCapacities.size > 0 && (
+                            <button
+                              onClick={() => onFinCapacitiesChange(new Set())}
+                              className="text-[10px] text-muted-foreground/60 hover:text-muted-foreground transition-colors"
+                            >
+                              Clear
+                            </button>
+                          )}
+                        </div>
+                        <div className="flex flex-wrap gap-1">
+                          {finCapacities.map((v) => (
+                            <Badge
+                              key={v}
+                              variant={activeFinCapacities.has(v) ? 'default' : 'outline'}
+                              className={`cursor-pointer text-[10px] ${
+                                activeFinCapacities.has(v)
+                                  ? 'bg-violet-500/20 text-violet-600 dark:text-violet-300 border-violet-500/30 hover:bg-violet-500/30'
+                                  : 'border-border text-muted-foreground/50 hover:bg-muted hover:text-muted-foreground'
+                              }`}
+                              onClick={() => toggleFinCapacity(v)}
+                            >
+                              {FINANCIAL_CAPACITY_LABELS[v] || v}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>

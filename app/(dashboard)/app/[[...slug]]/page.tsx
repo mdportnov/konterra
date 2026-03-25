@@ -37,6 +37,7 @@ import { useTripCompare } from '@/hooks/use-trip-compare'
 import { usePopupState } from '@/hooks/use-popup-state'
 import { useDashboardRouting } from '@/hooks/use-dashboard-routing'
 import { useHotkey } from '@/hooks/use-hotkey'
+import { useSwipe } from '@/hooks/use-swipe'
 import { toast } from 'sonner'
 import { ChevronRight, Globe } from 'lucide-react'
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
@@ -64,6 +65,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
   const [wishlistDetailOpen, setWishlistDetailOpen] = useState(false)
   const [commandMenuOpen, setCommandMenuOpen] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
+  const [regionSelectActive, setRegionSelectActive] = useState(false)
 
   useHotkey('?', () => setShortcutsOpen(true))
 
@@ -125,6 +127,21 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
   const handleSelectionChange = useCallback((ids: Set<string>) => {
     setHighlightedContactIds(ids)
   }, [])
+
+  const handleToggleRegionSelect = useCallback(() => {
+    setRegionSelectActive((prev) => !prev)
+  }, [])
+
+  const handleRegionSelect = useCallback((ids: string[]) => {
+    setHighlightedContactIds(new Set(ids))
+  }, [])
+
+  const handleRegionSelectDeactivate = useCallback(() => {
+    setRegionSelectActive(false)
+  }, [])
+
+  useHotkey('r', handleToggleRegionSelect)
+  useHotkey('Escape', handleRegionSelectDeactivate, { enabled: regionSelectActive, priority: Z.controls + 1 })
 
   const handleBulkDelete = useCallback((ids: string[]) => {
     if (ids.length > 0) {
@@ -362,6 +379,9 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
         highlightedContactIds={highlightedContactIds}
         trips={data.trips}
         selectedTripId={tripSelection.selectedTripId}
+        regionSelectActive={regionSelectActive}
+        onRegionSelect={handleRegionSelect}
+        onRegionSelectDeactivate={handleRegionSelectDeactivate}
       />
 
       {!data.loading && data.contacts.filter(c => !c.isSelf).length === 0 && (
@@ -493,6 +513,8 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
         isMobile={isMobile}
         onSwitchToDashboard={() => setMobileView('dashboard')}
         user={session?.user}
+        regionSelectActive={regionSelectActive}
+        onToggleRegionSelect={handleToggleRegionSelect}
       />
 
       <div className="absolute top-4 right-4 flex items-center gap-2" style={{ zIndex: Z.controls }}>
@@ -527,6 +549,21 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
         importSources={filters.allImportSources}
         activeImportSources={filters.activeImportSources}
         onImportSourcesChange={filters.setActiveImportSources}
+        commStyles={filters.allCommStyles}
+        activeCommStyles={filters.activeCommStyles}
+        onCommStylesChange={filters.setActiveCommStyles}
+        channels={filters.allChannels}
+        activeChannels={filters.activeChannels}
+        onChannelsChange={filters.setActiveChannels}
+        influenceLevels={filters.allInfluenceLevels}
+        activeInfluenceLevels={filters.activeInfluenceLevels}
+        onInfluenceLevelsChange={filters.setActiveInfluenceLevels}
+        trustLevels={filters.allTrustLevels}
+        activeTrustLevels={filters.activeTrustLevels}
+        onTrustLevelsChange={filters.setActiveTrustLevels}
+        finCapacities={filters.allFinCapacities}
+        activeFinCapacities={filters.activeFinCapacities}
+        onFinCapacitiesChange={filters.setActiveFinCapacities}
         userTags={data.userTags}
         onTagCreated={data.handleTagCreated}
         onTagDeleted={data.handleTagDeleted}
@@ -625,9 +662,22 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
 
   const shortcutsDialog = <KeyboardShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
 
+  const mobileViewSwipe = useSwipe({
+    threshold: 100,
+    velocityThreshold: 0.4,
+    direction: 'horizontal',
+    onSwipeLeft: () => setMobileView('globe'),
+    onSwipeRight: () => setMobileView('dashboard'),
+  })
+
   if (isMobile) {
     return (
-      <div className="fixed inset-0 overflow-hidden bg-background">
+      <div
+        className="fixed inset-0 overflow-hidden bg-background"
+        onTouchStart={mobileViewSwipe.onTouchStart}
+        onTouchMove={mobileViewSwipe.onTouchMove}
+        onTouchEnd={mobileViewSwipe.onTouchEnd}
+      >
         <div
           className="absolute inset-0 transition-[opacity,transform] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]"
           style={{
