@@ -8,6 +8,8 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { GLASS } from '@/lib/constants/ui'
 import { countryFlag } from '@/lib/country-flags'
+import { toDateStr } from '@/lib/utils'
+import TripContextMenu from '@/components/context-menus/trip-menu'
 import type { Trip } from '@/lib/db/schema'
 
 interface TravelJourneyProps {
@@ -35,13 +37,6 @@ function formatDate(d: Date | string | null): string {
 function formatYear(d: Date | string): number {
   const date = typeof d === 'string' ? new Date(d) : d
   return date.getFullYear()
-}
-
-function toDateStr(d: Date | string | null | undefined): string {
-  if (!d) return ''
-  const date = typeof d === 'string' ? new Date(d) : d
-  if (isNaN(date.getTime())) return ''
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 }
 
 function computeGap(laterTrip: Trip, earlierTrip: Trip): number {
@@ -251,6 +246,15 @@ export default function TravelJourney({ trips, loading, onImport, onTripClick, o
 
               return (
                 <div key={trip.id}>
+                  <TripContextMenu
+                    trip={trip}
+                    onEdit={onEditTrip}
+                    onDelete={onDeleteTrip}
+                    onAddTrip={onAddTrip}
+                    onTripClick={onTripClick}
+                    compareMode={compareMode}
+                    onToggleCompareTrip={onToggleCompareTrip}
+                  >
                   <div
                     className={`w-full text-left pl-5 pr-2 py-1.5 rounded-md transition-colors relative group ${isFuture ? 'hover:bg-green-500/5' : 'hover:bg-blue-500/5'}`}
                   >
@@ -322,6 +326,7 @@ export default function TravelJourney({ trips, loading, onImport, onTripClick, o
                       </div>
                     )}
                   </div>
+                  </TripContextMenu>
                   {!isSearching && !isLastOverall && nextInSorted && (() => {
                     if (gapDays > 1) {
                       const gapEndDate = nextInSorted.departureDate || nextInSorted.arrivalDate

@@ -36,6 +36,10 @@ import type { ConnectedContact } from '@/components/globe/ContactDetail'
 import { PerplexityIcon } from '@/components/icons/perplexity'
 import ContactInsights from '@/components/globe/ContactInsights'
 import SocialPreviewCards from '@/components/globe/SocialPreviewCards'
+import InteractionContextMenu from '@/components/context-menus/interaction-menu'
+import FavorContextMenu from '@/components/context-menus/favor-menu'
+import ConnectionContextMenu from '@/components/context-menus/connection-menu'
+import CountryTieContextMenu from '@/components/context-menus/country-tie-menu'
 
 function buildPerplexityUrl(city: string | null, country: string | null): string {
   const location = [city, country].filter(Boolean).join(', ')
@@ -1142,7 +1146,20 @@ export default function ContactDetailContent({
                 )
               }
               return (
-                <div key={item.id} className="flex items-start gap-2 py-1 group">
+                <InteractionContextMenu
+                  key={item.id}
+                  interaction={item}
+                  onEdit={(id) => {
+                    setEditingInteraction(id)
+                    setEditInteractionData({
+                      type: item.type,
+                      notes: item.notes || '',
+                      date: new Date(item.date).toISOString().slice(0, 10),
+                    })
+                  }}
+                  onDelete={handleDeleteInteraction}
+                >
+                <div className="flex items-start gap-2 py-1 group">
                   <div className="rounded-md p-1 shrink-0 bg-muted text-muted-foreground">
                     <Icon className="h-3 w-3" />
                   </div>
@@ -1175,6 +1192,7 @@ export default function ContactDetailContent({
                     </button>
                   </div>
                 </div>
+                </InteractionContextMenu>
               )
             })}
             {interactions.length === 0 && (
@@ -1275,7 +1293,14 @@ export default function ContactDetailContent({
             {connections.map((conn) => {
               const other = getConnectionContact(conn)
               return (
-                <div key={conn.id} className="group">
+                <ConnectionContextMenu
+                  key={conn.id}
+                  connection={conn}
+                  otherName={other?.name}
+                  onViewContact={other ? () => onConnectedContactClick?.({ id: other.id, name: other.name, lat: other.lat, lng: other.lng }) : undefined}
+                  onDelete={(id) => setConfirmDeleteConnId(id)}
+                >
+                <div className="group">
                   <div className="flex items-center gap-2 py-1">
                     <Link2 className="h-3 w-3 text-muted-foreground/60 shrink-0" />
                     {other ? (
@@ -1323,6 +1348,7 @@ export default function ContactDetailContent({
                     <p className="text-[10px] text-muted-foreground/70 pl-5 pb-1 leading-relaxed">{conn.notes}</p>
                   )}
                 </div>
+                </ConnectionContextMenu>
               )
             })}
             {connections.length === 0 && (
@@ -1384,7 +1410,13 @@ export default function ContactDetailContent({
           ) : (
           <div className="space-y-1">
             {countryTies.map((tie) => (
-              <div key={tie.id} className="flex items-center gap-2 py-1 group">
+              <CountryTieContextMenu
+                key={tie.id}
+                tie={tie}
+                onEditNotes={(id) => { setEditingCountryTie(id); setEditCountryTieNotes(tie.notes || '') }}
+                onDelete={handleDeleteCountryTie}
+              >
+              <div className="flex items-center gap-2 py-1 group">
                 <Globe className="h-3 w-3 text-purple-500/60 shrink-0" />
                 <span className="text-[11px] text-foreground font-medium">{tie.country} {countryFlag(tie.country)}</span>
                 {editingCountryTie === tie.id ? (
@@ -1418,6 +1450,7 @@ export default function ContactDetailContent({
                   <X className="h-3 w-3" />
                 </button>
               </div>
+              </CountryTieContextMenu>
             ))}
             {countryTies.length === 0 && (
               <p className="text-[11px] text-muted-foreground/60 py-1">No country ties yet</p>
@@ -1496,7 +1529,13 @@ export default function ContactDetailContent({
           ) : (
           <div className="space-y-1">
             {favorsList.map((f) => (
-              <div key={f.id} className="flex items-center gap-2 py-1 group">
+              <FavorContextMenu
+                key={f.id}
+                favor={f}
+                onCycleStatus={handleCycleFavorStatus}
+                onDelete={handleDeleteFavor}
+              >
+              <div className="flex items-center gap-2 py-1 group">
                 <span className={`text-xs font-medium ${f.direction === 'given' ? 'text-green-500' : 'text-red-400'}`}>
                   {f.direction === 'given' ? '+' : '-'}
                 </span>
@@ -1528,6 +1567,7 @@ export default function ContactDetailContent({
                   <Trash2 className="h-3 w-3" />
                 </button>
               </div>
+              </FavorContextMenu>
             ))}
             {favorsList.length === 0 && (
               <p className="text-[11px] text-muted-foreground/60 py-1">No favors recorded</p>

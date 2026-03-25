@@ -5,8 +5,10 @@ import type { Trip } from '@/lib/db/schema'
 import { GLASS, Z, PANEL_WIDTH } from '@/lib/constants/ui'
 import { TENSE_COLORS } from '@/lib/constants/globe-colors'
 import { countryFlag } from '@/lib/country-flags'
+import { toDateStr } from '@/lib/utils'
 import { ChevronLeft, ChevronRight, X, Calendar, Clock, MapPin, Plus, Pencil, Trash2 } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import TripContextMenu from '@/components/context-menus/trip-menu'
 
 interface TripPopupProps {
   trip: Trip | null
@@ -27,13 +29,6 @@ function formatDate(date: Date | null | undefined): string | null {
     day: 'numeric',
     year: 'numeric',
   })
-}
-
-function toDateStr(d: Date | string | null | undefined): string {
-  if (!d) return ''
-  const date = typeof d === 'string' ? new Date(d) : d
-  if (isNaN(date.getTime())) return ''
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 }
 
 function gapDaysBetween(prev: Trip | null, next: Trip | null): number | null {
@@ -85,6 +80,12 @@ export default function TripPopup({ trip, prevTrip, nextTrip, onNavigate, onClos
   const colors = TENSE_COLORS[tense]
 
   return (
+    <TripContextMenu
+      trip={trip}
+      onEdit={onEditTrip}
+      onDelete={onDeleteTrip}
+      onAddTrip={onAddTrip}
+    >
     <div
       data-globe-popup
       className={`absolute ${GLASS.panel} rounded-xl shadow-lg p-3 w-[320px]`}
@@ -231,5 +232,6 @@ export default function TripPopup({ trip, prevTrip, nextTrip, onNavigate, onClos
         </div>
       )}
     </div>
+    </TripContextMenu>
   )
 }

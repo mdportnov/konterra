@@ -5,6 +5,7 @@ import { X, MapPin, Calendar, Clock, Plane, ArrowRight, ArrowLeft, Pencil, Trash
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { useClickOutside } from '@/hooks/use-click-outside'
 import { useHotkey } from '@/hooks/use-hotkey'
+import TripContextMenu from '@/components/context-menus/trip-menu'
 import { GLASS, Z } from '@/lib/constants/ui'
 import { TENSE_COLORS } from '@/lib/constants/globe-colors'
 import { countryFlag } from '@/lib/country-flags'
@@ -217,8 +218,14 @@ export default function TripCountryPopup({ country, trips, allTrips, x, y, open,
               const tense = getTripTense(trip, now)
               const c = TENSE_COLORS[tense]
               return (
-                <div
+                <TripContextMenu
                   key={trip.id}
+                  trip={trip}
+                  onEdit={onEditTrip}
+                  onDelete={onDeleteTrip}
+                  onTripClick={onTripClick}
+                >
+                <div
                   className={`w-full text-left px-4 py-2 ${c.hover} transition-colors cursor-pointer relative group/trip`}
                 >
                   <button
@@ -301,6 +308,7 @@ export default function TripCountryPopup({ country, trips, allTrips, x, y, open,
                     </div>
                   )}
                 </div>
+                </TripContextMenu>
               )
             })}
           </div>

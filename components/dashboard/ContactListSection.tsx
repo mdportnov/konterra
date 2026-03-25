@@ -24,6 +24,7 @@ import FavorLedger from './widgets/FavorLedger'
 import ConnectionInsightsSummary from './widgets/ConnectionInsightsSummary'
 import { fetchRecentInteractions, fetchAllFavors, bulkDeleteContacts, bulkTagContacts } from '@/lib/api'
 import { IMPORT_SOURCE_LABELS } from '@/lib/validation'
+import ContactContextMenu from '@/components/context-menus/contact-menu'
 import type { Contact, ContactConnection, Interaction, Favor } from '@/lib/db/schema'
 
 type SortKey = 'name' | 'rating' | 'lastContacted' | 'updatedAt'
@@ -1004,15 +1005,24 @@ function ContactListView({
     return (
       <div className="grid grid-cols-2 gap-2">
         {contacts.map((contact) => (
-          <ContactCard
+          <ContactContextMenu
             key={contact.id}
             contact={contact}
+            onOpen={onContactClick}
+            onSelect={selectMode ? () => onToggleSelect(contact.id) : undefined}
             selectMode={selectMode}
-            isChecked={selectedIds.has(contact.id)}
-            isSelected={selectedContact?.id === contact.id}
-            onClick={() => onContactClick(contact)}
-            onToggleSelect={() => onToggleSelect(contact.id)}
-          />
+          >
+            <div style={{ display: 'contents' }}>
+              <ContactCard
+                contact={contact}
+                selectMode={selectMode}
+                isChecked={selectedIds.has(contact.id)}
+                isSelected={selectedContact?.id === contact.id}
+                onClick={() => onContactClick(contact)}
+                onToggleSelect={() => onToggleSelect(contact.id)}
+              />
+            </div>
+          </ContactContextMenu>
         ))}
       </div>
     )
@@ -1028,15 +1038,24 @@ function ContactListView({
           <span>Rating</span>
         </div>
         {contacts.map((contact) => (
-          <ContactCompactRow
+          <ContactContextMenu
             key={contact.id}
             contact={contact}
+            onOpen={onContactClick}
+            onSelect={selectMode ? () => onToggleSelect(contact.id) : undefined}
             selectMode={selectMode}
-            isChecked={selectedIds.has(contact.id)}
-            isSelected={selectedContact?.id === contact.id}
-            onClick={() => onContactClick(contact)}
-            onToggleSelect={() => onToggleSelect(contact.id)}
-          />
+          >
+            <div style={{ display: 'contents' }}>
+              <ContactCompactRow
+                contact={contact}
+                selectMode={selectMode}
+                isChecked={selectedIds.has(contact.id)}
+                isSelected={selectedContact?.id === contact.id}
+                onClick={() => onContactClick(contact)}
+                onToggleSelect={() => onToggleSelect(contact.id)}
+              />
+            </div>
+          </ContactContextMenu>
         ))}
       </div>
     )
@@ -1045,14 +1064,23 @@ function ContactListView({
   return (
     <div className="space-y-0.5">
       {contacts.map((contact) => (
-        <ContactRow
+        <ContactContextMenu
           key={contact.id}
           contact={contact}
+          onOpen={onContactClick}
+          onSelect={selectMode ? () => onToggleSelect(contact.id) : undefined}
           selectMode={selectMode}
-          isChecked={selectedIds.has(contact.id)}
-          onSelect={onContactClick}
-          onToggleSelect={() => onToggleSelect(contact.id)}
-        />
+        >
+          <div style={{ display: 'contents' }}>
+            <ContactRow
+              contact={contact}
+              selectMode={selectMode}
+              isChecked={selectedIds.has(contact.id)}
+              onSelect={onContactClick}
+              onToggleSelect={() => onToggleSelect(contact.id)}
+            />
+          </div>
+        </ContactContextMenu>
       ))}
     </div>
   )
