@@ -1,11 +1,13 @@
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { Pool } from 'pg'
+import { hash } from 'bcryptjs'
 import * as schema from '../lib/db/schema'
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL! })
 const db = drizzle(pool, { schema })
 
 const USER_ID = 'demo@konterra.app'
+const SEED_PASSWORD = process.env.SEED_PASSWORD || 'konterra-dev-only-' + crypto.randomUUID()
 
 const contactIds = {
   alex: crypto.randomUUID(),
@@ -35,11 +37,14 @@ function futureDate(n: number) {
 }
 
 async function seed() {
+  const hashedPassword = await hash(SEED_PASSWORD, 12)
+  console.log(`Seed user password: ${SEED_PASSWORD}`)
+
   await db.insert(schema.users).values({
     id: USER_ID,
     email: USER_ID,
     name: 'Demo User',
-    password: '$2b$10$j0UgM7/QYCeyscu6Et5lwOZ5y9/QZNH3xCqNLRcOcK///xljThkB6',
+    password: hashedPassword,
   }).onConflictDoNothing()
 
   await db.insert(schema.contacts).values([

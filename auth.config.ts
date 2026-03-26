@@ -35,6 +35,7 @@ export default {
     },
   },
   session: {
-    strategy: 'jwt'
+    strategy: 'jwt',
+    maxAge: 7 * 24 * 60 * 60,
   }
 } satisfies NextAuthConfig

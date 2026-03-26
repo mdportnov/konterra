@@ -11,6 +11,6 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const owns = await verifyContactOwnership(id, session.user.id)
   if (!owns) return notFound('Contact')
 
-  const previews = await getSocialPreviewsByContactId(id)
+  const previews = await getSocialPreviewsByContactId(id, session.user.id)
   return success(previews)
 }

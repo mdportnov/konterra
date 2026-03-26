@@ -11,11 +11,8 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ cod
 
     const { invite, inviterName } = row
 
-    if (invite.usedBy) {
-      return success({ status: 'used' as const, inviterName: inviterName ?? null })
-    }
-    if (new Date(invite.expiresAt) < new Date()) {
-      return success({ status: 'expired' as const, inviterName: inviterName ?? null })
+    if (invite.usedBy || new Date(invite.expiresAt) < new Date()) {
+      return notFound('Invite')
     }
 
     return success({ status: 'valid' as const, inviterName: inviterName ?? null })

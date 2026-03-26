@@ -18,7 +18,7 @@ interface PublicProfilePageProps {
     image: string | null
     username: string | null
     bio: string | null
-    createdAt: string | null
+    createdAt?: string | null
   }
   privacyLevel: 'countries_only' | 'full_travel'
   countries: string[]

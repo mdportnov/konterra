@@ -3,7 +3,7 @@ import { auth } from '@/auth'
 import { unauthorized, badRequest, notFound, success, serverError } from '@/lib/api-utils'
 import {
   getUserById, getUserByEmail, createUser,
-  getWaitlistEntries, getWaitlistEntryById, updateWaitlistStatus, deleteWaitlistEntry,
+  getWaitlistEntries, getWaitlistEntryById, updateWaitlistStatus, deleteWaitlistEntry, writeAuditLog,
 } from '@/lib/db/queries'
 import { hash } from 'bcryptjs'
 import { safeParseBody } from '@/lib/validation'
@@ -86,6 +86,8 @@ export async function PATCH(req: Request) {
 
       const note = typeof adminNote === 'string' ? adminNote : undefined
       await updateWaitlistStatus(id, 'approved', currentUser!.id, note)
+      writeAuditLog({ userId: currentUser!.id, action: 'waitlist_approve', targetId: id, targetType: 'waitlist', detail: `Approved ${entry.email}` })
+      writeAuditLog({ userId: currentUser!.id, action: 'user_create', targetId: newUser.id, targetType: 'user', detail: `Created from waitlist: ${entry.email}` })
 
       return success({
         entry: { ...entry, status: 'approved' },
@@ -96,6 +98,7 @@ export async function PATCH(req: Request) {
 
     const note = typeof adminNote === 'string' ? adminNote : undefined
     const updated = await updateWaitlistStatus(id, 'rejected', currentUser!.id, note)
+    writeAuditLog({ userId: currentUser!.id, action: 'waitlist_reject', targetId: id, targetType: 'waitlist', detail: `Rejected ${entry.email}` })
     return success(updated)
   } catch {
     return serverError('Failed to process waitlist action')

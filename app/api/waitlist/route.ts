@@ -26,26 +26,12 @@ export async function POST(req: Request) {
 
     const existingUser = await getUserByEmail(normalizedEmail)
     if (existingUser) {
-      return NextResponse.json(
-        { error: 'This email is already registered' },
-        { status: 409 },
-      )
+      return success({ ok: true }, 201)
     }
 
     const existingEntry = await getWaitlistEntryByEmail(normalizedEmail)
     if (existingEntry) {
-      if (existingEntry.status === 'pending') {
-        return NextResponse.json(
-          { error: 'A request with this email is already pending' },
-          { status: 409 },
-        )
-      }
-      if (existingEntry.status === 'rejected') {
-        return NextResponse.json(
-          { error: 'This email has been reviewed previously' },
-          { status: 409 },
-        )
-      }
+      return success({ ok: true }, 201)
     }
 
     const inserted = await createWaitlistEntry({

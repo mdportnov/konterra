@@ -32,7 +32,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       db.query.contacts.findFirst({
         where: and(eq(contacts.userId, session.user.id), eq(contacts.isSelf, true)),
       }),
-      getInteractionsByContactId(id),
+      getInteractionsByContactId(id, session.user.id),
       getFavorsByContactId(id, session.user.id),
     ])
 

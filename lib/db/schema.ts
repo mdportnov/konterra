@@ -389,3 +389,31 @@ export const invites = pgTable('invites', {
 ])
 
 export type Invite = typeof invites.$inferSelect
+
+export const auditActionEnum = pgEnum('audit_action', [
+  'login_success', 'login_failure',
+  'password_change',
+  'user_create', 'user_update', 'user_delete',
+  'role_change',
+  'invite_create', 'invite_use',
+  'waitlist_approve', 'waitlist_reject',
+  'export_data',
+])
+
+export const auditLog = pgTable('audit_log', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: text('user_id'),
+  action: auditActionEnum('action').notNull(),
+  targetId: text('target_id'),
+  targetType: text('target_type'),
+  ip: text('ip'),
+  detail: text('detail'),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (t) => [
+  index('audit_log_user_id_idx').on(t.userId),
+  index('audit_log_action_idx').on(t.action),
+  index('audit_log_created_at_idx').on(t.createdAt),
+])
+
+export type AuditLogEntry = typeof auditLog.$inferSelect
+export type NewAuditLogEntry = typeof auditLog.$inferInsert

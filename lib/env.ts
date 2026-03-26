@@ -2,7 +2,7 @@ import { z } from 'zod'
 
 const envSchema = z.object({
   DATABASE_URL: z.string().url(),
-  AUTH_SECRET: z.string().min(1),
+  AUTH_SECRET: z.string().min(32, 'AUTH_SECRET must be at least 32 characters for secure JWT signing'),
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
   OPENCAGE_API_KEY: z.string().optional(),

@@ -1,7 +1,7 @@
 import { auth } from '@/auth'
 import { unauthorized, badRequest, success, serverError } from '@/lib/api-utils'
 import { safeParseBody, PASSWORD_MIN_LENGTH, PASSWORD_MAX_LENGTH } from '@/lib/validation'
-import { getUserPasswordHash, updateUser } from '@/lib/db/queries'
+import { getUserPasswordHash, updateUser, writeAuditLog } from '@/lib/db/queries'
 import { compare, hash } from 'bcryptjs'
 
 export async function PATCH(req: Request) {
@@ -44,6 +44,7 @@ export async function PATCH(req: Request) {
 
     const hashedPassword = await hash(newPassword, 12)
     await updateUser(session.user.id, { password: hashedPassword })
+    writeAuditLog({ userId: session.user.id, action: 'password_change' })
 
     return success({ message: 'Password updated successfully' })
   } catch {

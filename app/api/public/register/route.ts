@@ -2,7 +2,6 @@ import { badRequest, success, serverError } from '@/lib/api-utils'
 import { safeParseBody } from '@/lib/validation'
 import { registerViaInvite } from '@/lib/db/queries'
 import { hash } from 'bcryptjs'
-import { NextResponse } from 'next/server'
 
 export async function POST(req: Request) {
   try {
@@ -29,10 +28,7 @@ export async function POST(req: Request) {
     )
 
     if ('error' in result) {
-      if (result.error === 'email_taken') {
-        return NextResponse.json({ error: 'Email already registered' }, { status: 409 })
-      }
-      return badRequest('Invalid or expired invite code')
+      return badRequest('Registration failed. Please check your invite code and try again.')
     }
 
     return success({ id: result.user.id, email: result.user.email, name: result.user.name }, 201)
