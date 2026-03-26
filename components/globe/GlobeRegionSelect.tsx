@@ -30,25 +30,28 @@ export default function GlobeRegionSelect({
   const startPos = useRef({ x: 0, y: 0 })
   const overlayRef = useRef<HTMLDivElement>(null)
 
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if (e.button !== 0) return
+  const getPos = useCallback((clientX: number, clientY: number) => {
+    const bounds = overlayRef.current?.getBoundingClientRect()
+    return {
+      x: clientX - (bounds?.left ?? 0),
+      y: clientY - (bounds?.top ?? 0),
+    }
+  }, [])
+
+  const startDraw = useCallback((clientX: number, clientY: number) => {
     dragging.current = true
-    const bounds = overlayRef.current?.getBoundingClientRect()
-    const x = e.clientX - (bounds?.left ?? 0)
-    const y = e.clientY - (bounds?.top ?? 0)
-    startPos.current = { x, y }
-    setRect({ x1: x, y1: y, x2: x, y2: y })
-  }, [])
+    const pos = getPos(clientX, clientY)
+    startPos.current = pos
+    setRect({ x1: pos.x, y1: pos.y, x2: pos.x, y2: pos.y })
+  }, [getPos])
 
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+  const moveDraw = useCallback((clientX: number, clientY: number) => {
     if (!dragging.current) return
-    const bounds = overlayRef.current?.getBoundingClientRect()
-    const x = e.clientX - (bounds?.left ?? 0)
-    const y = e.clientY - (bounds?.top ?? 0)
-    setRect((prev) => prev ? { ...prev, x2: x, y2: y } : null)
-  }, [])
+    const pos = getPos(clientX, clientY)
+    setRect((prev) => prev ? { ...prev, x2: pos.x, y2: pos.y } : null)
+  }, [getPos])
 
-  const handleMouseUp = useCallback(() => {
+  const endDraw = useCallback(() => {
     if (!dragging.current || !rect) {
       dragging.current = false
       setRect(null)
@@ -85,6 +88,34 @@ export default function GlobeRegionSelect({
     onDeactivate()
   }, [rect, contacts, getScreenCoords, onSelect, onDeactivate])
 
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    if (e.button !== 0) return
+    startDraw(e.clientX, e.clientY)
+  }, [startDraw])
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    moveDraw(e.clientX, e.clientY)
+  }, [moveDraw])
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length !== 1) return
+    e.preventDefault()
+    const touch = e.touches[0]
+    startDraw(touch.clientX, touch.clientY)
+  }, [startDraw])
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length !== 1) return
+    e.preventDefault()
+    const touch = e.touches[0]
+    moveDraw(touch.clientX, touch.clientY)
+  }, [moveDraw])
+
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    e.preventDefault()
+    endDraw()
+  }, [endDraw])
+
   useEffect(() => {
     if (!active) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -108,13 +139,17 @@ export default function GlobeRegionSelect({
     <div
       ref={overlayRef}
       className="absolute inset-0"
-      style={{ zIndex: Z.controls + 1, cursor: 'crosshair' }}
+      style={{ zIndex: Z.controls + 1, cursor: 'crosshair', touchAction: 'none' }}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
+      onMouseUp={endDraw}
       onMouseLeave={() => {
-        if (dragging.current) handleMouseUp()
+        if (dragging.current) endDraw()
       }}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchEnd}
     >
       {drawRect && drawRect.width > 2 && drawRect.height > 2 && (
         <div
