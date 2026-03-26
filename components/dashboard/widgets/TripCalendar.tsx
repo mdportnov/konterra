@@ -1,19 +1,14 @@
 'use client'
 
 import { useState, useMemo, useCallback } from 'react'
-import { ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react'
+import { ChevronLeft, ChevronRight, CalendarDays, Maximize2 } from 'lucide-react'
+import YearCalendarDialog from './YearCalendarDialog'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { GLASS } from '@/lib/constants/ui'
+import { COUNTRY_COLORS_BG, getMondayStart } from '@/lib/constants/calendar'
 import { countryFlag } from '@/lib/country-flags'
 import type { Trip } from '@/lib/db/schema'
-
-const COUNTRY_COLORS = [
-  'bg-blue-500', 'bg-emerald-500', 'bg-orange-500', 'bg-violet-500',
-  'bg-rose-500', 'bg-cyan-500', 'bg-amber-500', 'bg-indigo-500',
-  'bg-teal-500', 'bg-pink-500', 'bg-lime-500', 'bg-fuchsia-500',
-  'bg-sky-500', 'bg-red-500', 'bg-green-500', 'bg-purple-500',
-]
 
 const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 const MONTH_NAMES = [
@@ -23,16 +18,9 @@ const MONTH_NAMES = [
 
 function getCountryColorIndex(country: string, countryMap: Map<string, number>): number {
   if (countryMap.has(country)) return countryMap.get(country)!
-  const idx = countryMap.size % COUNTRY_COLORS.length
+  const idx = countryMap.size % COUNTRY_COLORS_BG.length
   countryMap.set(country, idx)
   return idx
-}
-
-function getMondayStart(year: number, month: number): Date {
-  const first = new Date(year, month, 1)
-  const dayOfWeek = first.getDay()
-  const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
-  return new Date(year, month, 1 + diff)
 }
 
 function isSameDay(a: Date, b: Date): boolean {
@@ -177,6 +165,7 @@ export default function TripCalendar({ trips, onTripClick, onAddTrip }: TripCale
   const [month, setMonth] = useState(today.getMonth())
   const [hoveredTripId, setHoveredTripId] = useState<string | null>(null)
   const [touchSelectedTrip, setTouchSelectedTrip] = useState<Trip | null>(null)
+  const [yearDialogOpen, setYearDialogOpen] = useState(false)
 
   const countryColorMap = useMemo(() => {
     const map = new Map<string, number>()
@@ -185,7 +174,7 @@ export default function TripCalendar({ trips, onTripClick, onAddTrip }: TripCale
     )
     for (const t of sorted) {
       if (!map.has(t.country)) {
-        map.set(t.country, map.size % COUNTRY_COLORS.length)
+        map.set(t.country, map.size % COUNTRY_COLORS_BG.length)
       }
     }
     return map
@@ -278,17 +267,28 @@ export default function TripCalendar({ trips, onTripClick, onAddTrip }: TripCale
             <ChevronRight className="h-3.5 w-3.5" />
           </Button>
         </div>
-        {!isCurrentMonth && (
+        <div className="flex items-center gap-1">
+          {!isCurrentMonth && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={goToToday}
+              className="h-6 text-[10px] text-muted-foreground hover:text-foreground px-2"
+            >
+              <CalendarDays className="h-3 w-3 mr-1" />
+              Today
+            </Button>
+          )}
           <Button
             size="sm"
             variant="ghost"
-            onClick={goToToday}
+            onClick={() => setYearDialogOpen(true)}
             className="h-6 text-[10px] text-muted-foreground hover:text-foreground px-2"
           >
-            <CalendarDays className="h-3 w-3 mr-1" />
-            Today
+            <Maximize2 className="h-3 w-3 mr-1" />
+            Year
           </Button>
-        )}
+        </div>
       </div>
 
       <div className="grid grid-cols-7 gap-px">
@@ -348,7 +348,7 @@ export default function TripCalendar({ trips, onTripClick, onAddTrip }: TripCale
                     const topPx = bar.lane * (barHeight + barGap) + 1
                     const isHovered = hoveredTripId === bar.trip.id
                     const isTouchSelected = touchSelectedTrip?.id === bar.trip.id
-                    const colorClass = COUNTRY_COLORS[bar.colorIdx]
+                    const colorClass = COUNTRY_COLORS_BG[bar.colorIdx]
 
                     return (
                       <TooltipProvider key={bIdx}>
@@ -414,7 +414,7 @@ export default function TripCalendar({ trips, onTripClick, onAddTrip }: TripCale
           onClick={handleTouchTripNavigate}
           className={`w-full ${GLASS.control} rounded-lg p-2.5 flex items-center gap-2.5 text-left transition-all`}
         >
-          <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${COUNTRY_COLORS[countryColorMap.get(touchSelectedTrip.country) ?? 0]}`} />
+          <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${COUNTRY_COLORS_BG[countryColorMap.get(touchSelectedTrip.country) ?? 0]}`} />
           <div className="flex-1 min-w-0">
             <p className="text-xs font-medium text-foreground truncate">
               {touchSelectedTrip.city}, {touchSelectedTrip.country} {countryFlag(touchSelectedTrip.country)}
@@ -435,7 +435,7 @@ export default function TripCalendar({ trips, onTripClick, onAddTrip }: TripCale
             const idx = countryColorMap.get(country) ?? 0
             return (
               <div key={country} className="flex items-center gap-1">
-                <div className={`w-2 h-2 rounded-full ${COUNTRY_COLORS[idx]}`} />
+                <div className={`w-2 h-2 rounded-full ${COUNTRY_COLORS_BG[idx]}`} />
                 <span className="text-[9px] text-muted-foreground/70">
                   {countryFlag(country)} {country}
                 </span>
@@ -443,6 +443,21 @@ export default function TripCalendar({ trips, onTripClick, onAddTrip }: TripCale
             )
           })}
         </div>
+      )}
+
+      {yearDialogOpen && (
+        <YearCalendarDialog
+          open={yearDialogOpen}
+          onOpenChange={setYearDialogOpen}
+          trips={trips}
+          onTripClick={onTripClick}
+          initialYear={year}
+          onMonthSelect={(y, m) => {
+            setYear(y)
+            setMonth(m)
+            setYearDialogOpen(false)
+          }}
+        />
       )}
     </div>
   )

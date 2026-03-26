@@ -8,6 +8,7 @@ interface SwipeConfig {
   onSwipeRight?: () => void
   onSwipeEnd?: (offset: number) => void
   lockAxis?: boolean
+  ignoreSelector?: string
 }
 
 interface SwipeState {
@@ -30,6 +31,7 @@ export function useSwipe(config: SwipeConfig = {}): SwipeState & TouchHandlers {
     onSwipeRight,
     onSwipeEnd,
     lockAxis = true,
+    ignoreSelector,
   } = config
 
   const [offset, setOffset] = useState(0)
@@ -43,6 +45,13 @@ export function useSwipe(config: SwipeConfig = {}): SwipeState & TouchHandlers {
   const active = useRef(false)
 
   const onTouchStart = useCallback((e: React.TouchEvent) => {
+    if (ignoreSelector) {
+      const target = e.target as HTMLElement
+      if (target.closest(ignoreSelector)) {
+        active.current = false
+        return
+      }
+    }
     const touch = e.touches[0]
     startX.current = touch.clientX
     startY.current = touch.clientY
@@ -50,7 +59,7 @@ export function useSwipe(config: SwipeConfig = {}): SwipeState & TouchHandlers {
     currentX.current = touch.clientX
     locked.current = null
     active.current = true
-  }, [])
+  }, [ignoreSelector])
 
   const onTouchMove = useCallback((e: React.TouchEvent) => {
     if (!active.current) return

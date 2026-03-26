@@ -668,6 +668,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
     direction: 'horizontal',
     onSwipeLeft: () => setMobileView('globe'),
     onSwipeRight: () => setMobileView('dashboard'),
+    ignoreSelector: '.globe-bg',
   })
 
   if (isMobile) {
