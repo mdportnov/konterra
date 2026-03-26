@@ -14,6 +14,7 @@ import { useHotkey } from '@/hooks/use-hotkey'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuLabel } from '@/components/ui/dropdown-menu'
 import { useSavedViews } from '@/hooks/use-saved-views'
 import { countryFlag } from '@/lib/country-flags'
+import { formatContactTime } from '@/lib/country-timezones'
 import GettingStartedCard, { computeAllStepsDone, isChecklistPermanentlyDone } from './GettingStartedCard'
 import StatsRow from './widgets/StatsRow'
 import TopCountriesChart from './widgets/TopCountriesChart'
@@ -1237,10 +1238,17 @@ function ContactCard({ contact, selectMode, isChecked, isSelected, onClick, onTo
   onToggleSelect: () => void
 }) {
   const initials = contact.name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
+  const [hovered, setHovered] = useState(false)
+  const localTime = useMemo(() => {
+    if (!hovered || !contact.timezone) return ''
+    return formatContactTime(contact.timezone)
+  }, [hovered, contact.timezone])
 
   return (
     <button
       onClick={() => selectMode ? onToggleSelect() : onClick()}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       className={`relative w-full text-left rounded-lg border p-3 transition-colors ${
         isChecked
           ? 'border-orange-500/40 bg-orange-500/5'
@@ -1281,6 +1289,9 @@ function ContactCard({ contact, selectMode, isChecked, isSelected, onClick, onTo
             <p className="text-[10px] text-muted-foreground/60 truncate flex items-center justify-center gap-0.5 mt-0.5">
               <MapPin className="h-2.5 w-2.5" />
               {[contact.city, contact.country].filter(Boolean).join(', ')} {countryFlag(contact.country)}
+              {hovered && localTime && (
+                <span className="text-muted-foreground/50 tabular-nums ml-0.5">{localTime}</span>
+              )}
             </p>
           )}
         </div>
@@ -1319,9 +1330,17 @@ function ContactCompactRow({ contact, selectMode, isChecked, isSelected, onClick
   onClick: () => void
   onToggleSelect: () => void
 }) {
+  const [hovered, setHovered] = useState(false)
+  const localTime = useMemo(() => {
+    if (!hovered || !contact.timezone) return ''
+    return formatContactTime(contact.timezone)
+  }, [hovered, contact.timezone])
+
   return (
     <button
       onClick={() => selectMode ? onToggleSelect() : onClick()}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       className={`w-full text-left grid grid-cols-[auto_1fr_auto_auto] gap-x-2 items-center px-2 py-1 border-b border-border/30 transition-colors ${
         isChecked
           ? 'bg-orange-500/10'
@@ -1345,7 +1364,12 @@ function ContactCompactRow({ contact, selectMode, isChecked, isSelected, onClick
         )}
       </span>
       <span className="text-[10px] text-muted-foreground/60 truncate text-right">
-        {[contact.city, contact.country].filter(Boolean).join(', ') ? `${[contact.city, contact.country].filter(Boolean).join(', ')} ${countryFlag(contact.country)}` : '\u2014'}
+        {[contact.city, contact.country].filter(Boolean).join(', ')
+          ? <>
+              {[contact.city, contact.country].filter(Boolean).join(', ')} {countryFlag(contact.country)}
+              {hovered && localTime && <span className="text-muted-foreground/50 tabular-nums ml-1">{localTime}</span>}
+            </>
+          : '\u2014'}
       </span>
       <span className="text-[10px] text-right w-6 flex items-center gap-0.5 justify-end">
         <FollowUpBadge contact={contact} />

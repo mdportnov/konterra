@@ -71,9 +71,13 @@ const ALIASES: Record<string, string> = {
   'Antigua and Barbuda': 'AG', 'Kosovo': 'XK',
 }
 
+export function countryAlpha2(name: string | null | undefined): string | undefined {
+  if (!name) return undefined
+  return NAME_TO_ALPHA2[name] ?? ALIASES[name] ?? undefined
+}
+
 export function countryFlag(name: string | null | undefined): string {
-  if (!name) return ''
-  const code = NAME_TO_ALPHA2[name] ?? ALIASES[name]
+  const code = countryAlpha2(name)
   if (!code) return ''
   return String.fromCodePoint(
     ...code.split('').map((c) => 0x1f1e6 + c.charCodeAt(0) - 65)

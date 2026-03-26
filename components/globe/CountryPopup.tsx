@@ -12,6 +12,7 @@ import { countryFlag } from '@/lib/country-flags'
 import { PerplexityIcon } from '@/components/icons/perplexity'
 import { PRIORITY_LABELS, STATUS_LABELS } from '@/lib/constants/wishlist'
 import type { Contact, CountryWishlistEntry } from '@/lib/db/schema'
+import { formatCountryTimesDisplay } from '@/lib/country-timezones'
 
 function buildPerplexityCountryUrl(country: string): string {
   const query = `Best hidden gems, specialty coffee shops, cocktail bars, popular local spots, and networking-friendly places in ${country}`
@@ -108,6 +109,8 @@ export default function CountryPopup({ country, contacts, x, y, open, onSelect, 
   useClickOutside(ref, onClose, open)
   useHotkey('Escape', onClose, { enabled: open, priority: Z.overlay })
 
+  const countryTimesDisplay = useMemo(() => formatCountryTimesDisplay(country), [country])
+
   const hasContacts = contacts.length > 0
   const hasAny = hasContacts || indirectContacts.length > 0
 
@@ -174,6 +177,11 @@ export default function CountryPopup({ country, contacts, x, y, open, onSelect, 
       <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
         <div className="flex items-center gap-2 min-w-0">
           <span className="text-sm font-medium text-foreground truncate">{country} {countryFlag(country)}</span>
+          {countryTimesDisplay && (
+            <span className="text-[10px] text-muted-foreground/60 shrink-0 tabular-nums">
+              {countryTimesDisplay}
+            </span>
+          )}
           {hasContacts && (
             <span className="text-xs text-muted-foreground/60 shrink-0">
               {contacts.length + indirectContacts.length}
