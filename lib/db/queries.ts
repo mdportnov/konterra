@@ -1,7 +1,7 @@
 import { db } from './index'
-import { users, contacts, interactions, contactConnections, contactCountryConnections, introductions, favors, visitedCountries, waitlist, tags, trips, countryWishlist, appSettings, socialPreviews, invites } from './schema'
+import { users, contacts, interactions, contactConnections, contactCountryConnections, introductions, favors, visitedCountries, waitlist, tags, trips, countryWishlist, appSettings, socialPreviews, invites, auditLog } from './schema'
 import { and, arrayContains, desc, eq, inArray, or, sql } from 'drizzle-orm'
-import type { NewContact, NewContactConnection, NewContactCountryConnection, NewIntroduction, NewFavor, NewTrip, NewCountryWishlistEntry, NewSocialPreview } from './schema'
+import type { NewContact, NewContactConnection, NewContactCountryConnection, NewIntroduction, NewFavor, NewTrip, NewCountryWishlistEntry, NewSocialPreview, NewAuditLogEntry } from './schema'
 import { DEFAULT_MAX_INVITES, SETTING_KEY_MAX_INVITES } from '@/lib/constants/invites'
 
 export async function deleteAllContactsByUserId(userId: string) {
@@ -1302,4 +1302,17 @@ export async function getAllInvitedUsers(userId: string) {
     .from(users)
     .where(eq(users.invitedBy, userId))
     .orderBy(desc(users.createdAt))
+}
+
+export async function writeAuditLog(entry: Omit<NewAuditLogEntry, 'id' | 'createdAt'>) {
+  await db.insert(auditLog).values(entry).catch(() => {})
+}
+
+export async function getAuditLogs(page = 1, limit = 50) {
+  const offset = (page - 1) * limit
+  return db.query.auditLog.findMany({
+    orderBy: (log, { desc: d }) => [d(log.createdAt)],
+    limit,
+    offset,
+  })
 }

@@ -20,7 +20,6 @@ export async function GET(
       name: user.name,
       image: user.image,
       username: user.username,
-      createdAt: user.createdAt,
     },
     privacyLevel: user.profilePrivacyLevel,
     countries,

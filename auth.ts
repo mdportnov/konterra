@@ -1,7 +1,7 @@
 import NextAuth from 'next-auth'
 import Credentials from 'next-auth/providers/credentials'
 import { compare } from 'bcryptjs'
-import { getUserByEmail, getUserById, updateLastActive } from '@/lib/db/queries'
+import { getUserByEmail, getUserById, updateLastActive, writeAuditLog } from '@/lib/db/queries'
 import authConfig from './auth.config'
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
@@ -18,9 +18,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const email = credentials.email as string
         const password = credentials.password as string
         const user = await getUserByEmail(email)
-        if (!user) return null
+        if (!user) {
+          writeAuditLog({ action: 'login_failure', detail: `Unknown email: ${email}` })
+          return null
+        }
         const valid = await compare(password, user.password)
-        if (!valid) return null
+        if (!valid) {
+          writeAuditLog({ userId: user.id, action: 'login_failure', detail: `Wrong password for ${email}` })
+          return null
+        }
+        writeAuditLog({ userId: user.id, action: 'login_success' })
         return { id: user.id, email: user.email, name: user.name, role: user.role }
       }
     })

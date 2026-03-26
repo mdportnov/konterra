@@ -67,7 +67,6 @@ export default async function PublicProfilePageRoute({ params }: Props) {
         image: user.image,
         username: user.username,
         bio: user.bio,
-        createdAt: user.createdAt?.toISOString() ?? null,
       }}
       privacyLevel={user.profilePrivacyLevel}
       countries={countries}

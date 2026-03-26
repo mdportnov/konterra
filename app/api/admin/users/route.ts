@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
 import { auth } from '@/auth'
 import { unauthorized, badRequest, notFound, success, serverError } from '@/lib/api-utils'
-import { getUserById, getAllUsers, createUser, updateUserRole, updateUser, deleteUser } from '@/lib/db/queries'
+import { getUserById, getAllUsers, createUser, updateUserRole, updateUser, deleteUser, writeAuditLog } from '@/lib/db/queries'
 import { hash } from 'bcryptjs'
 import { safeParseBody } from '@/lib/validation'
 
@@ -55,6 +55,7 @@ export async function POST(req: Request) {
       password: hashedPassword,
       role: userRole,
     })
+    writeAuditLog({ userId: session.user.id, action: 'user_create', targetId: newUser.id, targetType: 'user', detail: `Created user ${email} with role ${userRole}` })
     return success(newUser, 201)
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : 'Unknown error'
@@ -86,6 +87,7 @@ export async function PATCH(req: Request) {
     if (typeof role !== 'string' || !(validRoles as readonly string[]).includes(role)) return badRequest('Invalid role')
     const updated = await updateUserRole(userId, role as typeof validRoles[number])
     if (!updated) return notFound('User')
+    writeAuditLog({ userId: session.user.id, action: 'role_change', targetId: userId, targetType: 'user', detail: `Role changed to ${role}` })
     return success(updated)
   }
 
@@ -113,6 +115,8 @@ export async function PATCH(req: Request) {
   try {
     const updated = await updateUser(userId, updates)
     if (!updated) return notFound('User')
+    if (updates.role) writeAuditLog({ userId: session.user.id, action: 'role_change', targetId: userId, targetType: 'user', detail: `Role changed to ${updates.role}` })
+    writeAuditLog({ userId: session.user.id, action: 'user_update', targetId: userId, targetType: 'user', detail: `Updated fields: ${Object.keys(updates).join(', ')}` })
     return success(updated)
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : 'Unknown error'
@@ -143,6 +147,7 @@ export async function DELETE(req: Request) {
 
   const deleted = await deleteUser(userId)
   if (!deleted) return notFound('User')
+  writeAuditLog({ userId: session.user.id, action: 'user_delete', targetId: userId, targetType: 'user' })
 
   return success({ success: true })
 }
