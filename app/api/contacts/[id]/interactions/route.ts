@@ -14,7 +14,7 @@ export async function GET(
   const contact = await getContactById(id, session.user.id)
   if (!contact) return notFound('Contact')
 
-  const items = await getInteractionsByContactId(id)
+  const items = await getInteractionsByContactId(id, session.user.id)
   return success(items)
 }
 

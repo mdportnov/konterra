@@ -8,12 +8,8 @@ export async function GET(
   const { username } = await params
   const user = await getUserByUsername(username)
 
-  if (!user) {
+  if (!user || user.profileVisibility !== 'public') {
     return NextResponse.json({ status: 'not_found' })
-  }
-
-  if (user.profileVisibility !== 'public') {
-    return NextResponse.json({ status: 'private' })
   }
 
   const { countries, trips } = await getPublicProfileData(user.id, user.profilePrivacyLevel)

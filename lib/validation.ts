@@ -1,5 +1,5 @@
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-const URL_RE = /^https?:\/\/.+/
+const URL_RE = /^https?:\/\/[a-zA-Z0-9][a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/
 const TELEGRAM_RE = /^@?\w{3,32}$/
 
 export const COMMUNICATION_STYLES = ['direct', 'diplomatic', 'analytical', 'expressive'] as const
@@ -159,8 +159,12 @@ export function validateInteraction(body: Record<string, unknown>): string | nul
   return null
 }
 
+const MAX_BODY_BYTES = 1024 * 512
+
 export async function safeParseBody(req: Request): Promise<Record<string, unknown> | null> {
   try {
+    const contentLength = req.headers.get('content-length')
+    if (contentLength && parseInt(contentLength, 10) > MAX_BODY_BYTES) return null
     return await req.json()
   } catch {
     return null
