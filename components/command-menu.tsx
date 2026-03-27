@@ -96,11 +96,16 @@ export default function CommandMenu({
     if (!open) onAddContact()
   }, [open, onAddContact])
 
+  const handleHotkeyAddTrip = useCallback(() => {
+    if (!open) onAddTrip()
+  }, [open, onAddTrip])
+
   const handleHotkeyInsights = useCallback(() => {
     if (!open) onOpenInsights()
   }, [open, onOpenInsights])
 
   useHotkey('n', handleHotkeyAddContact, { meta: true })
+  useHotkey('j', handleHotkeyAddTrip, { meta: true })
   useHotkey('i', handleHotkeyInsights, { meta: true })
 
   const runAction = useCallback((action: () => void) => {
@@ -221,6 +226,7 @@ export default function CommandMenu({
                 <CommandItem onSelect={() => runAction(onAddTrip)}>
                   <Plane className="text-muted-foreground" />
                   <span>Add Trip</span>
+                  <CommandShortcut>⌘J</CommandShortcut>
                 </CommandItem>
                 <CommandItem onSelect={() => runAction(onOpenInsights)}>
                   <Sparkles className="text-muted-foreground" />

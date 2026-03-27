@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 
 interface HotkeyOptions {
   meta?: boolean
+  shift?: boolean
   enabled?: boolean
   priority?: number
 }
@@ -40,7 +41,7 @@ export function useHotkey(
   handler: () => void,
   options: HotkeyOptions = {}
 ) {
-  const { meta = false, enabled = true, priority = 0 } = options
+  const { meta = false, shift, enabled = true, priority = 0 } = options
   const handlerRef = useRef(handler)
 
   useEffect(() => {
@@ -65,6 +66,8 @@ export function useHotkey(
     const listener = (e: KeyboardEvent) => {
       if (meta && !(e.metaKey || e.ctrlKey)) return
       if (e.key.toLowerCase() !== key.toLowerCase()) return
+      if (shift === true && !e.shiftKey) return
+      if (shift === false && e.shiftKey) return
       if (!meta && isInsideInput(e)) return
       e.preventDefault()
       handlerRef.current()
@@ -72,5 +75,5 @@ export function useHotkey(
 
     window.addEventListener('keydown', listener)
     return () => window.removeEventListener('keydown', listener)
-  }, [key, meta, enabled, priority])
+  }, [key, meta, shift, enabled, priority])
 }

@@ -140,7 +140,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
     setRegionSelectActive(false)
   }, [])
 
-  useHotkey('r', handleToggleRegionSelect)
+  useHotkey('r', handleToggleRegionSelect, { shift: false })
   useHotkey('Escape', handleRegionSelectDeactivate, { enabled: regionSelectActive, priority: Z.controls + 1 })
 
   const handleBulkDelete = useCallback((ids: string[]) => {
