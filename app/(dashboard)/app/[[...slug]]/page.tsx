@@ -219,13 +219,13 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
 
     const now = new Date()
     const todayISO = now.toISOString().split('T')[0]
-    const hasActiveTrip = data.trips.some((t) => {
-      if (t.city.toLowerCase().trim() !== detected.city.toLowerCase().trim()) return false
+    const hasActiveTripInCountry = data.trips.some((t) => {
+      if (t.country.toLowerCase().trim() !== detected.country.toLowerCase().trim()) return false
       const arrival = new Date(t.arrivalDate)
       const departure = t.departureDate ? new Date(t.departureDate) : arrival
       return arrival <= now && departure >= now
     })
-    if (hasActiveTrip) return
+    if (hasActiveTripInCountry) return
 
     toast(`You're in ${detected.city}, ${detected.country}`, {
       duration: Infinity,

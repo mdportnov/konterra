@@ -291,7 +291,7 @@ export default function YearCalendarDialog({ open, onOpenChange, trips, onTripCl
           )}
 
           {yearTrips.length > 0 && (
-            <YearStats trips={yearTrips} allTrips={trips} tripDayMap={tripDayMap} year={year} isCurrentYear={isCurrentYear} />
+            <YearStats trips={yearTrips} tripDayMap={tripDayMap} year={year} isCurrentYear={isCurrentYear} />
           )}
           </div>
         )}
@@ -303,21 +303,33 @@ export default function YearCalendarDialog({ open, onOpenChange, trips, onTripCl
 
 interface YearStatsProps {
   trips: Trip[]
-  allTrips: Trip[]
   tripDayMap: Map<string, DayTripInfo>
   year: number
   isCurrentYear: boolean
 }
 
-function YearStats({ trips, allTrips, tripDayMap, year, isCurrentYear }: YearStatsProps) {
+function YearStats({ trips, tripDayMap, year, isCurrentYear }: YearStatsProps) {
   const stats = useMemo(() => {
-    const countries = new Set<string>()
-    const cities = new Set<string>()
-    let totalDays = 0
-    for (const t of trips) {
-      countries.add(t.country)
-      cities.add(`${t.city}-${t.country}`)
+    const now = new Date()
+    const pastTrips = isCurrentYear
+      ? trips.filter((t) => new Date(t.arrivalDate) <= now)
+      : trips
+
+    const visitedCountries = new Set<string>()
+    const visitedCities = new Set<string>()
+    for (const t of pastTrips) {
+      visitedCountries.add(t.country)
+      visitedCities.add(`${t.city}-${t.country}`)
     }
+
+    const plannedCountries = new Set<string>()
+    const plannedCities = new Set<string>()
+    for (const t of trips) {
+      plannedCountries.add(t.country)
+      plannedCities.add(`${t.city}-${t.country}`)
+    }
+
+    let totalDays = 0
     const daysInYear = ((year % 4 === 0 && year % 100 !== 0) || year % 400 === 0) ? 366 : 365
     for (let m = 0; m < 12; m++) {
       const dim = new Date(year, m + 1, 0).getDate()
@@ -327,43 +339,32 @@ function YearStats({ trips, allTrips, tripDayMap, year, isCurrentYear }: YearSta
       }
     }
 
-    let totalTrips = 0
-    let totalCountries = 0
-    let totalCities = 0
-    if (isCurrentYear) {
-      const allCountries = new Set<string>()
-      const allCities = new Set<string>()
-      for (const t of allTrips) {
-        allCountries.add(t.country)
-        allCities.add(`${t.city}-${t.country}`)
-      }
-      totalTrips = allTrips.length
-      totalCountries = allCountries.size
-      totalCities = allCities.size
-    }
-
     return {
-      countries: countries.size, cities: cities.size, trips: trips.length,
+      visitedTrips: pastTrips.length,
+      visitedCountries: visitedCountries.size,
+      visitedCities: visitedCities.size,
+      plannedTrips: trips.length,
+      plannedCountries: plannedCountries.size,
+      plannedCities: plannedCities.size,
       totalDays, daysInYear,
-      totalTrips, totalCountries, totalCities,
     }
-  }, [trips, allTrips, tripDayMap, year, isCurrentYear])
+  }, [trips, tripDayMap, year, isCurrentYear])
 
   return (
     <div className="flex items-center gap-4 pt-2 mt-1 border-t border-border text-[11px] text-muted-foreground">
       <span>
-        <strong className="text-foreground">{stats.trips}</strong>
-        {isCurrentYear && <span>/{stats.totalTrips}</span>}
+        <strong className="text-foreground">{stats.visitedTrips}</strong>
+        {isCurrentYear && <span>/{stats.plannedTrips}</span>}
         {' '}trips
       </span>
       <span>
-        <strong className="text-foreground">{stats.countries}</strong>
-        {isCurrentYear && <span>/{stats.totalCountries}</span>}
+        <strong className="text-foreground">{stats.visitedCountries}</strong>
+        {isCurrentYear && <span>/{stats.plannedCountries}</span>}
         {' '}countries
       </span>
       <span>
-        <strong className="text-foreground">{stats.cities}</strong>
-        {isCurrentYear && <span>/{stats.totalCities}</span>}
+        <strong className="text-foreground">{stats.visitedCities}</strong>
+        {isCurrentYear && <span>/{stats.plannedCities}</span>}
         {' '}cities
       </span>
       <span><strong className="text-foreground">{stats.totalDays}</strong>/{stats.daysInYear} days abroad</span>
