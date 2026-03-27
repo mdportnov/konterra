@@ -26,6 +26,7 @@ export default function GlobeRegionSelect({
   onDeactivate,
 }: GlobeRegionSelectProps) {
   const [rect, setRect] = useState<Rect | null>(null)
+  const rectRef = useRef<Rect | null>(null)
   const dragging = useRef(false)
   const startPos = useRef({ x: 0, y: 0 })
   const overlayRef = useRef<HTMLDivElement>(null)
@@ -42,31 +43,41 @@ export default function GlobeRegionSelect({
     dragging.current = true
     const pos = getPos(clientX, clientY)
     startPos.current = pos
-    setRect({ x1: pos.x, y1: pos.y, x2: pos.x, y2: pos.y })
+    const initial = { x1: pos.x, y1: pos.y, x2: pos.x, y2: pos.y }
+    rectRef.current = initial
+    setRect(initial)
   }, [getPos])
 
   const moveDraw = useCallback((clientX: number, clientY: number) => {
     if (!dragging.current) return
     const pos = getPos(clientX, clientY)
-    setRect((prev) => prev ? { ...prev, x2: pos.x, y2: pos.y } : null)
+    setRect((prev) => {
+      if (!prev) return null
+      const next = { ...prev, x2: pos.x, y2: pos.y }
+      rectRef.current = next
+      return next
+    })
   }, [getPos])
 
   const endDraw = useCallback(() => {
-    if (!dragging.current || !rect) {
+    const currentRect = rectRef.current
+    if (!dragging.current || !currentRect) {
       dragging.current = false
+      rectRef.current = null
       setRect(null)
       return
     }
     dragging.current = false
 
-    const minX = Math.min(rect.x1, rect.x2)
-    const maxX = Math.max(rect.x1, rect.x2)
-    const minY = Math.min(rect.y1, rect.y2)
-    const maxY = Math.max(rect.y1, rect.y2)
+    const minX = Math.min(currentRect.x1, currentRect.x2)
+    const maxX = Math.max(currentRect.x1, currentRect.x2)
+    const minY = Math.min(currentRect.y1, currentRect.y2)
+    const maxY = Math.max(currentRect.y1, currentRect.y2)
 
     const width = maxX - minX
     const height = maxY - minY
     if (width < 5 || height < 5) {
+      rectRef.current = null
       setRect(null)
       return
     }
@@ -81,12 +92,13 @@ export default function GlobeRegionSelect({
       }
     }
 
+    rectRef.current = null
     setRect(null)
     if (selected.length > 0) {
       onSelect(selected)
     }
     onDeactivate()
-  }, [rect, contacts, getScreenCoords, onSelect, onDeactivate])
+  }, [contacts, getScreenCoords, onSelect, onDeactivate])
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (e.button !== 0) return
@@ -118,6 +130,7 @@ export default function GlobeRegionSelect({
 
   useEffect(() => {
     if (!active) {
+      rectRef.current = null
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setRect(null)
       dragging.current = false

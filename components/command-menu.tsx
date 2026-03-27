@@ -91,6 +91,7 @@ export default function CommandMenu({
   }, [setOpen])
 
   useHotkey('k', toggleOpen, { meta: true })
+  useHotkey('f', toggleOpen, { meta: true })
 
   const handleHotkeyAddContact = useCallback(() => {
     if (!open) onAddContact()
@@ -106,6 +107,7 @@ export default function CommandMenu({
 
   useHotkey('n', handleHotkeyAddContact, { meta: true })
   useHotkey('j', handleHotkeyAddTrip, { meta: true })
+  useHotkey('p', handleHotkeyAddTrip, { meta: true })
   useHotkey('i', handleHotkeyInsights, { meta: true })
 
   const runAction = useCallback((action: () => void) => {
@@ -226,7 +228,7 @@ export default function CommandMenu({
                 <CommandItem onSelect={() => runAction(onAddTrip)}>
                   <Plane className="text-muted-foreground" />
                   <span>Add Trip</span>
-                  <CommandShortcut>⌘J</CommandShortcut>
+                  <CommandShortcut>⌘J / ⌘P</CommandShortcut>
                 </CommandItem>
                 <CommandItem onSelect={() => runAction(onOpenInsights)}>
                   <Sparkles className="text-muted-foreground" />

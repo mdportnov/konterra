@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useCallback, useRef, useLayoutEffect } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
@@ -182,12 +182,12 @@ export default function YearCalendarDialog({ open, onOpenChange, trips, onTripCl
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="max-w-7xl w-[calc(100vw-2rem)] max-h-[90vh] overflow-y-auto p-4 sm:p-6 top-[5vh] translate-y-0 data-[state=open]:zoom-in-100 data-[state=closed]:zoom-out-100"
+        className="max-w-5xl w-[calc(100vw-2rem)] p-0 top-[5vh] translate-y-0 data-[state=open]:zoom-in-100 data-[state=closed]:zoom-out-100"
         showCloseButton
       >
         <DialogDescription className="sr-only">Full year travel calendar overview</DialogDescription>
-        <div onClick={() => setTouchSelectedTrips(null)}>
-        <div className="flex flex-col gap-2 mb-4 pr-8">
+        <div onClick={() => setTouchSelectedTrips(null)} className="flex flex-col max-h-[90vh]">
+        <div className="flex flex-col gap-2 px-5 pt-5 pb-3 pr-10 shrink-0">
           <div className="flex items-center gap-2">
             <Button
               size="icon"
@@ -222,12 +222,13 @@ export default function YearCalendarDialog({ open, onOpenChange, trips, onTripCl
           </div>
         </div>
 
+        <div className="flex-1 min-h-0 overflow-y-auto px-5">
         {yearTrips.length === 0 ? (
           <div className="flex items-center justify-center py-16">
             <p className="text-sm text-muted-foreground">No trips in {year}</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-x-4 gap-y-5 sm:gap-5 lg:gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-6">
             {Array.from({ length: 12 }, (_, monthIdx) => (
               <MonthGrid
                 key={monthIdx}
@@ -244,9 +245,10 @@ export default function YearCalendarDialog({ open, onOpenChange, trips, onTripCl
             ))}
           </div>
         )}
+        </div>
 
         {touchSelectedTrips && touchSelectedTrips.length > 0 && (
-          <div className={`${GLASS.control} rounded-lg p-2.5 mt-3 space-y-1`} onClick={(e) => e.stopPropagation()}>
+          <div className={`${GLASS.control} rounded-lg p-2.5 mx-5 mt-3 space-y-1 shrink-0`} onClick={(e) => e.stopPropagation()}>
             {touchSelectedTrips.map((trip) => (
               <button
                 key={trip.id}
@@ -270,15 +272,16 @@ export default function YearCalendarDialog({ open, onOpenChange, trips, onTripCl
           </div>
         )}
 
-        {(legendCountries.length > 0 || yearTrips.length > 0) && <AnimatedFooter>
+        {(legendCountries.length > 0 || yearTrips.length > 0) && (
+          <div className="shrink-0 px-5 pb-4">
           {legendCountries.length > 0 && (
             <div className="flex flex-wrap gap-x-3 gap-y-1.5 pt-3 mt-2 border-t border-border">
               {legendCountries.map((country) => {
                 const color = countryColorMap.get(country) ?? '#3b82f6'
                 return (
-                  <div key={country} className="flex items-center gap-1">
-                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
-                    <span className="text-[10px] text-muted-foreground">
+                  <div key={country} className="flex items-center gap-1.5">
+                    <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
+                    <span className="text-[11px] text-muted-foreground">
                       {countryFlag(country)} {country}
                     </span>
                   </div>
@@ -290,38 +293,11 @@ export default function YearCalendarDialog({ open, onOpenChange, trips, onTripCl
           {yearTrips.length > 0 && (
             <YearStats trips={yearTrips} allTrips={trips} tripDayMap={tripDayMap} year={year} isCurrentYear={isCurrentYear} />
           )}
-        </AnimatedFooter>}
+          </div>
+        )}
         </div>
       </DialogContent>
     </Dialog>
-  )
-}
-
-function AnimatedFooter({ children }: { children: React.ReactNode }) {
-  const innerRef = useRef<HTMLDivElement>(null)
-  const [height, setHeight] = useState(0)
-
-  useLayoutEffect(() => {
-    if (!innerRef.current) return
-    setHeight(innerRef.current.getBoundingClientRect().height)
-    const observer = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        setHeight(entry.contentRect.height)
-      }
-    })
-    observer.observe(innerRef.current)
-    return () => observer.disconnect()
-  }, [])
-
-  return (
-    <div
-      className="overflow-hidden transition-[height] duration-300 ease-in-out"
-      style={{ height }}
-    >
-      <div ref={innerRef}>
-        {children}
-      </div>
-    </div>
   )
 }
 
@@ -374,7 +350,7 @@ function YearStats({ trips, allTrips, tripDayMap, year, isCurrentYear }: YearSta
   }, [trips, allTrips, tripDayMap, year, isCurrentYear])
 
   return (
-    <div className="flex items-center gap-4 pt-2 mt-1 border-t border-border text-[10px] text-muted-foreground">
+    <div className="flex items-center gap-4 pt-2 mt-1 border-t border-border text-[11px] text-muted-foreground">
       <span>
         <strong className="text-foreground">{stats.trips}</strong>
         {isCurrentYear && <span>/{stats.totalTrips}</span>}
@@ -417,7 +393,7 @@ function MonthGrid({ year, month, today, tripDayMap, countryColorMap, tripCount,
         {onMonthClick ? (
           <button
             onClick={() => onMonthClick(month)}
-            className={`text-xs lg:text-sm font-semibold mb-1.5 lg:mb-2 cursor-pointer hover:text-foreground text-left ${isCurrentMonth ? 'text-orange-500' : 'text-foreground/80'}`}
+            className={`text-sm font-semibold mb-2 cursor-pointer hover:text-foreground text-left ${isCurrentMonth ? 'text-orange-500' : 'text-foreground/80'}`}
           >
             {MONTH_NAMES_SHORT[month]}
             {tripCount > 0 && (
@@ -425,21 +401,21 @@ function MonthGrid({ year, month, today, tripDayMap, countryColorMap, tripCount,
             )}
           </button>
         ) : (
-          <h3 className={`text-xs lg:text-sm font-semibold mb-1.5 lg:mb-2 ${isCurrentMonth ? 'text-orange-500' : 'text-foreground/80'}`}>
+          <h3 className={`text-sm font-semibold mb-2 ${isCurrentMonth ? 'text-orange-500' : 'text-foreground/80'}`}>
             {MONTH_NAMES_SHORT[month]}
             {tripCount > 0 && (
               <span className="text-muted-foreground font-normal"> &middot; {tripCount}</span>
             )}
           </h3>
         )}
-        <div className="grid grid-cols-7 gap-0.5 lg:gap-1 mb-0.5 lg:mb-1">
+        <div className="grid grid-cols-7 gap-1 mb-1">
           {DAY_HEADERS.map((d, i) => (
-            <div key={i} className="text-[8px] sm:text-[9px] lg:text-[10px] text-muted-foreground/50 text-center">
+            <div key={i} className="text-[9px] sm:text-[10px] text-muted-foreground/50 text-center">
               {d}
             </div>
           ))}
         </div>
-        <div className="grid grid-cols-7 gap-0.5 lg:gap-1">
+        <div className="grid grid-cols-7 gap-1">
           {days.map((day, idx) => {
             const inMonth = day.getMonth() === month
             const isToday = inMonth &&
@@ -452,14 +428,14 @@ function MonthGrid({ year, month, today, tripDayMap, countryColorMap, tripCount,
             const cellKey = `${month}-${idx}`
 
             if (!inMonth) {
-              return <div key={cellKey} className="aspect-square min-h-[22px] sm:min-h-[24px] lg:min-h-[28px]" />
+              return <div key={cellKey} className="aspect-square min-h-[28px]" />
             }
 
             const cell = (
               <div
                 className={`
-                  relative w-full aspect-square min-h-[22px] sm:min-h-[24px] lg:min-h-[28px] flex items-center justify-center
-                  text-[10px] sm:text-[11px] lg:text-xs leading-none rounded-[3px]
+                  relative w-full aspect-square min-h-[28px] flex items-center justify-center
+                  text-[11px] sm:text-xs leading-none rounded-[4px]
                   ${isToday ? 'font-bold' : ''}
                   ${hasTrips && !isToday ? 'font-medium' : ''}
                   ${hasTrips ? 'cursor-pointer hover:ring-1 hover:ring-foreground/20' : ''}
@@ -468,12 +444,12 @@ function MonthGrid({ year, month, today, tripDayMap, countryColorMap, tripCount,
                 onTouchEnd={hasTrips ? (e) => { e.preventDefault(); onDayTouch(info.trips) } : undefined}
               >
                 {hasTrips && (
-                  <div className="absolute inset-0.5 rounded-[2px] opacity-25" style={{ backgroundColor: info.colors[0] }} />
+                  <div className="absolute inset-0.5 rounded-[3px] opacity-25" style={{ backgroundColor: info.colors[0] }} />
                 )}
                 <span
                   className={`
                     relative z-10
-                    ${isToday ? 'bg-orange-500 text-white rounded-full w-[18px] h-[18px] lg:w-[22px] lg:h-[22px] flex items-center justify-center text-[9px] lg:text-[10px]' : ''}
+                    ${isToday ? 'bg-orange-500 text-white rounded-full w-[22px] h-[22px] flex items-center justify-center text-[10px]' : ''}
                     ${!hasTrips && !isToday ? 'text-foreground/60' : ''}
                   `}
                   style={hasTrips && !isToday ? { color: getCountryTextColor(info.colors[0]) } : undefined}

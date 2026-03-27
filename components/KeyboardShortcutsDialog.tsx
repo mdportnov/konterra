@@ -14,9 +14,9 @@ interface KeyboardShortcutsDialogProps {
 }
 
 const shortcuts = [
-  { key: '\u2318K', label: 'Command menu' },
+  { key: '\u2318K / \u2318F', label: 'Search / Command menu' },
   { key: '\u2318N', label: 'New contact' },
-  { key: '\u2318J', label: 'New trip' },
+  { key: '\u2318J / \u2318P', label: 'New trip' },
   { key: '\u2318I', label: 'Network insights' },
   { key: 'R', label: 'Toggle region select' },
   { key: 'Escape', label: 'Close panel' },
