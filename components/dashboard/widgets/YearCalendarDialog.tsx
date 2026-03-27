@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { GLASS } from '@/lib/constants/ui'
-import { COUNTRY_COLORS_BG, COUNTRY_COLORS_TEXT, getMondayStart } from '@/lib/constants/calendar'
+import { getMondayStart, getCountryColor, getCountryTextColor } from '@/lib/constants/calendar'
 import { countryFlag } from '@/lib/country-flags'
 import type { Trip } from '@/lib/db/schema'
 
@@ -43,7 +43,7 @@ function formatShortDate(d: Date | string | null): string {
 
 interface DayTripInfo {
   trips: Trip[]
-  colorIndices: number[]
+  colors: string[]
 }
 
 interface YearCalendarDialogProps {
@@ -61,13 +61,15 @@ export default function YearCalendarDialog({ open, onOpenChange, trips, onTripCl
   const [touchSelectedTrips, setTouchSelectedTrips] = useState<Trip[] | null>(null)
 
   const countryColorMap = useMemo(() => {
-    const map = new Map<string, number>()
+    const map = new Map<string, string>()
     const sorted = [...trips].sort((a, b) =>
       new Date(a.arrivalDate).getTime() - new Date(b.arrivalDate).getTime()
     )
+    let idx = 0
     for (const t of sorted) {
       if (!map.has(t.country)) {
-        map.set(t.country, map.size % COUNTRY_COLORS_BG.length)
+        map.set(t.country, getCountryColor(t.country, idx))
+        idx++
       }
     }
     return map
@@ -90,18 +92,18 @@ export default function YearCalendarDialog({ open, onOpenChange, trips, onTripCl
     for (const trip of yearTrips) {
       const arrival = new Date(trip.arrivalDate)
       const departure = trip.departureDate ? new Date(trip.departureDate) : arrival
-      const colorIdx = countryColorMap.get(trip.country) ?? 0
+      const color = countryColorMap.get(trip.country) ?? '#3b82f6'
       const current = new Date(arrival)
       while (current <= departure) {
         const key = `${current.getFullYear()}-${current.getMonth()}-${current.getDate()}`
         const existing = map.get(key)
         if (existing) {
           existing.trips.push(trip)
-          if (!existing.colorIndices.includes(colorIdx)) {
-            existing.colorIndices.push(colorIdx)
+          if (!existing.colors.includes(color)) {
+            existing.colors.push(color)
           }
         } else {
-          map.set(key, { trips: [trip], colorIndices: [colorIdx] })
+          map.set(key, { trips: [trip], colors: [color] })
         }
         current.setDate(current.getDate() + 1)
       }
@@ -190,7 +192,7 @@ export default function YearCalendarDialog({ open, onOpenChange, trips, onTripCl
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="max-w-4xl w-[calc(100vw-2rem)] max-h-[90vh] overflow-y-auto p-4 sm:p-6"
+        className="max-w-6xl w-[calc(100vw-2rem)] max-h-[90vh] overflow-y-auto p-4 sm:p-6"
         showCloseButton
       >
         <DialogDescription className="sr-only">Full year travel calendar overview</DialogDescription>
@@ -253,7 +255,7 @@ export default function YearCalendarDialog({ open, onOpenChange, trips, onTripCl
             <p className="text-sm text-muted-foreground">No trips in {year}</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 sm:gap-5">
             {Array.from({ length: 12 }, (_, monthIdx) => (
               <MonthGrid
                 key={monthIdx}
@@ -279,7 +281,7 @@ export default function YearCalendarDialog({ open, onOpenChange, trips, onTripCl
                 onClick={() => handleTouchTripNavigate(trip)}
                 className="w-full flex items-center gap-2.5 text-left p-1.5 rounded-md hover:bg-accent/50 transition-colors"
               >
-                <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${COUNTRY_COLORS_BG[countryColorMap.get(trip.country) ?? 0]}`} />
+                <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: countryColorMap.get(trip.country) ?? '#3b82f6' }} />
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-medium text-foreground truncate">
                     {trip.city}, {trip.country} {countryFlag(trip.country)}
@@ -299,10 +301,10 @@ export default function YearCalendarDialog({ open, onOpenChange, trips, onTripCl
         {legendCountries.length > 0 && (
           <div className="flex flex-wrap gap-x-3 gap-y-1.5 pt-3 mt-2 border-t border-border">
             {legendCountries.map((country) => {
-              const idx = countryColorMap.get(country) ?? 0
+              const color = countryColorMap.get(country) ?? '#3b82f6'
               return (
                 <div key={country} className="flex items-center gap-1">
-                  <div className={`w-2 h-2 rounded-full ${COUNTRY_COLORS_BG[idx]}`} />
+                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
                   <span className="text-[10px] text-muted-foreground">
                     {countryFlag(country)} {country}
                   </span>
@@ -311,9 +313,49 @@ export default function YearCalendarDialog({ open, onOpenChange, trips, onTripCl
             })}
           </div>
         )}
+
+        {yearTrips.length > 0 && (
+          <YearStats trips={yearTrips} tripDayMap={tripDayMap} year={year} />
+        )}
         </div>
       </DialogContent>
     </Dialog>
+  )
+}
+
+interface YearStatsProps {
+  trips: Trip[]
+  tripDayMap: Map<string, DayTripInfo>
+  year: number
+}
+
+function YearStats({ trips, tripDayMap, year }: YearStatsProps) {
+  const stats = useMemo(() => {
+    const countries = new Set<string>()
+    const cities = new Set<string>()
+    let totalDays = 0
+    for (const t of trips) {
+      countries.add(t.country)
+      cities.add(`${t.city}-${t.country}`)
+    }
+    const daysInYear = ((year % 4 === 0 && year % 100 !== 0) || year % 400 === 0) ? 366 : 365
+    for (let m = 0; m < 12; m++) {
+      const dim = new Date(year, m + 1, 0).getDate()
+      for (let d = 1; d <= dim; d++) {
+        const key = `${year}-${m}-${d}`
+        if (tripDayMap.has(key)) totalDays++
+      }
+    }
+    return { countries: countries.size, cities: cities.size, trips: trips.length, totalDays, daysInYear }
+  }, [trips, tripDayMap, year])
+
+  return (
+    <div className="flex items-center gap-4 pt-2 mt-1 border-t border-border text-[10px] text-muted-foreground">
+      <span><strong className="text-foreground">{stats.trips}</strong> trips</span>
+      <span><strong className="text-foreground">{stats.countries}</strong> countries</span>
+      <span><strong className="text-foreground">{stats.cities}</strong> cities</span>
+      <span><strong className="text-foreground">{stats.totalDays}</strong>/{stats.daysInYear} days abroad</span>
+    </div>
   )
 }
 
@@ -322,7 +364,7 @@ interface MonthGridProps {
   month: number
   today: Date
   tripDayMap: Map<string, DayTripInfo>
-  countryColorMap: Map<string, number>
+  countryColorMap: Map<string, string>
   tripCount: number
   onDayClick: (trips: Trip[]) => void
   onDayTouch: (trips: Trip[]) => void
@@ -390,20 +432,22 @@ function MonthGrid({ year, month, today, tripDayMap, countryColorMap, tripCount,
                 onTouchEnd={hasTrips ? (e) => { e.preventDefault(); onDayTouch(info.trips) } : undefined}
               >
                 {hasTrips && (
-                  <div className={`absolute inset-0.5 rounded-[2px] ${COUNTRY_COLORS_BG[info.colorIndices[0]]} opacity-25`} />
+                  <div className="absolute inset-0.5 rounded-[2px] opacity-25" style={{ backgroundColor: info.colors[0] }} />
                 )}
-                <span className={`
-                  relative z-10
-                  ${isToday ? 'bg-orange-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-[8px]' : ''}
-                  ${hasTrips && !isToday ? COUNTRY_COLORS_TEXT[info.colorIndices[0]] : ''}
-                  ${!hasTrips && !isToday ? 'text-foreground/60' : ''}
-                `}>
+                <span
+                  className={`
+                    relative z-10
+                    ${isToday ? 'bg-orange-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-[8px]' : ''}
+                    ${!hasTrips && !isToday ? 'text-foreground/60' : ''}
+                  `}
+                  style={hasTrips && !isToday ? { color: getCountryTextColor(info.colors[0]) } : undefined}
+                >
                   {day.getDate()}
                 </span>
-                {hasTrips && info.colorIndices.length > 1 && (
+                {hasTrips && info.colors.length > 1 && (
                   <div className="absolute bottom-0 left-1/2 -translate-x-1/2 flex gap-px">
-                    {info.colorIndices.slice(0, 3).map((ci, i) => (
-                      <div key={i} className={`w-1 h-1 rounded-full ${COUNTRY_COLORS_BG[ci]}`} />
+                    {info.colors.slice(0, 3).map((c, i) => (
+                      <div key={i} className="w-1 h-1 rounded-full" style={{ backgroundColor: c }} />
                     ))}
                   </div>
                 )}
@@ -423,7 +467,7 @@ function MonthGrid({ year, month, today, tripDayMap, countryColorMap, tripCount,
                   <div className="space-y-0.5">
                     {info.trips.map((t) => (
                       <p key={t.id} className="flex items-center gap-1">
-                        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${COUNTRY_COLORS_BG[countryColorMap.get(t.country) ?? 0]}`} />
+                        <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: countryColorMap.get(t.country) ?? '#3b82f6' }} />
                         <span className="font-medium">{t.city}</span>
                         <span className="text-muted-foreground">{countryFlag(t.country)}</span>
                       </p>

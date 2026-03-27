@@ -6,7 +6,7 @@ import YearCalendarDialog from './YearCalendarDialog'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { GLASS } from '@/lib/constants/ui'
-import { COUNTRY_COLORS_BG, getMondayStart } from '@/lib/constants/calendar'
+import { getMondayStart, getCountryColor } from '@/lib/constants/calendar'
 import { countryFlag } from '@/lib/country-flags'
 import type { Trip } from '@/lib/db/schema'
 
@@ -16,11 +16,8 @@ const MONTH_NAMES = [
   'July', 'August', 'September', 'October', 'November', 'December',
 ]
 
-function getCountryColorIndex(country: string, countryMap: Map<string, number>): number {
-  if (countryMap.has(country)) return countryMap.get(country)!
-  const idx = countryMap.size % COUNTRY_COLORS_BG.length
-  countryMap.set(country, idx)
-  return idx
+function getCountryHexColor(country: string, countryMap: Map<string, string>): string {
+  return countryMap.get(country) ?? getCountryColor(country, countryMap.size)
 }
 
 function isSameDay(a: Date, b: Date): boolean {
@@ -54,7 +51,7 @@ function getCalendarWeeks(year: number, month: number): CalendarWeek[] {
 
 interface TripBar {
   trip: Trip
-  colorIdx: number
+  color: string
   startCol: number
   endCol: number
   isStart: boolean
@@ -65,7 +62,7 @@ interface TripBar {
 function layoutTripsForWeek(
   weekDays: Date[],
   trips: Trip[],
-  countryMap: Map<string, number>,
+  countryMap: Map<string, string>,
 ): TripBar[] {
   const weekStart = weekDays[0].getTime()
   const weekEnd = weekDays[6].getTime() + 86400000
@@ -139,7 +136,7 @@ function layoutTripsForWeek(
 
     bars.push({
       trip,
-      colorIdx: getCountryColorIndex(trip.country, countryMap),
+      color: getCountryHexColor(trip.country, countryMap),
       startCol,
       endCol,
       isStart,
@@ -168,13 +165,13 @@ export default function TripCalendar({ trips, onTripClick, onAddTrip }: TripCale
   const [yearDialogOpen, setYearDialogOpen] = useState(false)
 
   const countryColorMap = useMemo(() => {
-    const map = new Map<string, number>()
+    const map = new Map<string, string>()
     const sorted = [...trips].sort((a, b) =>
       new Date(a.arrivalDate).getTime() - new Date(b.arrivalDate).getTime()
     )
     for (const t of sorted) {
       if (!map.has(t.country)) {
-        map.set(t.country, map.size % COUNTRY_COLORS_BG.length)
+        map.set(t.country, getCountryColor(t.country, map.size))
       }
     }
     return map
@@ -348,7 +345,6 @@ export default function TripCalendar({ trips, onTripClick, onAddTrip }: TripCale
                     const topPx = bar.lane * (barHeight + barGap) + 1
                     const isHovered = hoveredTripId === bar.trip.id
                     const isTouchSelected = touchSelectedTrip?.id === bar.trip.id
-                    const colorClass = COUNTRY_COLORS_BG[bar.colorIdx]
 
                     return (
                       <TooltipProvider key={bIdx}>
@@ -361,7 +357,6 @@ export default function TripCalendar({ trips, onTripClick, onAddTrip }: TripCale
                               onMouseLeave={() => setHoveredTripId(null)}
                               className={`
                                 absolute flex items-center gap-1 px-1.5 overflow-hidden
-                                ${colorClass}
                                 ${isHovered || isTouchSelected ? 'opacity-100 shadow-sm ring-1 ring-white/20' : 'opacity-75'}
                                 ${bar.isStart ? 'rounded-l-full' : 'rounded-l-none'}
                                 ${bar.isEnd ? 'rounded-r-full' : 'rounded-r-none'}
@@ -373,6 +368,7 @@ export default function TripCalendar({ trips, onTripClick, onAddTrip }: TripCale
                                 width: `${widthPercent}%`,
                                 top: topPx,
                                 height: barHeight,
+                                backgroundColor: bar.color,
                               }}
                             >
                               <span className="text-[9px] font-medium text-white truncate leading-none">
@@ -414,7 +410,7 @@ export default function TripCalendar({ trips, onTripClick, onAddTrip }: TripCale
           onClick={handleTouchTripNavigate}
           className={`w-full ${GLASS.control} rounded-lg p-2.5 flex items-center gap-2.5 text-left transition-all`}
         >
-          <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${COUNTRY_COLORS_BG[countryColorMap.get(touchSelectedTrip.country) ?? 0]}`} />
+          <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: countryColorMap.get(touchSelectedTrip.country) ?? '#3b82f6' }} />
           <div className="flex-1 min-w-0">
             <p className="text-xs font-medium text-foreground truncate">
               {touchSelectedTrip.city}, {touchSelectedTrip.country} {countryFlag(touchSelectedTrip.country)}
@@ -432,10 +428,10 @@ export default function TripCalendar({ trips, onTripClick, onAddTrip }: TripCale
       {legendCountries.length > 0 && (
         <div className="flex flex-wrap gap-x-3 gap-y-1 pt-1">
           {legendCountries.map((country) => {
-            const idx = countryColorMap.get(country) ?? 0
+            const color = countryColorMap.get(country) ?? '#3b82f6'
             return (
               <div key={country} className="flex items-center gap-1">
-                <div className={`w-2 h-2 rounded-full ${COUNTRY_COLORS_BG[idx]}`} />
+                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
                 <span className="text-[9px] text-muted-foreground/70">
                   {countryFlag(country)} {country}
                 </span>
