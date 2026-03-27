@@ -192,12 +192,12 @@ export default function YearCalendarDialog({ open, onOpenChange, trips, onTripCl
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="max-w-6xl w-[calc(100vw-2rem)] max-h-[90vh] overflow-y-auto p-4 sm:p-6"
+        className="max-w-7xl w-[calc(100vw-2rem)] max-h-[90vh] overflow-y-auto p-4 sm:p-6"
         showCloseButton
       >
         <DialogDescription className="sr-only">Full year travel calendar overview</DialogDescription>
         <div onClick={() => setTouchSelectedTrips(null)}>
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col gap-2 mb-4 pr-8">
           <div className="flex items-center gap-2">
             <Button
               size="icon"
@@ -232,7 +232,7 @@ export default function YearCalendarDialog({ open, onOpenChange, trips, onTripCl
           </div>
 
           {tripYears.length > 0 && (
-            <div className="flex items-center gap-1 flex-wrap justify-end">
+            <div className="flex items-center gap-1 flex-wrap">
               {tripYears.map((y) => (
                 <button
                   key={y}
@@ -255,7 +255,7 @@ export default function YearCalendarDialog({ open, onOpenChange, trips, onTripCl
             <p className="text-sm text-muted-foreground">No trips in {year}</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 sm:gap-5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-x-4 gap-y-5 sm:gap-5">
             {Array.from({ length: 12 }, (_, monthIdx) => (
               <MonthGrid
                 key={monthIdx}
@@ -416,13 +416,13 @@ function MonthGrid({ year, month, today, tripDayMap, countryColorMap, tripCount,
             const cellKey = `${month}-${idx}`
 
             if (!inMonth) {
-              return <div key={cellKey} className="aspect-square min-h-[28px] sm:min-h-0" />
+              return <div key={cellKey} className="aspect-square min-h-[22px] sm:min-h-0" />
             }
 
             const cell = (
               <div
                 className={`
-                  relative w-full aspect-square min-h-[28px] sm:min-h-0 flex items-center justify-center
+                  relative w-full aspect-square min-h-[22px] sm:min-h-0 flex items-center justify-center
                   text-[9px] leading-none rounded-[2px]
                   ${isToday ? 'font-bold' : ''}
                   ${hasTrips && !isToday ? 'font-medium' : ''}
