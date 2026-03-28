@@ -16,6 +16,8 @@ const MONTH_NAMES_SHORT = [
 ]
 
 const DAY_HEADERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
+const CELL_SIZE = 'w-8 h-8 sm:w-9 sm:h-9'
+const CELL_W = 'w-8 sm:w-9'
 
 function getCalendarDays(year: number, month: number): Date[] {
   const start = getMondayStart(year, month)
@@ -182,12 +184,12 @@ export default function YearCalendarDialog({ open, onOpenChange, trips, onTripCl
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="max-w-5xl w-[calc(100vw-2rem)] p-0 top-[5vh] translate-y-0 data-[state=open]:zoom-in-100 data-[state=closed]:zoom-out-100"
+        className="max-w-[1200px] w-[calc(100vw-2rem)] p-0 top-[5vh] translate-y-0 data-[state=open]:zoom-in-100 data-[state=closed]:zoom-out-100"
         showCloseButton
       >
         <DialogDescription className="sr-only">Full year travel calendar overview</DialogDescription>
         <div onClick={() => setTouchSelectedTrips(null)} className="flex flex-col max-h-[90vh]">
-        <div className="flex flex-col gap-2 px-5 pt-5 pb-3 pr-10 shrink-0">
+        <div className="flex flex-col gap-2 px-6 pt-5 pb-3 pr-10 shrink-0">
           <div className="flex items-center gap-2">
             <Button
               size="icon"
@@ -222,13 +224,13 @@ export default function YearCalendarDialog({ open, onOpenChange, trips, onTripCl
           </div>
         </div>
 
-        <div className="flex-1 min-h-0 overflow-y-auto px-5">
+        <div className="flex-1 min-h-0 overflow-y-auto px-6 pb-4">
         {yearTrips.length === 0 ? (
           <div className="flex items-center justify-center py-16">
             <p className="text-sm text-muted-foreground">No trips in {year}</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-8 gap-y-8">
             {Array.from({ length: 12 }, (_, monthIdx) => (
               <MonthGrid
                 key={monthIdx}
@@ -248,7 +250,7 @@ export default function YearCalendarDialog({ open, onOpenChange, trips, onTripCl
         </div>
 
         {touchSelectedTrips && touchSelectedTrips.length > 0 && (
-          <div className={`${GLASS.control} rounded-lg p-2.5 mx-5 mt-3 space-y-1 shrink-0`} onClick={(e) => e.stopPropagation()}>
+          <div className={`${GLASS.control} rounded-lg p-2.5 mx-6 mt-3 space-y-1 shrink-0`} onClick={(e) => e.stopPropagation()}>
             {touchSelectedTrips.map((trip) => (
               <button
                 key={trip.id}
@@ -273,7 +275,7 @@ export default function YearCalendarDialog({ open, onOpenChange, trips, onTripCl
         )}
 
         {(legendCountries.length > 0 || yearTrips.length > 0) && (
-          <div className="shrink-0 px-5 pb-4">
+          <div className="shrink-0 px-6 pb-5">
           {legendCountries.length > 0 && (
             <div className="flex flex-wrap gap-x-3 gap-y-1.5 pt-3 mt-2 border-t border-border">
               {legendCountries.map((country) => {
@@ -409,14 +411,14 @@ function MonthGrid({ year, month, today, tripDayMap, countryColorMap, tripCount,
             )}
           </h3>
         )}
-        <div className="grid grid-cols-7 gap-1 mb-1">
+        <div className="grid grid-cols-7 gap-px mb-1">
           {DAY_HEADERS.map((d, i) => (
-            <div key={i} className="text-[9px] sm:text-[10px] text-muted-foreground/50 text-center">
+            <div key={i} className={`text-[10px] text-muted-foreground/50 text-center ${CELL_W}`}>
               {d}
             </div>
           ))}
         </div>
-        <div className="grid grid-cols-7 gap-1">
+        <div className="grid grid-cols-7 gap-px">
           {days.map((day, idx) => {
             const inMonth = day.getMonth() === month
             const isToday = inMonth &&
@@ -429,13 +431,13 @@ function MonthGrid({ year, month, today, tripDayMap, countryColorMap, tripCount,
             const cellKey = `${month}-${idx}`
 
             if (!inMonth) {
-              return <div key={cellKey} className="aspect-square" />
+              return <div key={cellKey} className={CELL_SIZE} />
             }
 
             const cell = (
               <div
                 className={`
-                  relative w-full aspect-square flex items-center justify-center
+                  relative ${CELL_SIZE} flex items-center justify-center
                   text-[11px] sm:text-xs leading-none rounded-[4px]
                   ${isToday ? 'font-bold' : ''}
                   ${hasTrips && !isToday ? 'font-medium' : ''}
@@ -450,7 +452,7 @@ function MonthGrid({ year, month, today, tripDayMap, countryColorMap, tripCount,
                 <span
                   className={`
                     relative z-10
-                    ${isToday ? 'bg-orange-500 text-white rounded-full w-[22px] h-[22px] flex items-center justify-center text-[10px]' : ''}
+                    ${isToday ? 'bg-orange-500 text-white rounded-full w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-[10px] sm:text-[11px]' : ''}
                     ${!hasTrips && !isToday ? 'text-foreground/60' : ''}
                   `}
                   style={hasTrips && !isToday ? { color: getCountryTextColor(info.colors[0]) } : undefined}
