@@ -183,11 +183,11 @@ export default function YearCalendarDialog({ open, onOpenChange, trips, onTripCl
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="max-w-6xl w-[calc(100vw-2rem)] p-0 top-[5vh] translate-y-0 data-[state=open]:zoom-in-100 data-[state=closed]:zoom-out-100"
+        className="max-w-[960px] w-[calc(100vw-2rem)] p-0 gap-0 overflow-hidden top-[5vh] translate-y-0 data-[state=open]:zoom-in-100 data-[state=closed]:zoom-out-100"
         showCloseButton
       >
         <DialogDescription className="sr-only">Full year travel calendar overview</DialogDescription>
-        <div onClick={() => setTouchSelectedTrips(null)} className="flex flex-col max-h-[90vh]">
+        <div onClick={() => setTouchSelectedTrips(null)} className="flex flex-col max-h-[90vh] select-none">
         <div className="flex flex-col gap-2 px-6 pt-5 pb-3 pr-10 shrink-0">
           <div className="flex items-center gap-2">
             <Button
@@ -223,13 +223,13 @@ export default function YearCalendarDialog({ open, onOpenChange, trips, onTripCl
           </div>
         </div>
 
-        <div className="flex-1 min-h-0 overflow-y-auto px-6 pb-4">
+        <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden thin-scrollbar px-6 pb-4">
         {yearTrips.length === 0 ? (
           <div className="flex items-center justify-center py-16">
             <p className="text-sm text-muted-foreground">No trips in {year}</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-10 gap-y-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-5">
             {Array.from({ length: 12 }, (_, monthIdx) => (
               <MonthGrid
                 key={monthIdx}
@@ -414,7 +414,7 @@ function MonthGrid({ year, month, today, tripDayMap, countryColorMap, tripCount,
           <thead>
             <tr>
               {DAY_HEADERS.map((d, i) => (
-                <th key={i} className="text-[10px] text-muted-foreground/50 font-normal pb-1 text-center w-[14.28%]">
+                <th key={i} className="text-[10px] text-muted-foreground/50 font-normal pb-1 text-center">
                   {d}
                 </th>
               ))}
