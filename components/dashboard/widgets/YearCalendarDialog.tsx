@@ -16,7 +16,7 @@ const MONTH_NAMES_SHORT = [
 ]
 
 const DAY_HEADERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
-const DAY_CELL = 'h-[26px] sm:h-7'
+const CELL_H = 'h-6 sm:h-7'
 
 function getCalendarDays(year: number, month: number): Date[] {
   const start = getMondayStart(year, month)
@@ -183,7 +183,7 @@ export default function YearCalendarDialog({ open, onOpenChange, trips, onTripCl
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="max-w-[960px] w-[calc(100vw-2rem)] p-0 gap-0 overflow-hidden top-[5vh] translate-y-0 data-[state=open]:zoom-in-100 data-[state=closed]:zoom-out-100"
+        className="max-w-5xl w-[calc(100vw-2rem)] p-0 gap-0 overflow-hidden top-[5vh] translate-y-0 data-[state=open]:zoom-in-100 data-[state=closed]:zoom-out-100"
         showCloseButton
       >
         <DialogDescription className="sr-only">Full year travel calendar overview</DialogDescription>
@@ -229,7 +229,7 @@ export default function YearCalendarDialog({ open, onOpenChange, trips, onTripCl
             <p className="text-sm text-muted-foreground">No trips in {year}</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-8 gap-y-5">
             {Array.from({ length: 12 }, (_, monthIdx) => (
               <MonthGrid
                 key={monthIdx}
@@ -410,11 +410,11 @@ function MonthGrid({ year, month, today, tripDayMap, countryColorMap, tripCount,
             )}
           </h3>
         )}
-        <table className="border-collapse w-full">
+        <table className="w-full border-separate" style={{ borderSpacing: '2px 1px', margin: '-2px' }}>
           <thead>
             <tr>
               {DAY_HEADERS.map((d, i) => (
-                <th key={i} className="text-[10px] text-muted-foreground/50 font-normal pb-1 text-center">
+                <th key={i} className="text-[10px] text-muted-foreground/50 font-normal pb-0.5 text-center">
                   {d}
                 </th>
               ))}
@@ -436,13 +436,13 @@ function MonthGrid({ year, month, today, tripDayMap, countryColorMap, tripCount,
                   const cellKey = `${month}-${idx}`
 
                   if (!inMonth) {
-                    return <td key={cellKey} className={DAY_CELL} />
+                    return <td key={cellKey} className={CELL_H} />
                   }
 
                   const cell = (
                     <div
                       className={`
-                        relative ${DAY_CELL} flex items-center justify-center
+                        relative ${CELL_H} flex items-center justify-center
                         text-[11px] sm:text-xs leading-none rounded-[3px]
                         ${isToday ? 'font-bold' : ''}
                         ${hasTrips && !isToday ? 'font-medium' : ''}
@@ -452,7 +452,7 @@ function MonthGrid({ year, month, today, tripDayMap, countryColorMap, tripCount,
                       onTouchEnd={hasTrips ? (e) => { e.preventDefault(); onDayTouch(info.trips) } : undefined}
                     >
                       {hasTrips && (
-                        <div className="absolute inset-px rounded-[2px] opacity-25" style={{ backgroundColor: info.colors[0] }} />
+                        <div className="absolute inset-0 rounded-[3px] opacity-25" style={{ backgroundColor: info.colors[0] }} />
                       )}
                       <span
                         className={`
@@ -475,11 +475,11 @@ function MonthGrid({ year, month, today, tripDayMap, countryColorMap, tripCount,
                   )
 
                   if (!hasTrips) {
-                    return <td key={cellKey} className="p-px">{cell}</td>
+                    return <td key={cellKey}>{cell}</td>
                   }
 
                   return (
-                    <td key={cellKey} className="p-px">
+                    <td key={cellKey}>
                       <Tooltip delayDuration={150}>
                         <TooltipTrigger asChild>
                           {cell}
