@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo, useCallback } from 'react'
-import { ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react'
+import { ChevronLeft, ChevronRight, CalendarDays, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
@@ -60,6 +60,13 @@ export default function YearCalendarDialog({ open, onOpenChange, trips, onTripCl
   const today = useMemo(() => new Date(), [])
   const [year, setYear] = useState(initialYear ?? today.getFullYear())
   const [touchSelectedTrips, setTouchSelectedTrips] = useState<Trip[] | null>(null)
+  const [range, setRange] = useState<{ start: Date | null; end: Date | null }>({ start: null, end: null })
+  const rangeStart = range.start
+  const rangeEnd = range.end
+
+  const clearRange = useCallback(() => {
+    setRange({ start: null, end: null })
+  }, [])
 
   const countryColorMap = useMemo(() => {
     const map = new Map<string, string>()
@@ -135,22 +142,43 @@ export default function YearCalendarDialog({ open, onOpenChange, trips, onTripCl
     return Array.from(countries).sort()
   }, [yearTrips])
 
+  const handleDayContextMenu = useCallback((date: Date) => {
+    setTouchSelectedTrips(null)
+    setRange((prev) => {
+      if (!prev.start || prev.end) {
+        return { start: date, end: null }
+      }
+      if (date < prev.start) {
+        return { start: date, end: prev.start }
+      }
+      return { start: prev.start, end: date }
+    })
+  }, [])
+
   const handlePrevYear = useCallback(() => {
     setTouchSelectedTrips(null)
+    clearRange()
     setYear((y) => y - 1)
-  }, [])
+  }, [clearRange])
 
   const handleNextYear = useCallback(() => {
     setTouchSelectedTrips(null)
+    clearRange()
     setYear((y) => y + 1)
-  }, [])
+  }, [clearRange])
 
   const isCurrentYear = year === today.getFullYear()
 
   const handleGoToCurrentYear = useCallback(() => {
     setTouchSelectedTrips(null)
+    clearRange()
     setYear(today.getFullYear())
-  }, [today])
+  }, [today, clearRange])
+
+  const handleOpenChange = useCallback((val: boolean) => {
+    if (!val) clearRange()
+    onOpenChange(val)
+  }, [clearRange, onOpenChange])
 
   const handleDayCellClick = useCallback((dayTrips: Trip[]) => {
     if (dayTrips.length === 1) {
@@ -181,13 +209,13 @@ export default function YearCalendarDialog({ open, onOpenChange, trips, onTripCl
   }, [year, onMonthSelect])
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         className="max-w-[1200px] sm:max-w-[1200px] w-[calc(100vw-2rem)] p-0 gap-0 overflow-hidden top-[5vh] translate-y-0 data-[state=open]:zoom-in-100 data-[state=closed]:zoom-out-100"
         showCloseButton
       >
         <DialogDescription className="sr-only">Full year travel calendar overview</DialogDescription>
-        <div onClick={() => setTouchSelectedTrips(null)} className="flex flex-col max-h-[90vh] select-none">
+        <div onClick={() => { setTouchSelectedTrips(null); clearRange() }} className="flex flex-col max-h-[90vh] select-none">
         <div className="flex flex-col gap-2 px-6 pt-5 pb-3 pr-10 shrink-0">
           <div className="flex items-center gap-2">
             <Button
@@ -242,11 +270,25 @@ export default function YearCalendarDialog({ open, onOpenChange, trips, onTripCl
                 onDayClick={handleDayCellClick}
                 onDayTouch={handleDayCellTouch}
                 onMonthClick={onMonthSelect ? handleMonthClick : undefined}
+                rangeStart={rangeStart}
+                rangeEnd={rangeEnd}
+                onDayContextMenu={handleDayContextMenu}
               />
             ))}
           </div>
         )}
         </div>
+
+        {rangeStart && rangeEnd && (
+          <RangeInfo
+            rangeStart={rangeStart}
+            rangeEnd={rangeEnd}
+            tripDayMap={tripDayMap}
+            countryColorMap={countryColorMap}
+            yearTrips={yearTrips}
+            onDismiss={clearRange}
+          />
+        )}
 
         {touchSelectedTrips && touchSelectedTrips.length > 0 && (
           <div className={`${GLASS.control} rounded-lg p-2.5 mx-6 mt-3 space-y-1 shrink-0`} onClick={(e) => e.stopPropagation()}>
@@ -373,6 +415,90 @@ function YearStats({ trips, tripDayMap, year, isCurrentYear }: YearStatsProps) {
   )
 }
 
+interface RangeInfoProps {
+  rangeStart: Date
+  rangeEnd: Date
+  tripDayMap: Map<string, DayTripInfo>
+  countryColorMap: Map<string, string>
+  yearTrips: Trip[]
+  onDismiss: () => void
+}
+
+function RangeInfo({ rangeStart, rangeEnd, tripDayMap, countryColorMap, yearTrips, onDismiss }: RangeInfoProps) {
+  const stats = useMemo(() => {
+    const totalDays = Math.floor((rangeEnd.getTime() - rangeStart.getTime()) / 86400000) + 1
+    const weeks = Math.floor(totalDays / 7)
+    const remainderDays = totalDays % 7
+
+    const countryDays = new Map<string, number>()
+    const tripsInRange = new Set<string>()
+    let daysWithTrips = 0
+
+    const cursor = new Date(rangeStart)
+    while (cursor <= rangeEnd) {
+      const key = `${cursor.getFullYear()}-${cursor.getMonth()}-${cursor.getDate()}`
+      const info = tripDayMap.get(key)
+      if (info) {
+        daysWithTrips++
+        const countries = new Set<string>()
+        for (const trip of info.trips) {
+          tripsInRange.add(trip.id)
+          countries.add(trip.country)
+        }
+        for (const c of countries) {
+          countryDays.set(c, (countryDays.get(c) ?? 0) + 1)
+        }
+      }
+      cursor.setDate(cursor.getDate() + 1)
+    }
+
+    const matchedTrips = yearTrips.filter(t => tripsInRange.has(t.id))
+
+    const sortedCountries = Array.from(countryDays.entries()).sort((a, b) => b[1] - a[1])
+
+    return { totalDays, weeks, remainderDays, daysWithTrips, daysWithout: totalDays - daysWithTrips, sortedCountries, matchedTrips }
+  }, [rangeStart, rangeEnd, tripDayMap, yearTrips])
+
+  const label = `${rangeStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${rangeEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
+
+  const durationLabel = stats.weeks > 0
+    ? `${stats.weeks}w${stats.remainderDays > 0 ? ` ${stats.remainderDays}d` : ''}`
+    : `${stats.totalDays}d`
+
+  return (
+    <div className={`${GLASS.control} rounded-lg p-3 mx-6 mt-3 shrink-0`} onClick={(e) => e.stopPropagation()}>
+      <div className="flex items-start justify-between gap-2">
+        <div className="space-y-2 flex-1 min-w-0">
+          <div className="flex items-center gap-3 text-xs">
+            <span className="font-semibold text-foreground">{label}</span>
+            <span className="text-muted-foreground">{stats.totalDays} days ({durationLabel})</span>
+          </div>
+
+          {stats.sortedCountries.length > 0 && (
+            <div className="flex flex-wrap gap-x-3 gap-y-1">
+              {stats.sortedCountries.map(([country, days]) => (
+                <span key={country} className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                  <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: countryColorMap.get(country) ?? '#3b82f6' }} />
+                  {countryFlag(country)} {country} <strong className="text-foreground">{days}d</strong>
+                </span>
+              ))}
+            </div>
+          )}
+
+          <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+            <span><strong className="text-foreground">{stats.matchedTrips.length}</strong> trips</span>
+            <span><strong className="text-foreground">{stats.daysWithTrips}</strong> days abroad</span>
+            <span><strong className="text-foreground">{stats.daysWithout}</strong> days home</span>
+          </div>
+        </div>
+        <button aria-label="Dismiss range selection" onClick={(e) => { e.stopPropagation(); onDismiss() }} className="text-muted-foreground hover:text-foreground p-0.5 rounded-sm hover:bg-accent/50">
+          <X className="h-3.5 w-3.5" />
+        </button>
+      </div>
+    </div>
+  )
+}
+
 interface MonthGridProps {
   year: number
   month: number
@@ -383,9 +509,23 @@ interface MonthGridProps {
   onDayClick: (trips: Trip[]) => void
   onDayTouch: (trips: Trip[]) => void
   onMonthClick?: (month: number) => void
+  rangeStart: Date | null
+  rangeEnd: Date | null
+  onDayContextMenu: (date: Date) => void
 }
 
-function MonthGrid({ year, month, today, tripDayMap, countryColorMap, tripCount, onDayClick, onDayTouch, onMonthClick }: MonthGridProps) {
+function isInRange(day: Date, start: Date | null, end: Date | null): boolean {
+  if (!start || !end) return false
+  const t = day.getTime()
+  return t >= start.getTime() && t <= end.getTime()
+}
+
+function isSameDay(a: Date, b: Date | null): boolean {
+  if (!b) return false
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
+}
+
+function MonthGrid({ year, month, today, tripDayMap, countryColorMap, tripCount, onDayClick, onDayTouch, onMonthClick, rangeStart, rangeEnd, onDayContextMenu }: MonthGridProps) {
   const days = useMemo(() => getCalendarDays(year, month), [year, month])
   const isCurrentMonth = today.getFullYear() === year && today.getMonth() === month
 
@@ -439,6 +579,10 @@ function MonthGrid({ year, month, today, tripDayMap, countryColorMap, tripCount,
                     return <td key={cellKey} className={CELL_H} />
                   }
 
+                  const inRange = isInRange(day, rangeStart, rangeEnd)
+                  const isRangeEndpoint = isSameDay(day, rangeStart) || isSameDay(day, rangeEnd)
+                  const isOnlyRangeStart = !rangeEnd && isSameDay(day, rangeStart)
+
                   const cell = (
                     <div
                       className={`
@@ -447,9 +591,12 @@ function MonthGrid({ year, month, today, tripDayMap, countryColorMap, tripCount,
                         ${isToday ? 'font-bold' : ''}
                         ${hasTrips && !isToday ? 'font-medium' : ''}
                         ${hasTrips ? 'cursor-pointer hover:ring-1 hover:ring-foreground/20' : ''}
+                        ${inRange ? 'ring-2 ring-sky-500/50' : ''}
+                        ${isRangeEndpoint || isOnlyRangeStart ? 'bg-sky-500/20' : ''}
                       `}
                       onClick={hasTrips ? (e) => { e.stopPropagation(); onDayClick(info.trips) } : undefined}
                       onTouchEnd={hasTrips ? (e) => { e.preventDefault(); onDayTouch(info.trips) } : undefined}
+                      onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); onDayContextMenu(day) }}
                     >
                       {hasTrips && (
                         <div className="absolute inset-0 rounded-[3px] opacity-25" style={{ backgroundColor: info.colors[0] }} />
