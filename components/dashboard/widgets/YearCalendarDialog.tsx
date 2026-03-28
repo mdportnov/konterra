@@ -183,7 +183,7 @@ export default function YearCalendarDialog({ open, onOpenChange, trips, onTripCl
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="max-w-5xl w-[calc(100vw-2rem)] p-0 gap-0 overflow-hidden top-[5vh] translate-y-0 data-[state=open]:zoom-in-100 data-[state=closed]:zoom-out-100"
+        className="max-w-[1200px] sm:max-w-[1200px] w-[calc(100vw-2rem)] p-0 gap-0 overflow-hidden top-[5vh] translate-y-0 data-[state=open]:zoom-in-100 data-[state=closed]:zoom-out-100"
         showCloseButton
       >
         <DialogDescription className="sr-only">Full year travel calendar overview</DialogDescription>
