@@ -429,13 +429,13 @@ function MonthGrid({ year, month, today, tripDayMap, countryColorMap, tripCount,
             const cellKey = `${month}-${idx}`
 
             if (!inMonth) {
-              return <div key={cellKey} className="aspect-square min-h-[28px]" />
+              return <div key={cellKey} className="aspect-square" />
             }
 
             const cell = (
               <div
                 className={`
-                  relative w-full aspect-square min-h-[28px] flex items-center justify-center
+                  relative w-full aspect-square flex items-center justify-center
                   text-[11px] sm:text-xs leading-none rounded-[4px]
                   ${isToday ? 'font-bold' : ''}
                   ${hasTrips && !isToday ? 'font-medium' : ''}
