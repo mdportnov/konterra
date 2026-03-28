@@ -16,8 +16,7 @@ const MONTH_NAMES_SHORT = [
 ]
 
 const DAY_HEADERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
-const CELL_SIZE = 'w-8 h-8 sm:w-9 sm:h-9'
-const CELL_W = 'w-8 sm:w-9'
+const DAY_CELL = 'h-[26px] sm:h-7'
 
 function getCalendarDays(year: number, month: number): Date[] {
   const start = getMondayStart(year, month)
@@ -184,7 +183,7 @@ export default function YearCalendarDialog({ open, onOpenChange, trips, onTripCl
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="max-w-[1200px] w-[calc(100vw-2rem)] p-0 top-[5vh] translate-y-0 data-[state=open]:zoom-in-100 data-[state=closed]:zoom-out-100"
+        className="max-w-6xl w-[calc(100vw-2rem)] p-0 top-[5vh] translate-y-0 data-[state=open]:zoom-in-100 data-[state=closed]:zoom-out-100"
         showCloseButton
       >
         <DialogDescription className="sr-only">Full year travel calendar overview</DialogDescription>
@@ -230,7 +229,7 @@ export default function YearCalendarDialog({ open, onOpenChange, trips, onTripCl
             <p className="text-sm text-muted-foreground">No trips in {year}</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-8 gap-y-8">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-10 gap-y-6">
             {Array.from({ length: 12 }, (_, monthIdx) => (
               <MonthGrid
                 key={monthIdx}
@@ -411,88 +410,99 @@ function MonthGrid({ year, month, today, tripDayMap, countryColorMap, tripCount,
             )}
           </h3>
         )}
-        <div className="grid grid-cols-7 gap-px mb-1">
-          {DAY_HEADERS.map((d, i) => (
-            <div key={i} className={`text-[10px] text-muted-foreground/50 text-center ${CELL_W}`}>
-              {d}
-            </div>
-          ))}
-        </div>
-        <div className="grid grid-cols-7 gap-px">
-          {days.map((day, idx) => {
-            const inMonth = day.getMonth() === month
-            const isToday = inMonth &&
-              day.getDate() === today.getDate() &&
-              day.getMonth() === today.getMonth() &&
-              day.getFullYear() === today.getFullYear()
-            const key = `${day.getFullYear()}-${day.getMonth()}-${day.getDate()}`
-            const info = inMonth ? tripDayMap.get(key) : undefined
-            const hasTrips = !!info && info.trips.length > 0
-            const cellKey = `${month}-${idx}`
+        <table className="border-collapse w-full">
+          <thead>
+            <tr>
+              {DAY_HEADERS.map((d, i) => (
+                <th key={i} className="text-[10px] text-muted-foreground/50 font-normal pb-1 text-center w-[14.28%]">
+                  {d}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {Array.from({ length: Math.ceil(days.length / 7) }, (_, weekIdx) => (
+              <tr key={weekIdx}>
+                {days.slice(weekIdx * 7, weekIdx * 7 + 7).map((day, dayIdx) => {
+                  const idx = weekIdx * 7 + dayIdx
+                  const inMonth = day.getMonth() === month
+                  const isToday = inMonth &&
+                    day.getDate() === today.getDate() &&
+                    day.getMonth() === today.getMonth() &&
+                    day.getFullYear() === today.getFullYear()
+                  const key = `${day.getFullYear()}-${day.getMonth()}-${day.getDate()}`
+                  const info = inMonth ? tripDayMap.get(key) : undefined
+                  const hasTrips = !!info && info.trips.length > 0
+                  const cellKey = `${month}-${idx}`
 
-            if (!inMonth) {
-              return <div key={cellKey} className={CELL_SIZE} />
-            }
+                  if (!inMonth) {
+                    return <td key={cellKey} className={DAY_CELL} />
+                  }
 
-            const cell = (
-              <div
-                className={`
-                  relative ${CELL_SIZE} flex items-center justify-center
-                  text-[11px] sm:text-xs leading-none rounded-[4px]
-                  ${isToday ? 'font-bold' : ''}
-                  ${hasTrips && !isToday ? 'font-medium' : ''}
-                  ${hasTrips ? 'cursor-pointer hover:ring-1 hover:ring-foreground/20' : ''}
-                `}
-                onClick={hasTrips ? (e) => { e.stopPropagation(); onDayClick(info.trips) } : undefined}
-                onTouchEnd={hasTrips ? (e) => { e.preventDefault(); onDayTouch(info.trips) } : undefined}
-              >
-                {hasTrips && (
-                  <div className="absolute inset-0.5 rounded-[3px] opacity-25" style={{ backgroundColor: info.colors[0] }} />
-                )}
-                <span
-                  className={`
-                    relative z-10
-                    ${isToday ? 'bg-orange-500 text-white rounded-full w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-[10px] sm:text-[11px]' : ''}
-                    ${!hasTrips && !isToday ? 'text-foreground/60' : ''}
-                  `}
-                  style={hasTrips && !isToday ? { color: getCountryTextColor(info.colors[0]) } : undefined}
-                >
-                  {day.getDate()}
-                </span>
-                {hasTrips && info.colors.length > 1 && (
-                  <div className="absolute bottom-0 left-1/2 -translate-x-1/2 flex gap-px">
-                    {info.colors.slice(0, 3).map((c, i) => (
-                      <div key={i} className="w-1 h-1 rounded-full" style={{ backgroundColor: c }} />
-                    ))}
-                  </div>
-                )}
-              </div>
-            )
+                  const cell = (
+                    <div
+                      className={`
+                        relative ${DAY_CELL} flex items-center justify-center
+                        text-[11px] sm:text-xs leading-none rounded-[3px]
+                        ${isToday ? 'font-bold' : ''}
+                        ${hasTrips && !isToday ? 'font-medium' : ''}
+                        ${hasTrips ? 'cursor-pointer hover:ring-1 hover:ring-foreground/20' : ''}
+                      `}
+                      onClick={hasTrips ? (e) => { e.stopPropagation(); onDayClick(info.trips) } : undefined}
+                      onTouchEnd={hasTrips ? (e) => { e.preventDefault(); onDayTouch(info.trips) } : undefined}
+                    >
+                      {hasTrips && (
+                        <div className="absolute inset-px rounded-[2px] opacity-25" style={{ backgroundColor: info.colors[0] }} />
+                      )}
+                      <span
+                        className={`
+                          relative z-10
+                          ${isToday ? 'bg-orange-500 text-white rounded-full w-5 h-5 sm:w-[22px] sm:h-[22px] flex items-center justify-center text-[10px]' : ''}
+                          ${!hasTrips && !isToday ? 'text-foreground/60' : ''}
+                        `}
+                        style={hasTrips && !isToday ? { color: getCountryTextColor(info.colors[0]) } : undefined}
+                      >
+                        {day.getDate()}
+                      </span>
+                      {hasTrips && info.colors.length > 1 && (
+                        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 flex gap-px">
+                          {info.colors.slice(0, 3).map((c, i) => (
+                            <div key={i} className="w-1 h-1 rounded-full" style={{ backgroundColor: c }} />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )
 
-            if (!hasTrips) {
-              return <div key={cellKey}>{cell}</div>
-            }
+                  if (!hasTrips) {
+                    return <td key={cellKey} className="p-px">{cell}</td>
+                  }
 
-            return (
-              <Tooltip key={cellKey} delayDuration={150}>
-                <TooltipTrigger asChild>
-                  {cell}
-                </TooltipTrigger>
-                <TooltipContent side="top" className="text-xs max-w-[200px]">
-                  <div className="space-y-0.5">
-                    {info.trips.map((t) => (
-                      <p key={t.id} className="flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: countryColorMap.get(t.country) ?? '#3b82f6' }} />
-                        <span className="font-medium">{t.city}</span>
-                        <span className="text-muted-foreground">{countryFlag(t.country)}</span>
-                      </p>
-                    ))}
-                  </div>
-                </TooltipContent>
-              </Tooltip>
-            )
-          })}
-        </div>
+                  return (
+                    <td key={cellKey} className="p-px">
+                      <Tooltip delayDuration={150}>
+                        <TooltipTrigger asChild>
+                          {cell}
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="text-xs max-w-[200px]">
+                          <div className="space-y-0.5">
+                            {info.trips.map((t) => (
+                              <p key={t.id} className="flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: countryColorMap.get(t.country) ?? '#3b82f6' }} />
+                                <span className="font-medium">{t.city}</span>
+                                <span className="text-muted-foreground">{countryFlag(t.country)}</span>
+                              </p>
+                            ))}
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    </td>
+                  )
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </TooltipProvider>
   )
