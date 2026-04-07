@@ -9,6 +9,7 @@ import { Separator } from '@/components/ui/separator'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Settings, Plus, LayoutDashboard, Search, Sparkles, BoxSelect } from 'lucide-react'
 import { GLASS, Z } from '@/lib/constants/ui'
+import { Kbd } from '@/components/ui/kbd'
 
 interface GlobeControlsProps {
   onAddContact?: (prefill?: Record<string, string>) => void
@@ -106,7 +107,7 @@ export default function GlobeControls({ onAddContact, onQuickAddContact, onSearc
               <Search className={iconSize} />
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Search</TooltipContent>
+          <TooltipContent className="flex items-center gap-2">Search <Kbd meta>K</Kbd></TooltipContent>
         </Tooltip>
 
         {onToggleRegionSelect && (
@@ -121,7 +122,9 @@ export default function GlobeControls({ onAddContact, onQuickAddContact, onSearc
                 <BoxSelect className={iconSize} />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>{regionSelectActive ? 'Cancel selection' : 'Select region'}</TooltipContent>
+            <TooltipContent className="flex items-center gap-2">
+              {regionSelectActive ? 'Cancel selection' : 'Select region'} <Kbd>G</Kbd>
+            </TooltipContent>
           </Tooltip>
         )}
 
@@ -138,7 +141,7 @@ export default function GlobeControls({ onAddContact, onQuickAddContact, onSearc
                 </Button>
               </PopoverTrigger>
             </TooltipTrigger>
-            <TooltipContent>Add Contact</TooltipContent>
+            <TooltipContent className="flex items-center gap-2">Add Contact <Kbd meta>N</Kbd></TooltipContent>
           </Tooltip>
           <PopoverContent
             className="w-64 p-3 space-y-2"
@@ -191,7 +194,7 @@ export default function GlobeControls({ onAddContact, onQuickAddContact, onSearc
               <Sparkles className={iconSize} />
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Insights</TooltipContent>
+          <TooltipContent className="flex items-center gap-2">Insights <Kbd meta>I</Kbd></TooltipContent>
         </Tooltip>
 
         <Tooltip>

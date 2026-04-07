@@ -2,10 +2,10 @@ import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { unauthorized, badRequest, success } from '@/lib/api-utils'
 import { getWishlistCountries, addWishlistCountry, removeWishlistCountryByName } from '@/lib/db/queries'
-import { safeParseBody } from '@/lib/validation'
+import { safeParseBody, WISHLIST_PRIORITIES, WISHLIST_STATUSES } from '@/lib/validation'
 
-const PRIORITIES = ['dream', 'high', 'medium', 'low'] as const
-const STATUSES = ['idea', 'researching', 'planning', 'ready'] as const
+const PRIORITIES = WISHLIST_PRIORITIES
+const STATUSES = WISHLIST_STATUSES
 const MAX_NOTES_LENGTH = 2000
 
 export async function GET() {

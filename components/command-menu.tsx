@@ -312,7 +312,7 @@ export default function CommandMenu({
                 </CommandItem>
                 <CommandItem onSelect={() => runAction(() => onDashboardTabChange('travel'))}>
                   <Globe className="text-muted-foreground" />
-                  <span>Travel Journey</span>
+                  <span>Travel</span>
                   {dashboardTab === 'travel' && (
                     <span className="text-xs text-muted-foreground ml-auto">Active</span>
                   )}

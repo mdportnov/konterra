@@ -931,140 +931,134 @@ export default memo(function GlobeCanvas({
         >
           {legendsOpen ? <ChevronUp className="h-3.5 w-3.5" /> : <Info className="h-3.5 w-3.5" />}
         </button>
-        {legendsOpen && (
-          <div className="flex flex-col gap-2">
-            {showTravel && trips.length > 0 && (
-              <div className={`${GLASS.control} rounded-lg px-2.5 py-2 flex flex-col gap-1`}>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: TRAVEL_COLORS.currentPoint }} />
-                  <span className="text-[10px] text-muted-foreground">Current trip</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: TRAVEL_COLORS.pastPoint }} />
-                  <span className="text-[10px] text-muted-foreground">Past trip</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? TRAVEL_COLORS.pastCountry.dark : TRAVEL_COLORS.pastCountry.light }} />
-                  <span className="text-[10px] text-muted-foreground">Visited country</span>
-                </div>
-                {futureTravelCountries.size > 0 && (
-                  <>
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: TRAVEL_COLORS.futurePoint }} />
-                      <span className="text-[10px] text-muted-foreground">Upcoming trip</span>
+        {legendsOpen && (() => {
+          const showTravelSection = showTravel && trips.length > 0
+          const showNetworkSection = showNetwork && (hasCountryContacts || countryConnections.length > 0)
+          const hasVisited = !!visitedCountries && visitedCountries.size > 0
+          const hasWishlist = !!wishlistCountries && wishlistCountries.size > 0
+          const showGeoSection = hasVisited || hasWishlist || !!userCountry
+          if (!showTravelSection && !showNetworkSection && !showGeoSection && !display.showHeatmap && !display.showHexBins) return null
+
+          const Row = ({ swatch, label }: { swatch: React.ReactNode; label: string }) => (
+            <div className="flex items-center gap-1.5">
+              {swatch}
+              <span className="text-[10px] text-muted-foreground">{label}</span>
+            </div>
+          )
+          const Pair = ({ dot, square, label }: { dot?: string; square?: { bg: string; border?: string }; label: string }) => (
+            <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-0.5 w-7 shrink-0">
+                {dot ? <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: dot }} /> : <div className="w-2.5 h-2.5" />}
+                {square ? <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: square.bg, border: square.border ? `1.5px solid ${square.border}` : undefined }} /> : <div className="w-2.5 h-2.5" />}
+              </div>
+              <span className="text-[10px] text-muted-foreground">{label}</span>
+            </div>
+          )
+          const SectionHeader = ({ children }: { children: React.ReactNode }) => (
+            <div className="text-[9px] uppercase tracking-wider text-muted-foreground/50 mb-0.5">{children}</div>
+          )
+          const Sep = () => <div className="h-px bg-border/40 my-1.5" />
+
+          let needSep = false
+          return (
+            <div className={`${GLASS.control} rounded-lg px-2.5 py-2 flex flex-col min-w-[180px]`}>
+              {showTravelSection && (() => {
+                const block = (
+                  <div key="travel">
+                    <SectionHeader>Travel</SectionHeader>
+                    <div className="flex flex-col gap-1">
+                      <Pair dot={TRAVEL_COLORS.currentPoint} label="Current trip" />
+                      <Pair dot={TRAVEL_COLORS.pastPoint} square={{ bg: isDark ? TRAVEL_COLORS.pastCountry.dark : TRAVEL_COLORS.pastCountry.light }} label="Past trip / visited" />
+                      {futureTravelCountries.size > 0 && (
+                        <Pair dot={TRAVEL_COLORS.futurePoint} square={{ bg: isDark ? TRAVEL_COLORS.futureCountry.dark : TRAVEL_COLORS.futureCountry.light }} label="Upcoming trip / country" />
+                      )}
+                      {selectedTripId && <Pair dot={TRAVEL_COLORS.selectedPoint} label="Selected trip" />}
                     </div>
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? TRAVEL_COLORS.futureCountry.dark : TRAVEL_COLORS.futureCountry.light }} />
-                      <span className="text-[10px] text-muted-foreground">Upcoming country</span>
+                    <div className="text-[9px] text-muted-foreground/60 mt-1">
+                      {trips.length} trips &middot; {pastTravelCountries.size} countries
+                      {futureTravelCountries.size > 0 && ` \u00b7 ${futureTravelCountries.size} upcoming`}
                     </div>
-                  </>
-                )}
-                {selectedTripId && (
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: TRAVEL_COLORS.selectedPoint }} />
-                    <span className="text-[10px] text-muted-foreground">Selected trip</span>
                   </div>
-                )}
-                <div className="text-[9px] text-muted-foreground/60 mt-0.5">
-                  {trips.length} trips &middot; {pastTravelCountries.size} countries
-                  {futureTravelCountries.size > 0 && ` \u00b7 ${futureTravelCountries.size} upcoming`}
-                </div>
-              </div>
-            )}
-            {showNetwork && (hasCountryContacts || countryConnections.length > 0) && (
-              <div className={`${GLASS.control} rounded-lg px-2.5 py-2 flex flex-col gap-1`}>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.contactLow.dark : POLYGON_COLORS.contactLow.light }} />
-                  <span className="text-[10px] text-muted-foreground">1-2 contacts</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.contactMed.dark : POLYGON_COLORS.contactMed.light }} />
-                  <span className="text-[10px] text-muted-foreground">3-5 contacts</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.contactHigh.dark : POLYGON_COLORS.contactHigh.light }} />
-                  <span className="text-[10px] text-muted-foreground">5+ contacts</span>
-                </div>
-                {visitedCountries && visitedCountries.size > 0 && (
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.visitedContactLow.dark : POLYGON_COLORS.visitedContactLow.light, border: `1.5px solid ${isDark ? POLYGON_COLORS.visitedContactsStroke.dark : POLYGON_COLORS.visitedContactsStroke.light}` }} />
-                    <span className="text-[10px] text-muted-foreground">Visited + contacts</span>
-                  </div>
-                )}
-                {wishlistCountries && wishlistCountries.size > 0 && hasCountryContacts && (
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.contactLow.dark : POLYGON_COLORS.contactLow.light, border: `1.5px solid ${isDark ? POLYGON_COLORS.wishlistStroke.dark : POLYGON_COLORS.wishlistStroke.light}` }} />
-                    <span className="text-[10px] text-muted-foreground">Contacts + wishlist</span>
-                  </div>
-                )}
-                {countryConnections.length > 0 && (
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.indirect.dark : POLYGON_COLORS.indirect.light, border: `1.5px solid ${isDark ? POLYGON_COLORS.indirectStroke.dark : POLYGON_COLORS.indirectStroke.light}` }} />
-                    <span className="text-[10px] text-muted-foreground">Indirect ties</span>
-                  </div>
-                )}
-              </div>
-            )}
-            {display.showHeatmap && (
-              <div className={`${GLASS.control} rounded-lg px-2.5 py-2 flex flex-col gap-1`}>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-3 h-3 rounded-sm" style={{ background: 'linear-gradient(90deg, rgba(0,0,255,0.3), rgba(0,255,0,0.5), rgba(255,255,0,0.7), rgba(255,0,0,0.9))' }} />
-                  <span className="text-[10px] text-muted-foreground">Network density</span>
-                </div>
-                <div className="text-[9px] text-muted-foreground/60 mt-0.5">
-                  Heatmap overlay
-                </div>
-              </div>
-            )}
-            {display.showHexBins && (
-              <div className={`${GLASS.control} rounded-lg px-2.5 py-2 flex flex-col gap-1`}>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: HEXBIN_COLORS.low.top }} />
-                  <span className="text-[10px] text-muted-foreground">1-2 contacts</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: HEXBIN_COLORS.med.top }} />
-                  <span className="text-[10px] text-muted-foreground">3-4 contacts</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: HEXBIN_COLORS.high.top }} />
-                  <span className="text-[10px] text-muted-foreground">5+ contacts</span>
-                </div>
-                <div className="text-[9px] text-muted-foreground/60 mt-0.5">
-                  Hex bin height = count
-                </div>
-              </div>
-            )}
-            {((visitedCountries && visitedCountries.size > 0) || (wishlistCountries && wishlistCountries.size > 0) || !!userCountry) && (
-              <div className={`${GLASS.control} rounded-lg px-2.5 py-2 flex flex-col gap-1`}>
-                {visitedCountries && visitedCountries.size > 0 && (
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.visitedOnly.dark : POLYGON_COLORS.visitedOnly.light, border: `1.5px solid ${isDark ? POLYGON_COLORS.visitedStroke.dark : POLYGON_COLORS.visitedStroke.light}` }} />
-                    <span className="text-[10px] text-muted-foreground">Visited</span>
-                  </div>
-                )}
-                {wishlistCountries && wishlistCountries.size > 0 && (
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.wishlist.dark : POLYGON_COLORS.wishlist.light, border: `1.5px solid ${isDark ? POLYGON_COLORS.wishlistStroke.dark : POLYGON_COLORS.wishlistStroke.light}` }} />
-                    <span className="text-[10px] text-muted-foreground">Wishlist</span>
-                  </div>
-                )}
-                {!!userCountry && (
-                  <>
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.userCountry.dark : POLYGON_COLORS.userCountry.light, border: `1.5px solid ${isDark ? POLYGON_COLORS.userCountryStroke.dark : POLYGON_COLORS.userCountryStroke.light}` }} />
-                      <span className="text-[10px] text-muted-foreground">Your country</span>
+                )
+                needSep = true
+                return block
+              })()}
+
+              {showNetworkSection && (
+                <>
+                  {needSep && <Sep />}
+                  <div>
+                    <SectionHeader>Network</SectionHeader>
+                    <div className="flex flex-col gap-1">
+                      <Row swatch={<div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.contactLow.dark : POLYGON_COLORS.contactLow.light }} />} label="1-2 contacts" />
+                      <Row swatch={<div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.contactMed.dark : POLYGON_COLORS.contactMed.light }} />} label="3-5 contacts" />
+                      <Row swatch={<div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.contactHigh.dark : POLYGON_COLORS.contactHigh.light }} />} label="5+ contacts" />
+                      {hasVisited && (
+                        <Row swatch={<div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.visitedContactLow.dark : POLYGON_COLORS.visitedContactLow.light, border: `1.5px solid ${isDark ? POLYGON_COLORS.visitedContactsStroke.dark : POLYGON_COLORS.visitedContactsStroke.light}` }} />} label="Visited + contacts" />
+                      )}
+                      {hasWishlist && hasCountryContacts && (
+                        <Row swatch={<div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.contactLow.dark : POLYGON_COLORS.contactLow.light, border: `1.5px solid ${isDark ? POLYGON_COLORS.wishlistStroke.dark : POLYGON_COLORS.wishlistStroke.light}` }} />} label="Wishlist + contacts" />
+                      )}
+                      {countryConnections.length > 0 && (
+                        <Row swatch={<div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.indirect.dark : POLYGON_COLORS.indirect.light, border: `1.5px solid ${isDark ? POLYGON_COLORS.indirectStroke.dark : POLYGON_COLORS.indirectStroke.light}` }} />} label="Indirect ties" />
+                      )}
                     </div>
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#22c55e', border: '1.5px solid white', boxShadow: '0 0 4px rgba(34,197,94,0.5)' }} />
-                      <span className="text-[10px] text-muted-foreground">You are here</span>
+                  </div>
+                  {(needSep = true)}
+                </>
+              )}
+
+              {showGeoSection && (
+                <>
+                  {needSep && <Sep />}
+                  <div>
+                    <SectionHeader>Geography</SectionHeader>
+                    <div className="flex flex-col gap-1">
+                      {hasVisited && (
+                        <Row swatch={<div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.visitedOnly.dark : POLYGON_COLORS.visitedOnly.light, border: `1.5px solid ${isDark ? POLYGON_COLORS.visitedStroke.dark : POLYGON_COLORS.visitedStroke.light}` }} />} label="Visited country" />
+                      )}
+                      {hasWishlist && (
+                        <Row swatch={<div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.wishlist.dark : POLYGON_COLORS.wishlist.light, border: `1.5px solid ${isDark ? POLYGON_COLORS.wishlistStroke.dark : POLYGON_COLORS.wishlistStroke.light}` }} />} label="Wishlist country" />
+                      )}
+                      {!!userCountry && (
+                        <>
+                          <Row swatch={<div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.userCountry.dark : POLYGON_COLORS.userCountry.light, border: `1.5px solid ${isDark ? POLYGON_COLORS.userCountryStroke.dark : POLYGON_COLORS.userCountryStroke.light}` }} />} label="Your country" />
+                          <Row swatch={<div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: '#22c55e', border: '1.5px solid white', boxShadow: '0 0 4px rgba(34,197,94,0.5)' }} />} label="You are here" />
+                        </>
+                      )}
                     </div>
-                  </>
-                )}
-              </div>
-            )}
-          </div>
-        )}
+                  </div>
+                  {(needSep = true)}
+                </>
+              )}
+
+              {display.showHeatmap && (
+                <>
+                  {needSep && <Sep />}
+                  <div>
+                    <SectionHeader>Density</SectionHeader>
+                    <Row swatch={<div className="w-2.5 h-2.5 rounded-sm" style={{ background: 'linear-gradient(90deg, rgba(0,0,255,0.3), rgba(0,255,0,0.5), rgba(255,255,0,0.7), rgba(255,0,0,0.9))' }} />} label="Heatmap" />
+                  </div>
+                  {(needSep = true)}
+                </>
+              )}
+
+              {display.showHexBins && (
+                <>
+                  {needSep && <Sep />}
+                  <div>
+                    <SectionHeader>Hex bins</SectionHeader>
+                    <div className="flex flex-col gap-1">
+                      <Row swatch={<div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: HEXBIN_COLORS.low.top }} />} label="1-2 contacts" />
+                      <Row swatch={<div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: HEXBIN_COLORS.med.top }} />} label="3-4 contacts" />
+                      <Row swatch={<div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: HEXBIN_COLORS.high.top }} />} label="5+ contacts" />
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          )
+        })()}
       </div>
       {clusterData && (
         <ClusterPopup

@@ -264,6 +264,7 @@ export const visitedCountries = pgTable('visited_countries', {
   id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
   userId: text('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
   country: text('country').notNull(),
+  source: text('source').notNull().default('manual'),
   createdAt: timestamp('created_at').defaultNow(),
 }, (t) => [
   index('visited_countries_user_id_idx').on(t.userId),

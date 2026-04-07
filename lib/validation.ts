@@ -17,6 +17,8 @@ export const FAVOR_STATUSES = ['active', 'resolved', 'expired', 'repaid'] as con
 export const INTERACTION_TYPES = ['meeting', 'call', 'message', 'email', 'event', 'introduction', 'deal', 'note'] as const
 export const INTRODUCTION_STATUSES = ['planned', 'introduced', 'connected', 'failed', 'completed', 'made'] as const
 export const IMPORT_SOURCES = ['manual', 'konterra-json', 'google-csv', 'telegram-json', 'vcard', 'linkedin-csv'] as const
+export const WISHLIST_PRIORITIES = ['dream', 'high', 'medium', 'low'] as const
+export const WISHLIST_STATUSES = ['idea', 'researching', 'planning', 'ready'] as const
 
 export const PASSWORD_MIN_LENGTH = 8
 export const PASSWORD_MAX_LENGTH = 128

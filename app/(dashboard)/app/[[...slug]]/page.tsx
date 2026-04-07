@@ -50,8 +50,19 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
   const { slug } = use(params)
   const { data: session } = useSession()
   const isMobile = useIsMobile()
-  const [mobileView, setMobileView] = useState<'globe' | 'dashboard'>('dashboard')
-  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [mobileView, setMobileView] = useState<'globe' | 'dashboard'>('globe')
+  const [sidebarOpen, setSidebarOpenRaw] = useState(true)
+  useEffect(() => {
+    const stored = typeof window !== 'undefined' ? localStorage.getItem('konterra-sidebar-open') : null
+    if (stored !== null) setSidebarOpenRaw(stored === '1')
+  }, [])
+  const setSidebarOpen = useCallback<typeof setSidebarOpenRaw>((v) => {
+    setSidebarOpenRaw((prev) => {
+      const next = typeof v === 'function' ? (v as (p: boolean) => boolean)(prev) : v
+      try { localStorage.setItem('konterra-sidebar-open', next ? '1' : '0') } catch {}
+      return next
+    })
+  }, [])
   const [importDialogOpen, setImportDialogOpen] = useState(false)
   const [dupDialogOpen, setDupDialogOpen] = useState(false)
   const [exportDialogOpen, setExportDialogOpen] = useState(false)
@@ -140,7 +151,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
     setRegionSelectActive(false)
   }, [])
 
-  useHotkey('r', handleToggleRegionSelect, { shift: false })
+  useHotkey('g', handleToggleRegionSelect, { shift: false })
   useHotkey('Escape', handleRegionSelectDeactivate, { enabled: regionSelectActive, priority: Z.controls + 1 })
 
   const handleBulkDelete = useCallback((ids: string[]) => {

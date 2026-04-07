@@ -29,6 +29,9 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   if (body.departureDate !== undefined) {
     data.departureDate = parseDate(body.departureDate)
   }
+  if (data.arrivalDate && data.departureDate && (data.departureDate as Date) < (data.arrivalDate as Date)) {
+    return badRequest('departureDate must be on or after arrivalDate')
+  }
   if (body.durationDays !== undefined) {
     data.durationDays = typeof body.durationDays === 'number' ? body.durationDays : null
   }
@@ -37,8 +40,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   }
 
   if (data.city || data.country) {
-    const city = (data.city || body.city) as string
-    const country = (data.country || body.country) as string
+    const city = typeof data.city === 'string' ? data.city : (typeof body.city === 'string' ? body.city : null)
+    const country = typeof data.country === 'string' ? data.country : (typeof body.country === 'string' ? body.country : null)
     if (city && country) {
       const result = await geocode(`${city}, ${country}`)
       if (result) {

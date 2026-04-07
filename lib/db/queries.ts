@@ -1,6 +1,6 @@
 import { db } from './index'
 import { users, contacts, interactions, contactConnections, contactCountryConnections, introductions, favors, visitedCountries, waitlist, tags, trips, countryWishlist, appSettings, socialPreviews, invites, auditLog } from './schema'
-import { and, arrayContains, desc, eq, inArray, or, sql } from 'drizzle-orm'
+import { and, arrayContains, desc, eq, inArray, lte, or, sql } from 'drizzle-orm'
 import type { NewContact, NewContactConnection, NewContactCountryConnection, NewIntroduction, NewFavor, NewTrip, NewCountryWishlistEntry, NewSocialPreview, NewAuditLogEntry } from './schema'
 import { DEFAULT_MAX_INVITES, SETTING_KEY_MAX_INVITES } from '@/lib/constants/invites'
 
@@ -284,21 +284,44 @@ export async function getRecentInteractions(userId: string, limit = 15, offset =
 }
 
 export async function getVisitedCountries(userId: string): Promise<string[]> {
-  const rows = await db.query.visitedCountries.findMany({
-    where: eq(visitedCountries.userId, userId),
+  const now = new Date()
+  return db.transaction(async (tx) => {
+    const pastTripCountries = await tx
+      .selectDistinct({ country: trips.country })
+      .from(trips)
+      .where(and(eq(trips.userId, userId), lte(trips.arrivalDate, now)))
+    if (pastTripCountries.length > 0) {
+      await tx
+        .insert(visitedCountries)
+        .values(pastTripCountries.map((r) => ({ userId, country: r.country, source: 'derived' as const })))
+        .onConflictDoNothing({ target: [visitedCountries.userId, visitedCountries.country] })
+    }
+    const rows = await tx.query.visitedCountries.findMany({
+      where: eq(visitedCountries.userId, userId),
+    })
+    return rows.map((r) => r.country)
   })
-  return rows.map((r) => r.country)
 }
 
 export async function addVisitedCountry(userId: string, country: string): Promise<string[]> {
   await db
     .insert(visitedCountries)
-    .values({ userId, country })
-    .onConflictDoNothing({ target: [visitedCountries.userId, visitedCountries.country] })
+    .values({ userId, country, source: 'manual' })
+    .onConflictDoUpdate({
+      target: [visitedCountries.userId, visitedCountries.country],
+      set: { source: 'manual' },
+    })
   return getVisitedCountries(userId)
 }
 
 export async function removeVisitedCountry(userId: string, country: string): Promise<string[]> {
+  const existing = await db.query.visitedCountries.findFirst({
+    where: and(eq(visitedCountries.userId, userId), eq(visitedCountries.country, country)),
+  })
+  if (!existing) return getVisitedCountries(userId)
+  if (existing.source === 'derived') {
+    return getVisitedCountries(userId)
+  }
   await db.delete(visitedCountries).where(
     and(eq(visitedCountries.userId, userId), eq(visitedCountries.country, country))
   )
@@ -307,11 +330,17 @@ export async function removeVisitedCountry(userId: string, country: string): Pro
 
 export async function setVisitedCountries(userId: string, countries: string[]): Promise<string[]> {
   return db.transaction(async (tx) => {
-    await tx.delete(visitedCountries).where(eq(visitedCountries.userId, userId))
+    await tx
+      .delete(visitedCountries)
+      .where(and(eq(visitedCountries.userId, userId), eq(visitedCountries.source, 'manual')))
     if (countries.length > 0) {
-      await tx.insert(visitedCountries).values(
-        countries.map((country) => ({ userId, country }))
-      )
+      await tx
+        .insert(visitedCountries)
+        .values(countries.map((country) => ({ userId, country, source: 'manual' as const })))
+        .onConflictDoUpdate({
+          target: [visitedCountries.userId, visitedCountries.country],
+          set: { source: 'manual' },
+        })
     }
     const rows = await tx.query.visitedCountries.findMany({
       where: eq(visitedCountries.userId, userId),
@@ -812,14 +841,51 @@ export async function createTagsBulk(userId: string, tagData: { name: string; co
   return results
 }
 
-export async function addVisitedCountriesBulk(userId: string, countries: string[]) {
+export async function addVisitedCountriesBulk(userId: string, countries: string[], source: 'manual' | 'derived' = 'derived') {
   if (countries.length === 0) return
   for (const country of countries) {
-    await db
-      .insert(visitedCountries)
-      .values({ userId, country })
-      .onConflictDoNothing({ target: [visitedCountries.userId, visitedCountries.country] })
+    if (source === 'manual') {
+      await db
+        .insert(visitedCountries)
+        .values({ userId, country, source: 'manual' })
+        .onConflictDoUpdate({
+          target: [visitedCountries.userId, visitedCountries.country],
+          set: { source: 'manual' },
+        })
+    } else {
+      await db
+        .insert(visitedCountries)
+        .values({ userId, country, source: 'derived' })
+        .onConflictDoNothing({ target: [visitedCountries.userId, visitedCountries.country] })
+    }
   }
+}
+
+type DbExecutor = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0]
+
+async function syncDerivedVisitedForCountryWith(exec: DbExecutor, userId: string, country: string) {
+  const stillHasPastTrip = await exec.query.trips.findFirst({
+    where: and(eq(trips.userId, userId), eq(trips.country, country), lte(trips.arrivalDate, new Date())),
+    columns: { id: true },
+  })
+  if (stillHasPastTrip) {
+    await exec
+      .insert(visitedCountries)
+      .values({ userId, country, source: 'derived' })
+      .onConflictDoNothing({ target: [visitedCountries.userId, visitedCountries.country] })
+    return
+  }
+  await exec.delete(visitedCountries).where(
+    and(
+      eq(visitedCountries.userId, userId),
+      eq(visitedCountries.country, country),
+      eq(visitedCountries.source, 'derived'),
+    )
+  )
+}
+
+export async function syncDerivedVisitedForCountry(userId: string, country: string) {
+  return syncDerivedVisitedForCountryWith(db, userId, country)
 }
 
 export async function renameTag(id: string, userId: string, newName: string) {
@@ -854,39 +920,64 @@ export async function getTripsByUserId(userId: string) {
 }
 
 export async function createTrip(data: NewTrip) {
-  const [trip] = await db.insert(trips).values(data).returning()
-  return trip
+  return db.transaction(async (tx) => {
+    const [trip] = await tx.insert(trips).values(data).returning()
+    await syncDerivedVisitedForCountryWith(tx, data.userId, data.country)
+    return trip
+  })
 }
 
 export async function createTripsBulk(data: NewTrip[]) {
   if (data.length === 0) return []
   const BATCH_SIZE = 50
   return db.transaction(async (tx) => {
-    const results: (typeof trips.$inferSelect)[] = []
+    const out: (typeof trips.$inferSelect)[] = []
     for (let i = 0; i < data.length; i += BATCH_SIZE) {
       const batch = data.slice(i, i + BATCH_SIZE)
       const rows = await tx.insert(trips).values(batch).returning()
-      results.push(...rows)
+      out.push(...rows)
     }
-    return results
+    const pairs = new Set<string>()
+    for (const t of data) pairs.add(`${t.userId}::${t.country}`)
+    for (const key of pairs) {
+      const [userId, country] = key.split('::')
+      await syncDerivedVisitedForCountryWith(tx, userId, country)
+    }
+    return out
   })
 }
 
 export async function updateTrip(id: string, userId: string, data: Partial<Omit<NewTrip, 'id' | 'userId'>>) {
-  const [trip] = await db
-    .update(trips)
-    .set({ ...data, updatedAt: new Date() })
-    .where(and(eq(trips.id, id), eq(trips.userId, userId)))
-    .returning()
-  return trip
+  return db.transaction(async (tx) => {
+    const before = await tx.query.trips.findFirst({ where: and(eq(trips.id, id), eq(trips.userId, userId)) })
+    const [trip] = await tx
+      .update(trips)
+      .set({ ...data, updatedAt: new Date() })
+      .where(and(eq(trips.id, id), eq(trips.userId, userId)))
+      .returning()
+    if (before) {
+      const countries = new Set<string>([before.country])
+      if (trip?.country) countries.add(trip.country)
+      for (const c of countries) await syncDerivedVisitedForCountryWith(tx, userId, c)
+    }
+    return trip
+  })
 }
 
 export async function deleteTrip(id: string, userId: string) {
-  await db.delete(trips).where(and(eq(trips.id, id), eq(trips.userId, userId)))
+  return db.transaction(async (tx) => {
+    const before = await tx.query.trips.findFirst({ where: and(eq(trips.id, id), eq(trips.userId, userId)) })
+    await tx.delete(trips).where(and(eq(trips.id, id), eq(trips.userId, userId)))
+    if (before) await syncDerivedVisitedForCountryWith(tx, userId, before.country)
+  })
 }
 
 export async function deleteAllTrips(userId: string) {
-  return db.delete(trips).where(eq(trips.userId, userId))
+  return db.transaction(async (tx) => {
+    const result = await tx.delete(trips).where(eq(trips.userId, userId))
+    await tx.delete(visitedCountries).where(and(eq(visitedCountries.userId, userId), eq(visitedCountries.source, 'derived')))
+    return result
+  })
 }
 
 export async function updateLastActive(userId: string) {

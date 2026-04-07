@@ -104,7 +104,7 @@ export default function TravelJourney({ trips, loading, onImport, onTripClick, o
     return (
       <div className={`${GLASS.control} rounded-xl p-4 text-center space-y-2`}>
         <Plane className="h-6 w-6 text-blue-400 mx-auto" />
-        <p className="text-xs font-medium text-foreground">Travel Journey</p>
+        <p className="text-xs font-medium text-foreground">Travel</p>
         <p className="text-[10px] text-muted-foreground">Import your travel history or add trips manually</p>
         <div className="flex gap-2 justify-center">
           <Button
@@ -139,7 +139,7 @@ export default function TravelJourney({ trips, loading, onImport, onTripClick, o
       <div className="flex items-center justify-between">
         <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
           <Plane className="h-3 w-3" />
-          Travel Journey
+          Travel
         </span>
         <div className="flex items-center gap-1">
           {trips.length >= 2 && onToggleCompareMode && (

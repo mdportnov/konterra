@@ -120,7 +120,7 @@ export default function DashboardHeader({
                 : 'text-muted-foreground/50 hover:text-muted-foreground'
             }`}
           >
-            Travel Journey
+            Travel
           </button>
         </div>
       </div>

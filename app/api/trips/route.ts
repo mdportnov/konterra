@@ -1,5 +1,5 @@
 import { auth } from '@/auth'
-import { getTripsByUserId, createTrip, createTripsBulk, deleteAllTrips, addVisitedCountriesBulk } from '@/lib/db/queries'
+import { getTripsByUserId, createTrip, createTripsBulk, deleteAllTrips } from '@/lib/db/queries'
 import { unauthorized, badRequest, success } from '@/lib/api-utils'
 import { safeParseBody } from '@/lib/validation'
 import type { NewTrip } from '@/lib/db/schema'
@@ -29,10 +29,12 @@ export async function POST(req: Request) {
     for (const t of body.trips as Record<string, unknown>[]) {
       const arrival = parseDate(t.arrivalDate)
       if (!arrival || !t.city || !t.country) continue
+      const departure = parseDate(t.departureDate)
+      if (departure && departure < arrival) continue
       tripsData.push({
         userId: session.user!.id,
         arrivalDate: arrival,
-        departureDate: parseDate(t.departureDate),
+        departureDate: departure,
         durationDays: typeof t.durationDays === 'number' ? t.durationDays : null,
         city: String(t.city),
         country: String(t.country),
@@ -43,15 +45,6 @@ export async function POST(req: Request) {
     }
     if (tripsData.length === 0) return badRequest('No valid trips in payload')
     const created = await createTripsBulk(tripsData)
-
-    const now = new Date()
-    const pastCountries = [...new Set(
-      tripsData.filter((t) => t.arrivalDate <= now).map((t) => t.country)
-    )]
-    if (pastCountries.length > 0) {
-      await addVisitedCountriesBulk(session.user!.id, pastCountries)
-    }
-
     return success({ created: created.length })
   }
 
@@ -61,11 +54,13 @@ export async function POST(req: Request) {
 
   const arrivalDate = parseDate(body.arrivalDate)
   if (!arrivalDate) return badRequest('Invalid arrivalDate')
+  const departureDate = parseDate(body.departureDate)
+  if (departureDate && departureDate < arrivalDate) return badRequest('departureDate must be on or after arrivalDate')
 
   const trip = await createTrip({
     userId: session.user.id,
     arrivalDate,
-    departureDate: parseDate(body.departureDate),
+    departureDate,
     durationDays: typeof body.durationDays === 'number' ? body.durationDays : null,
     city: String(body.city),
     country: String(body.country),

@@ -6,7 +6,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { Checkbox } from '@/components/ui/checkbox'
 import { GLASS, Z } from '@/lib/constants/ui'
 import { RATING_LABELS } from '@/lib/constants/rating'
@@ -510,20 +509,18 @@ export default function GlobeFilters({
                     </button>
                   )}
                 </div>
-                <ScrollArea className="max-h-[120px]">
-                  <div className="space-y-0.5 pr-2">
-                    {countries.map((c) => (
-                      <label key={c} className="flex items-center gap-2 px-1 py-0.5 rounded hover:bg-accent/50 cursor-pointer">
-                        <Checkbox
-                          checked={activeCountries.has(c)}
-                          onCheckedChange={() => toggleCountry(c)}
-                          className="h-3 w-3"
-                        />
-                        <span className="text-[11px] text-foreground truncate">{c}</span>
-                      </label>
-                    ))}
-                  </div>
-                </ScrollArea>
+                <div className="max-h-[140px] overflow-y-auto thin-scrollbar space-y-0.5 pr-2">
+                  {countries.map((c) => (
+                    <label key={c} className="flex items-center gap-2 px-1 py-0.5 rounded hover:bg-accent/50 cursor-pointer">
+                      <Checkbox
+                        checked={activeCountries.has(c)}
+                        onCheckedChange={() => toggleCountry(c)}
+                        className="h-3 w-3"
+                      />
+                      <span className="text-[11px] text-foreground truncate">{c}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
             )}
 

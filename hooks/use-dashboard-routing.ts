@@ -79,6 +79,7 @@ export function useDashboardRouting({ initialSlug, setDisplayOptions }: UseDashb
 
   const setDashboardTab = useCallback((tab: DashboardTab) => {
     setDashboardTabRaw(tab)
+    saveDefaultTab(tab)
     if (tab === 'travel') {
       trackOptions((prev) => ({ ...prev, showTravel: true }))
       queueMicrotask(() => {
