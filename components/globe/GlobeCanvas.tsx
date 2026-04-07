@@ -936,7 +936,7 @@ export default memo(function GlobeCanvas({
           const showNetworkSection = showNetwork && (hasCountryContacts || countryConnections.length > 0)
           const hasVisited = !!visitedCountries && visitedCountries.size > 0
           const hasWishlist = !!wishlistCountries && wishlistCountries.size > 0
-          const showGeoSection = hasVisited || hasWishlist || !!userCountry
+          const showGeoSection = hasVisited || hasWishlist || !!userCountry || futureTravelCountries.size > 0
           if (!showTravelSection && !showNetworkSection && !showGeoSection && !display.showHeatmap && !display.showHexBins) return null
 
           const Row = ({ swatch, label }: { swatch: React.ReactNode; label: string }) => (
@@ -945,11 +945,10 @@ export default memo(function GlobeCanvas({
               <span className="text-[10px] text-muted-foreground">{label}</span>
             </div>
           )
-          const Pair = ({ dot, square, label }: { dot?: string; square?: { bg: string; border?: string }; label: string }) => (
+          const Dot = ({ color, label }: { color: string; label: string }) => (
             <div className="flex items-center gap-1.5">
-              <div className="flex items-center gap-0.5 w-7 shrink-0">
-                {dot ? <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: dot }} /> : <div className="w-2.5 h-2.5" />}
-                {square ? <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: square.bg, border: square.border ? `1.5px solid ${square.border}` : undefined }} /> : <div className="w-2.5 h-2.5" />}
+              <div className="w-3 flex justify-center shrink-0">
+                <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
               </div>
               <span className="text-[10px] text-muted-foreground">{label}</span>
             </div>
@@ -967,12 +966,10 @@ export default memo(function GlobeCanvas({
                   <div key="travel">
                     <SectionHeader>Travel</SectionHeader>
                     <div className="flex flex-col gap-1">
-                      <Pair dot={TRAVEL_COLORS.currentPoint} label="Current trip" />
-                      <Pair dot={TRAVEL_COLORS.pastPoint} square={{ bg: isDark ? TRAVEL_COLORS.pastCountry.dark : TRAVEL_COLORS.pastCountry.light }} label="Past trip / visited" />
-                      {futureTravelCountries.size > 0 && (
-                        <Pair dot={TRAVEL_COLORS.futurePoint} square={{ bg: isDark ? TRAVEL_COLORS.futureCountry.dark : TRAVEL_COLORS.futureCountry.light }} label="Upcoming trip / country" />
-                      )}
-                      {selectedTripId && <Pair dot={TRAVEL_COLORS.selectedPoint} label="Selected trip" />}
+                      <Dot color={TRAVEL_COLORS.currentPoint} label="Current trip" />
+                      <Dot color={TRAVEL_COLORS.pastPoint} label="Past trip" />
+                      {futureTravelCountries.size > 0 && <Dot color={TRAVEL_COLORS.futurePoint} label="Upcoming trip" />}
+                      {selectedTripId && <Dot color={TRAVEL_COLORS.selectedPoint} label="Selected trip" />}
                     </div>
                     <div className="text-[9px] text-muted-foreground/60 mt-1">
                       {trips.length} trips &middot; {pastTravelCountries.size} countries
@@ -1016,6 +1013,9 @@ export default memo(function GlobeCanvas({
                     <div className="flex flex-col gap-1">
                       {hasVisited && (
                         <Row swatch={<div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.visitedOnly.dark : POLYGON_COLORS.visitedOnly.light, border: `1.5px solid ${isDark ? POLYGON_COLORS.visitedStroke.dark : POLYGON_COLORS.visitedStroke.light}` }} />} label="Visited country" />
+                      )}
+                      {futureTravelCountries.size > 0 && (
+                        <Row swatch={<div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: isDark ? TRAVEL_COLORS.futureCountry.dark : TRAVEL_COLORS.futureCountry.light, border: `1.5px solid ${isDark ? TRAVEL_COLORS.futureStroke.dark : TRAVEL_COLORS.futureStroke.light}` }} />} label="Upcoming country" />
                       )}
                       {hasWishlist && (
                         <Row swatch={<div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: isDark ? POLYGON_COLORS.wishlist.dark : POLYGON_COLORS.wishlist.light, border: `1.5px solid ${isDark ? POLYGON_COLORS.wishlistStroke.dark : POLYGON_COLORS.wishlistStroke.light}` }} />} label="Wishlist country" />
