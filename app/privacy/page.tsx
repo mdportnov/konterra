@@ -110,7 +110,7 @@ export default function PrivacyPolicyPage() {
         <main className="pt-24 sm:pt-32 pb-16 sm:pb-24 px-4 sm:px-6">
           <div className="max-w-3xl mx-auto">
             <div className="landing-glass-panel p-6 sm:p-8 md:p-12 rounded-xl sm:rounded-2xl">
-              <p className="font-mono text-[10px] sm:text-xs uppercase tracking-[0.25em] text-[oklch(0.55_0.08_180)] mb-3 sm:mb-4">
+              <p className="font-mono text-[10px] sm:text-xs uppercase tracking-[0.25em] text-[oklch(0.6_0.2_250)] mb-3 sm:mb-4">
                 Legal
               </p>
               <h1 className="text-2xl sm:text-3xl md:text-4xl font-semibold text-white mb-2">

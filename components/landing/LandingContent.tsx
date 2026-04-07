@@ -19,7 +19,7 @@ const PILLAR_ICONS = [
   </svg>,
 ]
 
-const CATEGORY_COLORS = ['oklch(0.55 0.08 180)', 'oklch(0.65 0.15 55)']
+const CATEGORY_COLORS = ['oklch(0.6 0.2 250)', 'oklch(0.65 0.15 55)']
 
 interface LandingContentProps {
   t: LandingTranslations
@@ -67,7 +67,7 @@ export default function LandingContent({ t, locale }: LandingContentProps) {
         <main>
           <section className="relative min-h-dvh flex items-center justify-center px-4 sm:px-6">
             <div className="max-w-3xl mx-auto text-center pt-14">
-              <p className="font-mono text-[10px] sm:text-xs uppercase tracking-[0.25em] text-[oklch(0.55_0.08_180)] mb-4 sm:mb-6">
+              <p className="font-mono text-[10px] sm:text-xs uppercase tracking-[0.25em] text-[oklch(0.6_0.2_250)] mb-4 sm:mb-6">
                 {t.hero.badge}
               </p>
               <h1 className="text-[1.75rem] sm:text-4xl md:text-5xl lg:text-6xl font-semibold leading-[1.15] sm:leading-[1.1] text-white tracking-tight">
@@ -95,7 +95,7 @@ export default function LandingContent({ t, locale }: LandingContentProps) {
               </div>
             </div>
             <div className="absolute bottom-6 sm:bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
-              <svg viewBox="0 0 24 24" fill="none" stroke="oklch(0.55 0.08 180 / 40%)" strokeWidth="1.5" className="size-5">
+              <svg viewBox="0 0 24 24" fill="none" stroke="oklch(0.6 0.2 250 / 40%)" strokeWidth="1.5" className="size-5">
                 <path d="M12 5v14M19 12l-7 7-7-7" />
               </svg>
             </div>
@@ -132,7 +132,7 @@ export default function LandingContent({ t, locale }: LandingContentProps) {
           <section className="py-16 sm:py-24 md:py-32 px-4 sm:px-6">
             <div className="max-w-5xl mx-auto">
               <div className="text-center mb-10 sm:mb-16">
-                <p className="font-mono text-[10px] sm:text-xs uppercase tracking-[0.25em] text-[oklch(0.55_0.08_180)] mb-3 sm:mb-4">
+                <p className="font-mono text-[10px] sm:text-xs uppercase tracking-[0.25em] text-[oklch(0.6_0.2_250)] mb-3 sm:mb-4">
                   {t.pillars.badge}
                 </p>
                 <h2 className="text-2xl sm:text-3xl md:text-4xl font-semibold text-white">
@@ -142,13 +142,13 @@ export default function LandingContent({ t, locale }: LandingContentProps) {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
                 {t.pillars.items.map((pillar, i) => (
                   <div key={pillar.title} className="landing-glass-panel p-6 sm:p-8 rounded-xl group">
-                    <div className="size-10 sm:size-12 rounded-lg bg-[oklch(0.55_0.08_180/10%)] border border-[oklch(0.55_0.08_180/20%)] flex items-center justify-center text-[oklch(0.55_0.08_180)] mb-4 sm:mb-5 group-hover:bg-[oklch(0.55_0.08_180/15%)] transition-colors">
+                    <div className="size-10 sm:size-12 rounded-lg bg-[oklch(0.6_0.2_250/10%)] border border-[oklch(0.6_0.2_250/20%)] flex items-center justify-center text-[oklch(0.6_0.2_250)] mb-4 sm:mb-5 group-hover:bg-[oklch(0.6_0.2_250/15%)] transition-colors">
                       {PILLAR_ICONS[i]}
                     </div>
                     <h3 className="text-base sm:text-lg font-semibold text-white mb-1">
                       {pillar.title}
                     </h3>
-                    <p className="text-[10px] sm:text-xs font-mono text-[oklch(0.55_0.08_180)] mb-2 sm:mb-3">
+                    <p className="text-[10px] sm:text-xs font-mono text-[oklch(0.6_0.2_250)] mb-2 sm:mb-3">
                       {pillar.subtitle}
                     </p>
                     <p className="text-xs sm:text-sm text-white/45 leading-relaxed">
@@ -164,7 +164,7 @@ export default function LandingContent({ t, locale }: LandingContentProps) {
             <div className="max-w-4xl mx-auto">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 items-center">
                 <div>
-                  <p className="font-mono text-[10px] sm:text-xs uppercase tracking-[0.25em] text-[oklch(0.55_0.08_180)] mb-3 sm:mb-4">
+                  <p className="font-mono text-[10px] sm:text-xs uppercase tracking-[0.25em] text-[oklch(0.6_0.2_250)] mb-3 sm:mb-4">
                     {t.thesis.badge}
                   </p>
                   <h2 className="text-xl sm:text-2xl md:text-3xl font-semibold text-white leading-snug mb-4 sm:mb-6">
@@ -190,11 +190,11 @@ export default function LandingContent({ t, locale }: LandingContentProps) {
                     </div>
                   </div>
                   <div className="landing-glass-panel landing-glass-panel-accent p-4 sm:p-5 rounded-xl">
-                    <p className="text-xs sm:text-sm text-[oklch(0.65_0.08_180)] mb-2">{t.thesis.remains}</p>
+                    <p className="text-xs sm:text-sm text-[oklch(0.7_0.18_240)] mb-2">{t.thesis.remains}</p>
                     <div className="space-y-1.5 sm:space-y-2">
                       {t.thesis.remainsList.map((item) => (
                         <div key={item} className="flex items-center gap-2 text-xs sm:text-sm text-white/60">
-                          <span className="size-1.5 rounded-full bg-[oklch(0.55_0.08_180)] shrink-0" />
+                          <span className="size-1.5 rounded-full bg-[oklch(0.6_0.2_250)] shrink-0" />
                           {item}
                         </div>
                       ))}
@@ -208,7 +208,7 @@ export default function LandingContent({ t, locale }: LandingContentProps) {
           <section className="py-16 sm:py-24 md:py-32 px-4 sm:px-6">
             <div className="max-w-5xl mx-auto">
               <div className="text-center mb-10 sm:mb-16">
-                <p className="font-mono text-[10px] sm:text-xs uppercase tracking-[0.25em] text-[oklch(0.55_0.08_180)] mb-3 sm:mb-4">
+                <p className="font-mono text-[10px] sm:text-xs uppercase tracking-[0.25em] text-[oklch(0.6_0.2_250)] mb-3 sm:mb-4">
                   {t.features.badge}
                 </p>
                 <h2 className="text-2xl sm:text-3xl md:text-4xl font-semibold text-white">

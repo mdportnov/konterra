@@ -145,8 +145,8 @@
 .login-card {
   background: oklch(0.08 0.01 260 / 70%);
   backdrop-filter: blur(24px);
-  border: 1px solid oklch(0.55 0.08 180 / 15%);
-  box-shadow: 0 0 40px oklch(0.55 0.08 180 / 5%);
+  border: 1px solid oklch(0.6 0.2 250 / 15%);
+  box-shadow: 0 0 40px oklch(0.6 0.2 250 / 5%);
 }
 
 .login-input {
@@ -171,7 +171,7 @@
   color: oklch(0.5 0 0);
 }
 .login-input:focus {
-  border-color: oklch(0.55 0.08 180 / 50%);
+  border-color: oklch(0.6 0.2 250 / 50%);
 }
 
 .login-button {
@@ -182,8 +182,8 @@
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: oklch(0.95 0 0);
-  background: oklch(0.55 0.08 180 / 15%);
-  border: 1px solid oklch(0.55 0.08 180 / 30%);
+  background: oklch(0.6 0.2 250 / 15%);
+  border: 1px solid oklch(0.6 0.2 250 / 30%);
   border-radius: 0.5rem;
   cursor: pointer;
   transition: background 150ms, border-color 150ms;
@@ -195,8 +195,8 @@
   }
 }
 .login-button:hover:not(:disabled) {
-  background: oklch(0.55 0.08 180 / 25%);
-  border-color: oklch(0.55 0.08 180 / 50%);
+  background: oklch(0.6 0.2 250 / 25%);
+  border-color: oklch(0.6 0.2 250 / 50%);
 }
 .login-button:disabled {
   opacity: 0.5;
@@ -228,7 +228,7 @@
 }
 
 .landing-gradient-text {
-  background: linear-gradient(135deg, oklch(0.65 0.08 180), oklch(0.7 0.12 200));
+  background: linear-gradient(135deg, oklch(0.7 0.18 240), oklch(0.75 0.18 220));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -241,8 +241,8 @@
 }
 
 .landing-glass-panel-accent {
-  border-color: oklch(0.55 0.08 180 / 15%);
-  box-shadow: 0 0 60px oklch(0.55 0.08 180 / 4%);
+  border-color: oklch(0.6 0.2 250 / 15%);
+  box-shadow: 0 0 60px oklch(0.6 0.2 250 / 4%);
 }
 
 .landing-cta-button {
@@ -254,14 +254,14 @@
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: oklch(0.95 0 0);
-  background: oklch(0.55 0.08 180 / 15%);
-  border: 1px solid oklch(0.55 0.08 180 / 30%);
+  background: oklch(0.6 0.2 250 / 15%);
+  border: 1px solid oklch(0.6 0.2 250 / 30%);
   border-radius: 0.5rem;
   transition: background 150ms, border-color 150ms;
 }
 .landing-cta-button:hover {
-  background: oklch(0.55 0.08 180 / 25%);
-  border-color: oklch(0.55 0.08 180 / 50%);
+  background: oklch(0.6 0.2 250 / 25%);
+  border-color: oklch(0.6 0.2 250 / 50%);
 }
 
 .landing-cta-button-lg {
@@ -273,16 +273,16 @@
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: oklch(0.95 0 0);
-  background: oklch(0.55 0.08 180 / 20%);
-  border: 1px solid oklch(0.55 0.08 180 / 35%);
+  background: oklch(0.6 0.2 250 / 20%);
+  border: 1px solid oklch(0.6 0.2 250 / 35%);
   border-radius: 0.625rem;
-  box-shadow: 0 0 30px oklch(0.55 0.08 180 / 8%);
+  box-shadow: 0 0 30px oklch(0.6 0.2 250 / 8%);
   transition: background 150ms, border-color 150ms, box-shadow 150ms;
 }
 .landing-cta-button-lg:hover {
-  background: oklch(0.55 0.08 180 / 30%);
-  border-color: oklch(0.55 0.08 180 / 55%);
-  box-shadow: 0 0 40px oklch(0.55 0.08 180 / 12%);
+  background: oklch(0.6 0.2 250 / 30%);
+  border-color: oklch(0.6 0.2 250 / 55%);
+  box-shadow: 0 0 40px oklch(0.6 0.2 250 / 12%);
 }
 
 .float-tooltip-kap {

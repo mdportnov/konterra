@@ -204,6 +204,7 @@ function LoginContent() {
 
       <div className="login-card relative z-10 w-full max-w-md mx-4 p-6 sm:p-8 rounded-xl">
         <div className="text-center mb-8">
+          <img src="/icon.svg" alt="" width={48} height={48} className="mx-auto mb-3" />
           <h1 className="font-mono tracking-[0.3em] uppercase text-sm text-white/90">
             Konterra
           </h1>
@@ -225,7 +226,7 @@ function LoginContent() {
               type="button"
               onClick={() => switchMode('signin')}
               className={`flex-1 pb-3 font-mono text-xs uppercase tracking-wider transition-colors ${
-                mode === 'signin' ? 'text-white border-b border-[oklch(0.55_0.08_180)]' : 'text-white/40 hover:text-white/60'
+                mode === 'signin' ? 'text-white border-b border-[oklch(0.6_0.2_250)]' : 'text-white/40 hover:text-white/60'
               }`}
             >
               Sign In
@@ -234,7 +235,7 @@ function LoginContent() {
               type="button"
               onClick={() => switchMode('waitlist')}
               className={`flex-1 pb-3 font-mono text-xs uppercase tracking-wider transition-colors ${
-                mode === 'waitlist' ? 'text-white border-b border-[oklch(0.55_0.08_180)]' : 'text-white/40 hover:text-white/60'
+                mode === 'waitlist' ? 'text-white border-b border-[oklch(0.6_0.2_250)]' : 'text-white/40 hover:text-white/60'
               }`}
             >
               Request Access
