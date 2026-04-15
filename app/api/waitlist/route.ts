@@ -1,10 +1,15 @@
 import { NextResponse } from 'next/server'
-import { badRequest, success, serverError } from '@/lib/api-utils'
+import { badRequest, success, serverError, tooManyRequests } from '@/lib/api-utils'
 import { safeParseBody } from '@/lib/validation'
 import { createWaitlistEntry, getUserByEmail, getWaitlistEntryByEmail } from '@/lib/db/queries'
+import { rateLimit, getClientIp } from '@/lib/rate-limit'
 
 export async function POST(req: Request) {
   try {
+    const ip = getClientIp(req)
+    const rl = rateLimit(`waitlist:${ip}`, { windowMs: 60 * 60 * 1000, max: 5 })
+    if (!rl.ok) return tooManyRequests(rl.resetAt)
+
     const body = await safeParseBody(req)
     if (!body) return badRequest('Invalid JSON body')
 

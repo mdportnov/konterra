@@ -2,7 +2,10 @@ import NextAuth from 'next-auth'
 import Credentials from 'next-auth/providers/credentials'
 import { compare } from 'bcryptjs'
 import { getUserByEmail, getUserById, updateLastActive, writeAuditLog } from '@/lib/db/queries'
+import { rateLimit, getClientIp } from '@/lib/rate-limit'
 import authConfig from './auth.config'
+
+const DUMMY_BCRYPT_HASH = '$2a$12$CwTycUXWue0Thq9StjUM0uJ8oP/2gk8mV.8pB4rUx1qQYk3WqFgEW'
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   ...authConfig,
@@ -13,12 +16,22 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         email: { label: 'Email', type: 'email', placeholder: 'you@example.com' },
         password: { label: 'Password', type: 'password' },
       },
-      async authorize(credentials) {
+      async authorize(credentials, request) {
         if (!credentials?.email || !credentials?.password) return null
-        const email = credentials.email as string
+        const email = (credentials.email as string).toLowerCase().trim()
         const password = credentials.password as string
+
+        const ip = request instanceof Request ? getClientIp(request) : 'unknown'
+        const ipRl = rateLimit(`login:ip:${ip}`, { windowMs: 15 * 60 * 1000, max: 10 })
+        const emailRl = rateLimit(`login:email:${email}`, { windowMs: 15 * 60 * 1000, max: 5 })
+        if (!ipRl.ok || !emailRl.ok) {
+          writeAuditLog({ action: 'login_failure', detail: `Rate limited IP=${ip} email=${email}` })
+          return null
+        }
+
         const user = await getUserByEmail(email)
         if (!user) {
+          await compare(password, DUMMY_BCRYPT_HASH)
           writeAuditLog({ action: 'login_failure', detail: `Unknown email: ${email}` })
           return null
         }

@@ -1,5 +1,9 @@
 import { NextResponse } from 'next/server'
 
+export function forbidden(message = 'Forbidden') {
+  return NextResponse.json({ error: message }, { status: 403 })
+}
+
 export function toStringOrNull(v: unknown): string | null {
   if (typeof v === 'string' && v.trim() !== '') return v.trim()
   return null
@@ -42,6 +46,14 @@ export function success<T>(data: T, status = 200) {
 
 export function serverError(message = 'Internal server error') {
   return NextResponse.json({ error: message }, { status: 500 })
+}
+
+export function tooManyRequests(resetAt: number) {
+  const retryAfter = Math.max(1, Math.ceil((resetAt - Date.now()) / 1000))
+  return NextResponse.json(
+    { error: 'Too many requests' },
+    { status: 429, headers: { 'Retry-After': String(retryAfter) } },
+  )
 }
 
 export function parsePagination(searchParams: URLSearchParams, defaults = { page: 1, limit: 50 }) {

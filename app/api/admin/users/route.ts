@@ -1,32 +1,20 @@
 import { NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
-import { auth } from '@/auth'
-import { unauthorized, badRequest, notFound, success, serverError } from '@/lib/api-utils'
-import { getUserById, getAllUsers, createUser, updateUserRole, updateUser, deleteUser, writeAuditLog } from '@/lib/db/queries'
+import { badRequest, notFound, success, serverError, forbidden } from '@/lib/api-utils'
+import { requireRole } from '@/lib/require-role'
+import { getAllUsers, createUser, updateUserRole, updateUser, deleteUser, writeAuditLog } from '@/lib/db/queries'
 import { hash } from 'bcryptjs'
 import { safeParseBody } from '@/lib/validation'
 
 export async function GET() {
-  const session = await auth()
-  if (!session?.user?.id) return unauthorized()
-
-  const user = await getUserById(session.user.id)
-  if (!user || (user.role !== 'admin' && user.role !== 'moderator')) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  }
-
-  const users = await getAllUsers()
-  return success(users)
+  const r = await requireRole(['admin', 'moderator'])
+  if (r.error) return r.error
+  return success(await getAllUsers())
 }
 
 export async function POST(req: Request) {
-  const session = await auth()
-  if (!session?.user?.id) return unauthorized()
-
-  const currentUser = await getUserById(session.user.id)
-  if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'moderator')) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  }
+  const r = await requireRole(['admin', 'moderator'])
+  if (r.error) return r.error
 
   const body = await safeParseBody(req)
   if (!body) return badRequest('Invalid JSON body')
@@ -43,8 +31,8 @@ export async function POST(req: Request) {
   const validRoles = ['user', 'moderator', 'admin'] as const
   const userRole = (typeof role === 'string' && (validRoles as readonly string[]).includes(role)) ? role as typeof validRoles[number] : 'user'
 
-  if (userRole === 'admin' && currentUser.role !== 'admin') {
-    return NextResponse.json({ error: 'Only admins can create admin users' }, { status: 403 })
+  if (userRole === 'admin' && r.role !== 'admin') {
+    return forbidden('Only admins can create admin users')
   }
 
   try {
@@ -55,7 +43,7 @@ export async function POST(req: Request) {
       password: hashedPassword,
       role: userRole,
     })
-    writeAuditLog({ userId: session.user.id, action: 'user_create', targetId: newUser.id, targetType: 'user', detail: `Created user ${email} with role ${userRole}` })
+    writeAuditLog({ userId: r.userId, action: 'user_create', targetId: newUser.id, targetType: 'user', detail: `Created user ${email} with role ${userRole}` })
     return success(newUser, 201)
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : 'Unknown error'
@@ -67,13 +55,8 @@ export async function POST(req: Request) {
 }
 
 export async function PATCH(req: Request) {
-  const session = await auth()
-  if (!session?.user?.id) return unauthorized()
-
-  const currentUser = await getUserById(session.user.id)
-  if (!currentUser || currentUser.role !== 'admin') {
-    return NextResponse.json({ error: 'Only admins can update users' }, { status: 403 })
-  }
+  const r = await requireRole(['admin'])
+  if (r.error) return r.error
 
   const body = await safeParseBody(req)
   if (!body) return badRequest('Invalid JSON body')
@@ -87,7 +70,7 @@ export async function PATCH(req: Request) {
     if (typeof role !== 'string' || !(validRoles as readonly string[]).includes(role)) return badRequest('Invalid role')
     const updated = await updateUserRole(userId, role as typeof validRoles[number])
     if (!updated) return notFound('User')
-    writeAuditLog({ userId: session.user.id, action: 'role_change', targetId: userId, targetType: 'user', detail: `Role changed to ${role}` })
+    writeAuditLog({ userId: r.userId, action: 'role_change', targetId: userId, targetType: 'user', detail: `Role changed to ${role}` })
     return success(updated)
   }
 
@@ -115,8 +98,8 @@ export async function PATCH(req: Request) {
   try {
     const updated = await updateUser(userId, updates)
     if (!updated) return notFound('User')
-    if (updates.role) writeAuditLog({ userId: session.user.id, action: 'role_change', targetId: userId, targetType: 'user', detail: `Role changed to ${updates.role}` })
-    writeAuditLog({ userId: session.user.id, action: 'user_update', targetId: userId, targetType: 'user', detail: `Updated fields: ${Object.keys(updates).join(', ')}` })
+    if (updates.role) writeAuditLog({ userId: r.userId, action: 'role_change', targetId: userId, targetType: 'user', detail: `Role changed to ${updates.role}` })
+    writeAuditLog({ userId: r.userId, action: 'user_update', targetId: userId, targetType: 'user', detail: `Updated fields: ${Object.keys(updates).join(', ')}` })
     return success(updated)
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : 'Unknown error'
@@ -128,26 +111,18 @@ export async function PATCH(req: Request) {
 }
 
 export async function DELETE(req: Request) {
-  const session = await auth()
-  if (!session?.user?.id) return unauthorized()
-
-  const currentUser = await getUserById(session.user.id)
-  if (!currentUser || currentUser.role !== 'admin') {
-    return NextResponse.json({ error: 'Only admins can delete users' }, { status: 403 })
-  }
+  const r = await requireRole(['admin'])
+  if (r.error) return r.error
 
   const { searchParams } = new URL(req.url)
   const userId = searchParams.get('id')
 
   if (!userId) return badRequest('User ID is required')
-
-  if (userId === session.user.id) {
-    return badRequest('Cannot delete your own account')
-  }
+  if (userId === r.userId) return badRequest('Cannot delete your own account')
 
   const deleted = await deleteUser(userId)
   if (!deleted) return notFound('User')
-  writeAuditLog({ userId: session.user.id, action: 'user_delete', targetId: userId, targetType: 'user' })
+  writeAuditLog({ userId: r.userId, action: 'user_delete', targetId: userId, targetType: 'user' })
 
   return success({ success: true })
 }

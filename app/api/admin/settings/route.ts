@@ -1,5 +1,5 @@
-import { auth } from '@/auth'
-import { unauthorized, badRequest, success, serverError } from '@/lib/api-utils'
+import { badRequest, success, serverError } from '@/lib/api-utils'
+import { requireRole } from '@/lib/require-role'
 import { safeParseBody } from '@/lib/validation'
 import { getAllSettings, upsertSetting } from '@/lib/db/queries'
 import { LLM_MODELS, SETTING_KEY_LLM_MODEL } from '@/lib/constants/llm-models'
@@ -7,12 +7,9 @@ import { SETTING_KEY_MAX_INVITES } from '@/lib/constants/invites'
 
 export async function GET() {
   try {
-    const session = await auth()
-    if (!session?.user?.id) return unauthorized()
-    if (session.user.role !== 'admin' && session.user.role !== 'moderator') return unauthorized()
-
-    const settings = await getAllSettings()
-    return success(settings)
+    const r = await requireRole(['admin', 'moderator'])
+    if (r.error) return r.error
+    return success(await getAllSettings())
   } catch (error) {
     console.error('Settings GET error:', error)
     return serverError('Failed to load settings')
@@ -21,9 +18,8 @@ export async function GET() {
 
 export async function PATCH(req: Request) {
   try {
-    const session = await auth()
-    if (!session?.user?.id) return unauthorized()
-    if (session.user.role !== 'admin') return unauthorized()
+    const r = await requireRole(['admin'])
+    if (r.error) return r.error
 
     const body = await safeParseBody(req)
     if (!body) return badRequest('Invalid JSON body')

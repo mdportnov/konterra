@@ -1,30 +1,16 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@/auth'
-import { unauthorized, badRequest, notFound, success, serverError } from '@/lib/api-utils'
+import { badRequest, notFound, success, serverError } from '@/lib/api-utils'
+import { requireRole } from '@/lib/require-role'
 import {
-  getUserById, getUserByEmail, createUser,
+  getUserByEmail, createUser,
   getWaitlistEntries, getWaitlistEntryById, updateWaitlistStatus, deleteWaitlistEntry, writeAuditLog,
 } from '@/lib/db/queries'
 import { hash } from 'bcryptjs'
 import { safeParseBody } from '@/lib/validation'
 
-function forbidden(msg = 'Forbidden') {
-  return NextResponse.json({ error: msg }, { status: 403 })
-}
-
-async function requireAdmin() {
-  const session = await auth()
-  if (!session?.user?.id) return { error: unauthorized() }
-  const user = await getUserById(session.user.id)
-  if (!user || (user.role !== 'admin' && user.role !== 'moderator')) {
-    return { error: forbidden() }
-  }
-  return { user, session }
-}
-
 export async function GET(req: Request) {
-  const result = await requireAdmin()
-  if ('error' in result && result.error) return result.error
+  const r = await requireRole(['admin', 'moderator'])
+  if (r.error) return r.error
 
   try {
     const { searchParams } = new URL(req.url)
@@ -42,9 +28,8 @@ export async function GET(req: Request) {
 }
 
 export async function PATCH(req: Request) {
-  const result = await requireAdmin()
-  if ('error' in result && result.error) return result.error
-  const { user: currentUser } = result
+  const r = await requireRole(['admin', 'moderator'])
+  if (r.error) return r.error
 
   try {
     const body = await safeParseBody(req)
@@ -85,9 +70,9 @@ export async function PATCH(req: Request) {
       })
 
       const note = typeof adminNote === 'string' ? adminNote : undefined
-      await updateWaitlistStatus(id, 'approved', currentUser!.id, note)
-      writeAuditLog({ userId: currentUser!.id, action: 'waitlist_approve', targetId: id, targetType: 'waitlist', detail: `Approved ${entry.email}` })
-      writeAuditLog({ userId: currentUser!.id, action: 'user_create', targetId: newUser.id, targetType: 'user', detail: `Created from waitlist: ${entry.email}` })
+      await updateWaitlistStatus(id, 'approved', r.userId, note)
+      writeAuditLog({ userId: r.userId, action: 'waitlist_approve', targetId: id, targetType: 'waitlist', detail: `Approved ${entry.email}` })
+      writeAuditLog({ userId: r.userId, action: 'user_create', targetId: newUser.id, targetType: 'user', detail: `Created from waitlist: ${entry.email}` })
 
       return success({
         entry: { ...entry, status: 'approved' },
@@ -97,8 +82,8 @@ export async function PATCH(req: Request) {
     }
 
     const note = typeof adminNote === 'string' ? adminNote : undefined
-    const updated = await updateWaitlistStatus(id, 'rejected', currentUser!.id, note)
-    writeAuditLog({ userId: currentUser!.id, action: 'waitlist_reject', targetId: id, targetType: 'waitlist', detail: `Rejected ${entry.email}` })
+    const updated = await updateWaitlistStatus(id, 'rejected', r.userId, note)
+    writeAuditLog({ userId: r.userId, action: 'waitlist_reject', targetId: id, targetType: 'waitlist', detail: `Rejected ${entry.email}` })
     return success(updated)
   } catch {
     return serverError('Failed to process waitlist action')
@@ -106,13 +91,8 @@ export async function PATCH(req: Request) {
 }
 
 export async function DELETE(req: Request) {
-  const result = await requireAdmin()
-  if ('error' in result && result.error) return result.error
-  const { user: currentUser } = result
-
-  if (currentUser!.role !== 'admin') {
-    return forbidden('Only admins can delete waitlist entries')
-  }
+  const r = await requireRole(['admin'])
+  if (r.error) return r.error
 
   const { searchParams } = new URL(req.url)
   const id = searchParams.get('id')

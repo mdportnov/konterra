@@ -1,18 +1,10 @@
-import { NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
-import { auth } from '@/auth'
-import { unauthorized, success } from '@/lib/api-utils'
-import { getUserById, getAdminStats } from '@/lib/db/queries'
+import { success } from '@/lib/api-utils'
+import { requireRole } from '@/lib/require-role'
+import { getAdminStats } from '@/lib/db/queries'
 
 export async function GET() {
-  const session = await auth()
-  if (!session?.user?.id) return unauthorized()
-
-  const user = await getUserById(session.user.id)
-  if (!user || (user.role !== 'admin' && user.role !== 'moderator')) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  }
-
-  const stats = await getAdminStats()
-  return success(stats)
+  const r = await requireRole(['admin', 'moderator'])
+  if (r.error) return r.error
+  return success(await getAdminStats())
 }
