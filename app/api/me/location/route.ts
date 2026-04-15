@@ -24,7 +24,28 @@ export async function GET() {
     currentCountry: self.currentCountry,
     currentLat: self.currentLat,
     currentLng: self.currentLng,
+    currentLocationUpdatedAt: self.currentLocationUpdatedAt,
   })
+}
+
+export async function DELETE() {
+  const session = await auth()
+  if (!session?.user?.id) return unauthorized()
+
+  const self = await getOrCreateSelfContact(session.user.id, session.user.name ?? 'Me')
+
+  await db
+    .update(contacts)
+    .set({
+      currentCity: null,
+      currentCountry: null,
+      currentLat: null,
+      currentLng: null,
+      currentLocationUpdatedAt: null,
+    })
+    .where(and(eq(contacts.id, self.id), eq(contacts.userId, session.user.id)))
+
+  return NextResponse.json({ cleared: true })
 }
 
 export async function POST(req: Request) {
@@ -38,11 +59,13 @@ export async function POST(req: Request) {
 
   if (body.source === 'gps' && typeof body.lat === 'number' && typeof body.lng === 'number') {
     const geo = await reverseGeocode(body.lat, body.lng)
+    const now = new Date()
     const update: Record<string, unknown> = {
       currentLat: body.lat,
       currentLng: body.lng,
       currentCity: geo?.city ?? null,
       currentCountry: geo?.country ?? null,
+      currentLocationUpdatedAt: now,
     }
 
     await db
@@ -54,6 +77,7 @@ export async function POST(req: Request) {
       updated: true,
       currentCity: update.currentCity,
       currentCountry: update.currentCountry,
+      currentLocationUpdatedAt: now.toISOString(),
     })
   }
 

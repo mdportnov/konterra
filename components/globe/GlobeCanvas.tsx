@@ -182,7 +182,12 @@ export default memo(function GlobeCanvas({
     if (readOnly) return
     const fetchSaved = () => {
       fetch('/api/me/location').then((r) => r.json()).then((d) => {
-        if (d.lat != null && d.lng != null) setUserLocation({ lat: d.lat, lng: d.lng })
+        const STALE_MS = 7 * 24 * 60 * 60 * 1000
+        const updatedAt = d.currentLocationUpdatedAt ? new Date(d.currentLocationUpdatedAt).getTime() : 0
+        const fresh = updatedAt > 0 && Date.now() - updatedAt < STALE_MS
+        const lat = fresh ? (d.currentLat ?? d.lat) : d.lat
+        const lng = fresh ? (d.currentLng ?? d.lng) : d.lng
+        if (lat != null && lng != null) setUserLocation({ lat, lng })
       }).catch(() => {})
     }
     if (navigator.geolocation) {
@@ -209,6 +214,16 @@ export default memo(function GlobeCanvas({
     } else {
       fetchSaved()
     }
+    const onLocationUpdated = (e: Event) => {
+      const detail = (e as CustomEvent<{ lat: number; lng: number }>).detail
+      if (detail && typeof detail.lat === 'number' && typeof detail.lng === 'number') {
+        setUserLocation({ lat: detail.lat, lng: detail.lng })
+      } else {
+        fetchSaved()
+      }
+    }
+    window.addEventListener('konterra:location-updated', onLocationUpdated)
+    return () => window.removeEventListener('konterra:location-updated', onLocationUpdated)
   }, [readOnly, onGpsLocationDetected])
 
   useEffect(() => {

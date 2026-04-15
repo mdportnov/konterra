@@ -121,6 +121,7 @@ export const contacts = pgTable('contacts', {
   currentCountry: text('current_country'),
   currentLat: doublePrecision('current_lat'),
   currentLng: doublePrecision('current_lng'),
+  currentLocationUpdatedAt: timestamp('current_location_updated_at', { mode: 'date' }),
   email: text('email'),
   phone: text('phone'),
   linkedin: text('linkedin'),

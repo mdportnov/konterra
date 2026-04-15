@@ -85,6 +85,13 @@
       "when": 1774099560796,
       "tag": "0011_dark_gambit",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1776263097512,
+      "tag": "0012_long_maddog",
+      "breakpoints": true
     }
   ]
 }

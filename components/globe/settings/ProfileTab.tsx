@@ -9,7 +9,7 @@ import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { LogOut, Loader2, Pencil, Check, X, Users, Globe, Link2, Shield, MapPin, Copy, ExternalLink, Ticket, UserPlus, Info, Navigation, Home, RotateCw } from 'lucide-react'
+import { LogOut, Loader2, Pencil, Check, X, Users, Globe, Link2, Shield, MapPin, Copy, ExternalLink, Ticket, UserPlus, Info, Navigation, Home, RotateCw, Trash2 } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
 import { PROFILE_NUDGE_KEY } from '@/lib/local-storage'
@@ -37,6 +37,26 @@ interface HomebaseData {
   lng?: number | null
   currentCity?: string | null
   currentCountry?: string | null
+  currentLat?: number | null
+  currentLng?: number | null
+  currentLocationUpdatedAt?: string | null
+}
+
+const STALE_MS = 7 * 24 * 60 * 60 * 1000
+
+function formatRelativeTime(iso: string | null | undefined): string | null {
+  if (!iso) return null
+  const diff = Date.now() - new Date(iso).getTime()
+  if (diff < 0) return null
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return 'just now'
+  if (mins < 60) return `${mins}m ago`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return `${hrs}h ago`
+  const days = Math.floor(hrs / 24)
+  if (days < 30) return `${days}d ago`
+  const months = Math.floor(days / 30)
+  return `${months}mo ago`
 }
 
 interface GeoSuggestion {
@@ -165,8 +185,18 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
           })
           if (!res.ok) throw new Error()
           const data = await res.json()
-          setHomebase((prev) => prev ? { ...prev, currentCity: data.currentCity, currentCountry: data.currentCountry } : prev)
+          setHomebase((prev) => prev ? {
+            ...prev,
+            currentCity: data.currentCity,
+            currentCountry: data.currentCountry,
+            currentLat: pos.coords.latitude,
+            currentLng: pos.coords.longitude,
+            currentLocationUpdatedAt: data.currentLocationUpdatedAt ?? new Date().toISOString(),
+          } : prev)
           setGpsStatus('done')
+          window.dispatchEvent(new CustomEvent('konterra:location-updated', {
+            detail: { lat: pos.coords.latitude, lng: pos.coords.longitude },
+          }))
         } catch {
           setGpsStatus('done')
           toast.error('Failed to detect location')
@@ -202,6 +232,28 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
     setEditingHomebase(true)
   }
 
+  const handleClearCurrentLocation = useCallback(async () => {
+    try {
+      const res = await fetch('/api/me/location', { method: 'DELETE' })
+      if (!res.ok) throw new Error()
+      setHomebase((prev) => prev ? {
+        ...prev,
+        currentCity: null,
+        currentCountry: null,
+        currentLat: null,
+        currentLng: null,
+        currentLocationUpdatedAt: null,
+      } : prev)
+      setGpsStatus('idle')
+      if (typeof homebase?.lat === 'number' && typeof homebase?.lng === 'number') {
+        window.dispatchEvent(new CustomEvent('konterra:location-updated', { detail: { lat: homebase.lat, lng: homebase.lng } }))
+      }
+      toast.success('Current location cleared')
+    } catch {
+      toast.error('Failed to clear location')
+    }
+  }, [homebase?.lat, homebase?.lng])
+
   const handleCancelHomebase = () => {
     setEditingHomebase(false)
     setCityInput('')
@@ -230,6 +282,13 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
       setHomebase(data)
       setEditingHomebase(false)
       toast.success('Homebase updated')
+      const updatedAt = data.currentLocationUpdatedAt ? new Date(data.currentLocationUpdatedAt).getTime() : 0
+      const fresh7d = updatedAt > 0 && Date.now() - updatedAt < STALE_MS
+      const lat = fresh7d ? (data.currentLat ?? data.lat) : data.lat
+      const lng = fresh7d ? (data.currentLng ?? data.lng) : data.lng
+      if (typeof lat === 'number' && typeof lng === 'number') {
+        window.dispatchEvent(new CustomEvent('konterra:location-updated', { detail: { lat, lng } }))
+      }
     } catch {
       toast.error('Failed to update homebase')
     } finally {
@@ -754,23 +813,50 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
                       <span className="text-sm text-muted-foreground">Detecting...</span>
                     </div>
                   ) : homebase?.currentCity ? (
-                    <span className="text-sm text-muted-foreground truncate">
-                      {[homebase.currentCity, homebase.currentCountry].filter(Boolean).join(', ')}
-                    </span>
+                    <div className="flex flex-col min-w-0 flex-1">
+                      <span className="text-sm text-muted-foreground truncate">
+                        {[homebase.currentCity, homebase.currentCountry].filter(Boolean).join(', ')}
+                      </span>
+                      {(() => {
+                        const rel = formatRelativeTime(homebase.currentLocationUpdatedAt)
+                        if (!rel) return null
+                        const updatedAt = homebase.currentLocationUpdatedAt ? new Date(homebase.currentLocationUpdatedAt).getTime() : 0
+                        const isStale = updatedAt > 0 && Date.now() - updatedAt >= STALE_MS
+                        return (
+                          <span className={`text-[10px] ${isStale ? 'text-orange-500/80' : 'text-muted-foreground/50'}`}>
+                            {isStale ? `Stale — detected ${rel}` : `Detected ${rel}`}
+                          </span>
+                        )
+                      })()}
+                    </div>
                   ) : (
                     <span className="text-sm text-muted-foreground/50">Unavailable</span>
                   )}
                   {!homebaseLoading && gpsStatus !== 'detecting' && (
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={requestGps}>
-                            <RotateCw className="h-3 w-3" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Refresh location</TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
+                    <>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={requestGps}>
+                              <RotateCw className="h-3 w-3" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Refresh location</TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      {homebase?.currentCity && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={handleClearCurrentLocation}>
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Clear current location</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
