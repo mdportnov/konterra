@@ -96,7 +96,17 @@ export default memo(function GlobeCanvas({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const globeRef = useRef<any>(null)
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 })
-  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null)
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(() => {
+    if (typeof window === 'undefined') return null
+    try {
+      const raw = localStorage.getItem('konterra:globe-center')
+      if (!raw) return null
+      const cached = JSON.parse(raw) as { lat: number; lng: number; ts: number }
+      if (typeof cached?.lat !== 'number' || typeof cached?.lng !== 'number' || !cached?.ts) return null
+      if (Date.now() - cached.ts > 24 * 60 * 60 * 1000) return null
+      return { lat: cached.lat, lng: cached.lng }
+    } catch { return null }
+  })
   const [userCountry, setUserCountry] = useState<string | null>(null)
   const globeReady = useRef(false)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -225,6 +235,13 @@ export default memo(function GlobeCanvas({
     window.addEventListener('konterra:location-updated', onLocationUpdated)
     return () => window.removeEventListener('konterra:location-updated', onLocationUpdated)
   }, [readOnly, onGpsLocationDetected])
+
+  useEffect(() => {
+    if (!userLocation || readOnly) return
+    try {
+      localStorage.setItem('konterra:globe-center', JSON.stringify({ ...userLocation, ts: Date.now() }))
+    } catch {}
+  }, [userLocation, readOnly])
 
   useEffect(() => {
     if (!userLocation || countries.length === 0) return

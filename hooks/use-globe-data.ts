@@ -99,6 +99,16 @@ export function useGlobeData() {
     return fetchTrips().then(setTrips).catch(() => { toast.error('Failed to reload trips') })
   }, [])
 
+  const upsertTripLocal = useCallback((trip: Trip) => {
+    setTrips((prev) => {
+      const idx = prev.findIndex((t) => t.id === trip.id)
+      if (idx === -1) return [...prev, trip]
+      const next = prev.slice()
+      next[idx] = trip
+      return next
+    })
+  }, [])
+
   const reloadVisitedCountries = useCallback(() => {
     return fetchVisitedCountries().then((data) => { if (Array.isArray(data)) setVisitedCountries(new Set(data.map(normalizeToGlobeName))) }).catch(() => {})
   }, [])
@@ -400,6 +410,7 @@ export function useGlobeData() {
     reloadContacts,
     reloadConnections,
     reloadTrips,
+    upsertTripLocal,
     reloadVisitedCountries,
     reloadWishlistCountries,
     runBatchGeocode,

@@ -16,7 +16,7 @@ interface TripEditDialogProps {
   trip?: Trip | null
   prefill?: { arrivalDate?: string; departureDate?: string; city?: string; country?: string }
   trips: Trip[]
-  onSaved: () => void
+  onSaved: (trip?: Trip) => void
 }
 
 function toDateStr(d: Date | string | null | undefined): string {
@@ -130,9 +130,10 @@ export default function TripEditDialog({ open, onOpenChange, trip, prefill, trip
         const err = await res.json().catch(() => ({}))
         throw new Error(err.error || 'Failed to save trip')
       }
+      const saved = await res.json().catch(() => null) as Trip | null
       toast.success(isEdit ? 'Trip updated' : 'Trip added')
       onOpenChange(false)
-      onSaved()
+      onSaved(saved ?? undefined)
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to save trip')
     } finally {

@@ -257,9 +257,10 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
     setTripEditDialogOpen(true)
   }, [])
 
-  const handleTripSaved = useCallback(() => {
+  const handleTripSaved = useCallback((trip?: Trip) => {
+    if (trip) data.upsertTripLocal(trip)
     Promise.all([data.reloadTrips(), data.reloadVisitedCountries()])
-  }, [data.reloadTrips, data.reloadVisitedCountries])
+  }, [data.upsertTripLocal, data.reloadTrips, data.reloadVisitedCountries])
 
   const handleDeleteTrip = useCallback(async (trip: Trip) => {
     if (!confirm(`Delete trip to ${trip.city}, ${trip.country}?`)) return
