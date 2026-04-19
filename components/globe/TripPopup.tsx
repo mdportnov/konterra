@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import type { Trip } from '@/lib/db/schema'
+import { useIsMobile } from '@/hooks/use-mobile'
 import { GLASS, Z, PANEL_WIDTH } from '@/lib/constants/ui'
 import { TENSE_COLORS } from '@/lib/constants/globe-colors'
 import { countryFlag } from '@/lib/country-flags'
@@ -42,6 +43,7 @@ function gapDaysBetween(prev: Trip | null, next: Trip | null): number | null {
 export default function TripPopup({ trip, prevTrip, nextTrip, onNavigate, onClose, onAddTrip, onEditTrip, onDeleteTrip, rightPanelOpen }: TripPopupProps) {
   const [visible, setVisible] = useState(false)
   const [shouldRender, setShouldRender] = useState(false)
+  const isMobile = useIsMobile()
 
   if (!!trip && !shouldRender) {
     setShouldRender(true)
@@ -79,6 +81,10 @@ export default function TripPopup({ trip, prevTrip, nextTrip, onNavigate, onClos
     arrDate <= now && depDate >= now ? 'current' : arrDate > now ? 'future' : 'past'
   const colors = TENSE_COLORS[tense]
 
+  const actionBtnClass = isMobile
+    ? 'h-10 w-10 flex items-center justify-center rounded-lg'
+    : 'h-6 w-6 flex items-center justify-center rounded'
+
   return (
     <TripContextMenu
       trip={trip}
@@ -88,10 +94,14 @@ export default function TripPopup({ trip, prevTrip, nextTrip, onNavigate, onClos
     >
     <div
       data-globe-popup
-      className={`absolute ${GLASS.panel} rounded-xl shadow-lg p-3 w-[320px]`}
+      className={`absolute ${GLASS.panel} rounded-xl shadow-lg p-3 ${isMobile ? '' : 'w-[320px]'}`}
       style={{
-        bottom: 'calc(max(1.25rem, env(safe-area-inset-bottom, 0px)) + 60px)',
-        right: rightPanelOpen ? PANEL_WIDTH.detail + 24 : 24,
+        bottom: isMobile
+          ? 'calc(max(1.25rem, env(safe-area-inset-bottom, 0px)) + 62px)'
+          : 'calc(max(1.25rem, env(safe-area-inset-bottom, 0px)) + 60px)',
+        ...(isMobile
+          ? { left: 16, right: 16 }
+          : { right: rightPanelOpen ? PANEL_WIDTH.detail + 24 : 24 }),
         opacity: visible ? 1 : 0,
         transform: visible ? 'translateY(0)' : 'translateY(8px)',
         transition: 'opacity 200ms cubic-bezier(0.32,0.72,0,1), transform 200ms cubic-bezier(0.32,0.72,0,1), right 300ms cubic-bezier(0.32,0.72,0,1)',
@@ -100,62 +110,58 @@ export default function TripPopup({ trip, prevTrip, nextTrip, onNavigate, onClos
         zIndex: Z.overlay,
       }}
     >
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 min-w-0">
-          <div className={`shrink-0 w-6 h-6 rounded ${colors.icon} flex items-center justify-center`}>
-            <MapPin className={`h-3.5 w-3.5 ${colors.iconText}`} />
+      <TooltipProvider delayDuration={300}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className={`shrink-0 w-6 h-6 rounded ${colors.icon} flex items-center justify-center`}>
+              <MapPin className={`h-3.5 w-3.5 ${colors.iconText}`} />
+            </div>
+            <div className="min-w-0">
+              <div className="text-sm font-semibold truncate">{trip.city}</div>
+              <div className="text-xs text-muted-foreground truncate">{trip.country} {countryFlag(trip.country)}</div>
+            </div>
           </div>
-          <div className="min-w-0">
-            <div className="text-sm font-semibold truncate">{trip.city}</div>
-            <div className="text-xs text-muted-foreground truncate">{trip.country} {countryFlag(trip.country)}</div>
-          </div>
-        </div>
-        <div className="flex items-center gap-0.5 shrink-0 ml-2">
-          {onEditTrip && (
-            <TooltipProvider>
+          <div className="flex items-center gap-0.5 shrink-0 ml-2">
+            {onEditTrip && (
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
                     onClick={() => onEditTrip(trip)}
-                    className="h-6 w-6 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                    className={`${actionBtnClass} text-muted-foreground hover:text-foreground hover:bg-accent transition-colors`}
                   >
                     <Pencil className="h-3 w-3" />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent className="text-xs">Edit trip</TooltipContent>
               </Tooltip>
-            </TooltipProvider>
-          )}
-          {onDeleteTrip && (
-            <TooltipProvider>
+            )}
+            {onDeleteTrip && (
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
                     onClick={() => onDeleteTrip(trip)}
-                    className="h-6 w-6 flex items-center justify-center rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                    className={`${actionBtnClass} text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors`}
                   >
                     <Trash2 className="h-3 w-3" />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent className="text-xs">Delete trip</TooltipContent>
               </Tooltip>
-            </TooltipProvider>
-          )}
-          <TooltipProvider>
+            )}
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
                   onClick={onClose}
-                  className="h-6 w-6 flex items-center justify-center rounded text-muted-foreground hover:text-foreground transition-colors"
+                  className={`${actionBtnClass} text-muted-foreground hover:text-foreground transition-colors`}
                 >
                   <X className="h-3.5 w-3.5" />
                 </button>
               </TooltipTrigger>
               <TooltipContent className="text-xs">Close</TooltipContent>
             </Tooltip>
-          </TooltipProvider>
+          </div>
         </div>
-      </div>
+      </TooltipProvider>
 
       <div className="flex items-center gap-3 mt-2">
         {arrival && (
@@ -184,26 +190,26 @@ export default function TripPopup({ trip, prevTrip, nextTrip, onNavigate, onClos
             {prevTrip ? (
               <button
                 onClick={() => onNavigate(prevTrip)}
-                className={`flex items-center gap-0.5 text-[10px] ${colors.iconText} hover:brightness-125 transition-colors max-w-[120px]`}
+                className={`flex items-center gap-0.5 text-[11px] ${colors.iconText} hover:brightness-125 transition-colors ${isMobile ? 'min-h-[44px] py-1 max-w-[45%]' : 'max-w-[120px]'}`}
               >
-                <ChevronLeft className="h-3 w-3 shrink-0" />
+                <ChevronLeft className="h-3.5 w-3.5 shrink-0" />
                 <span className="truncate">{prevTrip.city}</span>
               </button>
             ) : (
               <span />
             )}
             {(gapToPrev || gapToNext) && (
-              <span className="text-[9px] text-muted-foreground/50">
+              <span className="text-[9px] text-muted-foreground/50 shrink-0 px-1">
                 {gapToPrev ? `${gapToPrev}d gap` : gapToNext ? `${gapToNext}d gap` : ''}
               </span>
             )}
             {nextTrip ? (
               <button
                 onClick={() => onNavigate(nextTrip)}
-                className={`flex items-center gap-0.5 text-[10px] ${colors.iconText} hover:brightness-125 transition-colors max-w-[120px]`}
+                className={`flex items-center gap-0.5 text-[11px] ${colors.iconText} hover:brightness-125 transition-colors ${isMobile ? 'min-h-[44px] py-1 max-w-[45%]' : 'max-w-[120px]'}`}
               >
                 <span className="truncate">{nextTrip.city}</span>
-                <ChevronRight className="h-3 w-3 shrink-0" />
+                <ChevronRight className="h-3.5 w-3.5 shrink-0" />
               </button>
             ) : (
               <span />
@@ -224,9 +230,9 @@ export default function TripPopup({ trip, prevTrip, nextTrip, onNavigate, onClos
               const d = String(nextDay.getDate()).padStart(2, '0')
               onAddTrip({ arrivalDate: `${y}-${m}-${d}` })
             }}
-            className="flex items-center gap-1 text-[10px] text-blue-400 hover:text-blue-300 transition-colors"
+            className={`flex items-center gap-1 text-[11px] text-blue-400 hover:text-blue-300 transition-colors ${isMobile ? 'min-h-[44px] py-1' : ''}`}
           >
-            <Plus className="h-3 w-3" />
+            <Plus className="h-3.5 w-3.5" />
             Add next trip
           </button>
         </div>
