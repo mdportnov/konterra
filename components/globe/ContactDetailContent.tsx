@@ -53,6 +53,7 @@ export interface ContactDetailContentProps {
   onEdit: (contact: Contact) => void
   onDelete?: (contactId: string) => void
   onReloadContacts?: () => void
+  onRefreshContact?: (contactId: string) => void
   onBack?: () => void
   onClose?: () => void
   connectedContacts?: ConnectedContact[]
@@ -86,6 +87,7 @@ export default function ContactDetailContent({
   onEdit,
   onDelete,
   onReloadContacts,
+  onRefreshContact,
   onBack,
   onClose,
   connectedContacts = [],
@@ -230,6 +232,11 @@ export default function ContactDetailContent({
     cacheRef.current.delete(contact.id)
   }, [contact.id])
 
+  const syncContact = useCallback(() => {
+    if (onRefreshContact) onRefreshContact(contact.id)
+    else onReloadContacts?.()
+  }, [contact.id, onRefreshContact, onReloadContacts])
+
   const handleAddInteraction = async () => {
     setSavingInteraction(true)
     try {
@@ -245,6 +252,7 @@ export default function ContactDetailContent({
         setShowAddInteraction(false)
         setNewInteraction({ type: 'meeting', notes: '', date: new Date().toISOString().slice(0, 10) })
         toast.success('Interaction added')
+        syncContact()
       }
     } catch {
       toast.error('Failed to add interaction')
@@ -269,6 +277,7 @@ export default function ContactDetailContent({
         setShowAddConnection(false)
         setNewConnection({ targetContactId: '', connectionType: 'knows', strength: 3, notes: '' })
         toast.success('Connection added')
+        syncContact()
       } else {
         const err = await res.json().catch(() => null)
         toast.error(err?.error || 'Failed to add connection')
@@ -295,6 +304,7 @@ export default function ContactDetailContent({
         setShowAddFavor(false)
         setNewFavor({ direction: 'given', type: 'introduction', description: '' })
         toast.success('Favor recorded')
+        syncContact()
       }
     } catch {
       toast.error('Failed to record favor')
@@ -385,6 +395,7 @@ export default function ContactDetailContent({
         setInteractions((prev) => prev.map((i) => (i.id === interactionId ? updated : i)))
         setEditingInteraction(null)
         toast.success('Interaction updated')
+        syncContact()
       }
     } catch {
       toast.error('Failed to update interaction')
@@ -404,6 +415,8 @@ export default function ContactDetailContent({
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ interactionId }),
+      }).then(() => {
+        syncContact()
       }).catch(() => {
         toast.error('Failed to delete interaction')
         setInteractions((prev) => [removed, ...prev])
@@ -436,6 +449,7 @@ export default function ContactDetailContent({
         const updated = await res.json()
         invalidateCache()
         setFavorsList((prev) => prev.map((f) => (f.id === favor.id ? updated : f)))
+        syncContact()
       }
     } catch {
       toast.error('Failed to update favor')
@@ -455,6 +469,8 @@ export default function ContactDetailContent({
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ favorId }),
+      }).then(() => {
+        syncContact()
       }).catch(() => {
         toast.error('Failed to delete favor')
         setFavorsList((prev) => [removed, ...prev])
@@ -487,6 +503,8 @@ export default function ContactDetailContent({
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ connectionId }),
+      }).then(() => {
+        syncContact()
       }).catch(() => {
         toast.error('Failed to remove connection')
         setConnections((prev) => [...prev, removed])
@@ -539,6 +557,7 @@ export default function ContactDetailContent({
       if (res.ok) {
         toast.success('Follow-up scheduled')
         setShowFollowUpPicker(false)
+        syncContact()
       }
     } catch {
       toast.error('Failed to schedule follow-up')
@@ -554,7 +573,10 @@ export default function ContactDetailContent({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nextFollowUp: newDate.toISOString() }),
       })
-      if (res.ok) toast.success(`Follow-up snoozed ${days} days`)
+      if (res.ok) {
+        toast.success(`Follow-up snoozed ${days} days`)
+        syncContact()
+      }
     } catch {
       toast.error('Failed to snooze follow-up')
     }

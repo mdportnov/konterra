@@ -843,7 +843,7 @@ export default function AdminPage() {
                                 {u.maxInvites != null && <span className="text-muted-foreground ml-1">(custom)</span>}
                               </p>
                             </div>
-                            {isAdmin && !isSelf && (
+                            {isAdmin && (
                               <div className="flex items-center gap-1.5">
                                 <span className="text-muted-foreground">Limit:</span>
                                 <Input

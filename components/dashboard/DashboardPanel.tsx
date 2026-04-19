@@ -21,6 +21,7 @@ interface DashboardPanelProps {
   onEditContact?: (contact: Contact) => void
   onDeleteContact?: (contactId: string) => void
   onReloadContacts?: () => void
+  onRefreshContact?: (contactId: string) => void
   connectedContacts?: ConnectedContact[]
   onConnectedContactClick?: (cc: ConnectedContact) => void
   allContacts?: Contact[]
@@ -64,6 +65,7 @@ export default function DashboardPanel({
   onEditContact,
   onDeleteContact,
   onReloadContacts,
+  onRefreshContact,
   connectedContacts = [],
   onConnectedContactClick,
   allContacts,
@@ -106,6 +108,7 @@ export default function DashboardPanel({
         onEdit={(c) => onEditContact?.(c)}
         onDelete={onDeleteContact}
         onReloadContacts={onReloadContacts}
+        onRefreshContact={onRefreshContact}
         onBack={onBackToList}
         connectedContacts={connectedContacts}
         onConnectedContactClick={onConnectedContactClick}
@@ -160,6 +163,7 @@ export default function DashboardPanel({
             onSelectionChange={onSelectionChange}
             onBulkDelete={onBulkDelete}
             onReloadContacts={onReloadContacts}
+            onRefreshContact={onRefreshContact}
             onSwitchToGlobe={onSwitchToGlobe}
             onEditContact={onEditContact}
             onDeleteContact={onDeleteContact}

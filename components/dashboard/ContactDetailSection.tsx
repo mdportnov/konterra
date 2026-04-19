@@ -7,6 +7,7 @@ interface ContactDetailSectionProps {
   onEdit: (c: Contact) => void
   onDelete?: (contactId: string) => void
   onReloadContacts?: () => void
+  onRefreshContact?: (contactId: string) => void
   onBack: () => void
   connectedContacts: ConnectedContact[]
   onConnectedContactClick?: (cc: ConnectedContact) => void
@@ -19,6 +20,7 @@ export default function ContactDetailSection({
   onEdit,
   onDelete,
   onReloadContacts,
+  onRefreshContact,
   onBack,
   connectedContacts,
   onConnectedContactClick,
@@ -32,6 +34,7 @@ export default function ContactDetailSection({
         onEdit={onEdit}
         onDelete={onDelete}
         onReloadContacts={onReloadContacts}
+        onRefreshContact={onRefreshContact}
         onBack={onBack}
         connectedContacts={connectedContacts}
         onConnectedContactClick={onConnectedContactClick}

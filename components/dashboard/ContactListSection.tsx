@@ -57,6 +57,7 @@ interface ContactListSectionProps {
   onSelectionChange?: (ids: Set<string>) => void
   onBulkDelete?: (ids: string[]) => void
   onReloadContacts?: () => void
+  onRefreshContact?: (contactId: string) => void
   onSwitchToGlobe?: () => void
   onEditContact?: (contact: Contact) => void
   onDeleteContact?: (contactId: string) => void
@@ -77,6 +78,7 @@ export default function ContactListSection({
   onSelectionChange,
   onBulkDelete,
   onReloadContacts,
+  onRefreshContact,
   onSwitchToGlobe,
   onEditContact,
   onDeleteContact,
@@ -423,7 +425,7 @@ export default function ContactListSection({
       {nonSelfContacts.length > 0 && (
         <NetworkHealth contacts={contacts} interactions={recentInteractions} loading={contactsLoading || interactionsLoading} />
       )}
-      <ReconnectAlerts contacts={contacts} onContactClick={onContactClick} loading={contactsLoading} />
+      <ReconnectAlerts contacts={contacts} onContactClick={onContactClick} loading={contactsLoading} onContactUpdated={(id) => onRefreshContact ? onRefreshContact(id) : onReloadContacts?.()} onInteractionLogged={(id) => onRefreshContact ? onRefreshContact(id) : onReloadContacts?.()} />
       <FavorLedger favors={favors} contacts={contacts} onContactClick={onContactClick} loading={contactsLoading || favorsLoading} />
       {nonSelfContacts.length > 0 && (
         <ConnectionInsightsSummary

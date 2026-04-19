@@ -41,6 +41,10 @@ export async function fetchContacts(signal?: AbortSignal): Promise<Contact[]> {
   })
 }
 
+export async function fetchContact(id: string, signal?: AbortSignal): Promise<Contact> {
+  return apiFetch<Contact>(`/api/contacts/${id}`, signal)
+}
+
 export async function fetchConnections(signal?: AbortSignal): Promise<ContactConnection[]> {
   return fetchAllPages<ContactConnection>('/api/connections', signal)
 }

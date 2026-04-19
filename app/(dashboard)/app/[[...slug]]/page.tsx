@@ -343,6 +343,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
     onEditContact: nav.handleEditContact,
     onDeleteContact: handleDeleteContact,
     onReloadContacts: data.reloadContacts,
+    onRefreshContact: data.refreshContact,
     connectedContacts: nav.connectedContacts,
     onConnectedContactClick: nav.handleConnectedContactClick,
     allContacts: data.contacts,

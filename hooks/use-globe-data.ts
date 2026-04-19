@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { toast } from 'sonner'
-import { fetchContacts, fetchConnections, fetchVisitedCountries, fetchTags, fetchRecentInteractions, fetchAllFavors, fetchAllCountryConnections, fetchTrips, fetchWishlistCountries } from '@/lib/api'
+import { fetchContact, fetchContacts, fetchConnections, fetchVisitedCountries, fetchTags, fetchRecentInteractions, fetchAllFavors, fetchAllCountryConnections, fetchTrips, fetchWishlistCountries } from '@/lib/api'
 import { normalizeToGlobeName } from '@/components/globe/data/country-centroids'
 import type { Contact, ContactConnection, ContactCountryConnection, CountryWishlistEntry, Tag, Interaction, Favor, Trip } from '@/lib/db/schema'
 
@@ -89,6 +89,12 @@ export function useGlobeData() {
 
   const reloadContacts = useCallback(() => {
     return fetchContacts().then((data) => { setContacts(data); return data }).catch(() => { toast.error('Failed to reload contacts'); return [] as Contact[] })
+  }, [])
+
+  const refreshContact = useCallback((contactId: string) => {
+    return fetchContact(contactId).then((updated) => {
+      setContacts((prev) => prev.map((c) => c.id === contactId ? updated : c))
+    }).catch(() => {})
   }, [])
 
   const reloadConnections = useCallback(() => {
@@ -408,6 +414,7 @@ export function useGlobeData() {
     loading,
     pendingContactIdRef,
     reloadContacts,
+    refreshContact,
     reloadConnections,
     reloadTrips,
     upsertTripLocal,

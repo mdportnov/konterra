@@ -910,6 +910,7 @@ export default memo(function GlobeCanvas({
         pointColor={getPointColor}
         pointRadius={getPointRadius}
         pointAltitude={0.015}
+        pointsTransitionDuration={100}
         pointLabel={getPointLabel}
         onPointClick={handlePointClick}
         arcsData={allArcs}
