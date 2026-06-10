@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { unauthorized, badRequest, notFound, success } from '@/lib/api-utils'
 import { getIntroductionsByUserId, createIntroduction, updateIntroduction, deleteIntroduction, verifyContactOwnership } from '@/lib/db/queries'
-import { safeParseBody } from '@/lib/validation'
+import { safeParseBody, validateEnum, validateMaxLength, INTRODUCTION_STATUSES, MAX_DESCRIPTION_LENGTH, MAX_NOTES_LENGTH } from '@/lib/validation'
 
 export async function GET(req: Request) {
   const session = await auth()
@@ -26,6 +26,10 @@ export async function POST(req: Request) {
   if (!contactAId || !contactBId || !initiatedBy) {
     return badRequest('contactAId, contactBId, and initiatedBy are required')
   }
+
+  const validationError = validateEnum(status, INTRODUCTION_STATUSES, 'status')
+    || validateMaxLength(notes, MAX_NOTES_LENGTH, 'notes')
+  if (validationError) return badRequest(validationError)
 
   const [ownsA, ownsB] = await Promise.all([
     verifyContactOwnership(contactAId as string, session.user.id),
@@ -55,9 +59,26 @@ export async function PATCH(req: Request) {
   if (!session?.user?.id) return unauthorized()
   const body = await safeParseBody(req)
   if (!body) return badRequest('Invalid JSON body')
-  const { id, ...updates } = body as Record<string, unknown>
+  const { id, status, date, outcome, notes, initiatedBy } = body as Record<string, unknown>
   if (!id) return badRequest('id required')
-  if (updates.date) updates.date = new Date(updates.date as string)
+
+  const validationError = validateEnum(status, INTRODUCTION_STATUSES, 'status')
+    || validateMaxLength(outcome, MAX_DESCRIPTION_LENGTH, 'outcome')
+    || validateMaxLength(notes, MAX_NOTES_LENGTH, 'notes')
+  if (validationError) return badRequest(validationError)
+
+  const updates: Record<string, unknown> = {}
+  if (status !== undefined) updates.status = status
+  if (outcome !== undefined) updates.outcome = (outcome as string) || null
+  if (notes !== undefined) updates.notes = (notes as string) || null
+  if (initiatedBy !== undefined && typeof initiatedBy === 'string') updates.initiatedBy = initiatedBy
+  if (date !== undefined) {
+    const d = date ? new Date(date as string) : null
+    if (d && isNaN(d.getTime())) return badRequest('Invalid date')
+    updates.date = d
+  }
+  if (Object.keys(updates).length === 0) return badRequest('No valid fields to update')
+
   const intro = await updateIntroduction(id as string, session.user.id, updates)
   if (!intro) return notFound('Introduction')
   return success(intro)

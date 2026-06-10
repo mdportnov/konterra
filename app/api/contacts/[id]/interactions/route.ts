@@ -1,7 +1,7 @@
 import { auth } from '@/auth'
 import { unauthorized, badRequest, notFound, success } from '@/lib/api-utils'
 import { getInteractionsByContactId, createInteraction, updateInteraction, deleteInteraction, getContactById } from '@/lib/db/queries'
-import { validateInteraction, safeParseBody } from '@/lib/validation'
+import { validateInteraction, validateMaxLength, safeParseBody, MAX_SHORT_TEXT_LENGTH, MAX_NOTES_LENGTH } from '@/lib/validation'
 
 export async function GET(
   _req: Request,
@@ -37,6 +37,8 @@ export async function POST(
   if (!type || !date) return badRequest('type and date are required')
 
   const validationError = validateInteraction(body)
+    || validateMaxLength(location, MAX_SHORT_TEXT_LENGTH, 'location')
+    || validateMaxLength(notes, MAX_NOTES_LENGTH, 'notes')
   if (validationError) return badRequest(validationError)
 
   const interaction = await createInteraction({
@@ -72,6 +74,10 @@ export async function PATCH(
   if (date !== undefined) updates.date = new Date(date as string)
   if (location !== undefined) updates.location = (location as string) || null
   if (notes !== undefined) updates.notes = (notes as string) || null
+
+  const lengthError = validateMaxLength(location, MAX_SHORT_TEXT_LENGTH, 'location')
+    || validateMaxLength(notes, MAX_NOTES_LENGTH, 'notes')
+  if (lengthError) return badRequest(lengthError)
 
   if (updates.type !== undefined || updates.date !== undefined) {
     const validationError = validateInteraction({

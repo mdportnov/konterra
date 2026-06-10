@@ -1,7 +1,7 @@
 import { auth } from '@/auth'
 import { getTripsByUserId, createTrip, createTripsBulk, deleteAllTrips } from '@/lib/db/queries'
 import { unauthorized, badRequest, success } from '@/lib/api-utils'
-import { safeParseBody } from '@/lib/validation'
+import { safeParseBody, validateMaxLength, validateIntRange, MAX_SHORT_TEXT_LENGTH, MAX_NOTES_LENGTH } from '@/lib/validation'
 import type { NewTrip } from '@/lib/db/schema'
 
 export async function GET() {
@@ -31,6 +31,8 @@ export async function POST(req: Request) {
       if (!arrival || !t.city || !t.country) continue
       const departure = parseDate(t.departureDate)
       if (departure && departure < arrival) continue
+      if (String(t.city).length > MAX_SHORT_TEXT_LENGTH || String(t.country).length > MAX_SHORT_TEXT_LENGTH) continue
+      if (typeof t.notes === 'string' && t.notes.length > MAX_NOTES_LENGTH) continue
       tripsData.push({
         userId: session.user!.id,
         arrivalDate: arrival,
@@ -56,6 +58,12 @@ export async function POST(req: Request) {
   if (!arrivalDate) return badRequest('Invalid arrivalDate')
   const departureDate = parseDate(body.departureDate)
   if (departureDate && departureDate < arrivalDate) return badRequest('departureDate must be on or after arrivalDate')
+
+  const validationError = validateMaxLength(body.city, MAX_SHORT_TEXT_LENGTH, 'city')
+    || validateMaxLength(body.country, MAX_SHORT_TEXT_LENGTH, 'country')
+    || validateMaxLength(body.notes, MAX_NOTES_LENGTH, 'notes')
+    || validateIntRange(body.durationDays, 0, 36500, 'durationDays')
+  if (validationError) return badRequest(validationError)
 
   const trip = await createTrip({
     userId: session.user.id,
