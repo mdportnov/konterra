@@ -15,6 +15,10 @@ export default auth((req) => {
   const isLoggedIn = !!req.auth
   const { pathname } = req.nextUrl
 
+  if (pathname.startsWith('/api/mcp')) {
+    return NextResponse.next()
+  }
+
   if (
     pathname.startsWith('/api/') &&
     !pathname.startsWith('/api/auth') &&

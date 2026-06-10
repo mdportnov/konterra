@@ -1,5 +1,5 @@
 import { db } from './index'
-import { users, contacts, interactions, contactConnections, contactCountryConnections, introductions, favors, visitedCountries, waitlist, tags, trips, countryWishlist, appSettings, socialPreviews, invites, auditLog } from './schema'
+import { users, contacts, interactions, contactConnections, contactCountryConnections, introductions, favors, visitedCountries, waitlist, tags, trips, countryWishlist, appSettings, socialPreviews, invites, auditLog, apiTokens } from './schema'
 import { and, arrayContains, desc, eq, gte, inArray, lte, or, sql } from 'drizzle-orm'
 import type { NewContact, NewContactConnection, NewContactCountryConnection, NewIntroduction, NewFavor, NewTrip, NewCountryWishlistEntry, NewSocialPreview, NewAuditLogEntry } from './schema'
 import { DEFAULT_MAX_INVITES, SETTING_KEY_MAX_INVITES } from '@/lib/constants/invites'
@@ -1386,6 +1386,68 @@ export async function getAllInvitedUsers(userId: string) {
 
 export async function writeAuditLog(entry: Omit<NewAuditLogEntry, 'id' | 'createdAt'>) {
   await db.insert(auditLog).values(entry).catch(() => {})
+}
+
+export async function createApiToken(data: { userId: string; name: string; tokenHash: string; tokenPrefix: string; scopes: string[]; expiresAt?: Date | null }) {
+  const [row] = await db
+    .insert(apiTokens)
+    .values({
+      userId: data.userId,
+      name: data.name,
+      tokenHash: data.tokenHash,
+      tokenPrefix: data.tokenPrefix,
+      scopes: data.scopes,
+      expiresAt: data.expiresAt ?? null,
+    })
+    .returning({
+      id: apiTokens.id,
+      name: apiTokens.name,
+      tokenPrefix: apiTokens.tokenPrefix,
+      scopes: apiTokens.scopes,
+      expiresAt: apiTokens.expiresAt,
+      createdAt: apiTokens.createdAt,
+    })
+  return row
+}
+
+export async function getApiTokensByUserId(userId: string) {
+  return db
+    .select({
+      id: apiTokens.id,
+      name: apiTokens.name,
+      tokenPrefix: apiTokens.tokenPrefix,
+      scopes: apiTokens.scopes,
+      lastUsedAt: apiTokens.lastUsedAt,
+      expiresAt: apiTokens.expiresAt,
+      createdAt: apiTokens.createdAt,
+    })
+    .from(apiTokens)
+    .where(eq(apiTokens.userId, userId))
+    .orderBy(desc(apiTokens.createdAt))
+}
+
+export async function deleteApiToken(id: string, userId: string) {
+  const result = await db.delete(apiTokens).where(and(eq(apiTokens.id, id), eq(apiTokens.userId, userId)))
+  return (result.rowCount ?? 0) > 0
+}
+
+export async function getApiTokenByHash(tokenHash: string) {
+  return db.query.apiTokens.findFirst({
+    where: eq(apiTokens.tokenHash, tokenHash),
+  })
+}
+
+export async function touchApiTokenLastUsed(id: string) {
+  await db
+    .update(apiTokens)
+    .set({ lastUsedAt: new Date() })
+    .where(
+      and(
+        eq(apiTokens.id, id),
+        sql`(${apiTokens.lastUsedAt} IS NULL OR ${apiTokens.lastUsedAt} < now() - interval '1 minute')`
+      )
+    )
+    .catch(() => {})
 }
 
 export async function countRecentLoginFailures(email: string, windowMs: number): Promise<number> {

@@ -99,6 +99,13 @@
       "when": 1781106968252,
       "tag": "0013_repair_schema_drift",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1781117484475,
+      "tag": "0014_fixed_maginty",
+      "breakpoints": true
     }
   ]
 }

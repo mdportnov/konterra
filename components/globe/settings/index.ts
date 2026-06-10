@@ -1,5 +1,6 @@
 export { ProfileTab } from './ProfileTab'
 export { SettingsTab } from './SettingsTab'
 export { CountriesTab } from './CountriesTab'
+export { McpTab } from './McpTab'
 export { TABS, isTab } from './types'
 export type { Tab, SettingsTabProps, CountriesTabProps, ProfileTabProps } from './types'

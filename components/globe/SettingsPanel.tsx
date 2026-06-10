@@ -3,10 +3,10 @@
 import { useCallback } from 'react'
 import { Separator } from '@/components/ui/separator'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import { User, Settings, Globe, ArrowLeft } from 'lucide-react'
+import { User, Settings, Globe, Plug, ArrowLeft } from 'lucide-react'
 import GlobePanel from '@/components/globe/GlobePanel'
 import { PANEL_WIDTH } from '@/lib/constants/ui'
-import { ProfileTab, SettingsTab, CountriesTab, TABS, isTab } from '@/components/globe/settings'
+import { ProfileTab, SettingsTab, CountriesTab, McpTab, TABS, isTab } from '@/components/globe/settings'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { Button } from '@/components/ui/button'
 import { saveDefaultTab } from '@/hooks/use-dashboard-routing'
@@ -15,7 +15,7 @@ import type { Tab } from '@/components/globe/settings'
 import type { DisplayOptions } from '@/types/display'
 import type { CountryWishlistEntry } from '@/lib/db/schema'
 
-const TAB_ICONS = { profile: User, settings: Settings, countries: Globe } as const
+const TAB_ICONS = { profile: User, settings: Settings, countries: Globe, mcp: Plug } as const
 
 interface SettingsPanelProps {
   open: boolean
@@ -141,6 +141,7 @@ export default function SettingsPanel({
               onDeleteAllContacts={onDeleteAllContacts}
             />
           )}
+          {tab === 'mcp' && <McpTab open={open} />}
           {tab === 'countries' && (
             <CountriesTab
               visitedCountries={visitedCountries}
