@@ -1,6 +1,6 @@
 import { db } from './index'
 import { users, contacts, interactions, contactConnections, contactCountryConnections, introductions, favors, visitedCountries, waitlist, tags, trips, countryWishlist, appSettings, socialPreviews, invites, auditLog } from './schema'
-import { and, arrayContains, desc, eq, inArray, lte, or, sql } from 'drizzle-orm'
+import { and, arrayContains, desc, eq, gte, inArray, lte, or, sql } from 'drizzle-orm'
 import type { NewContact, NewContactConnection, NewContactCountryConnection, NewIntroduction, NewFavor, NewTrip, NewCountryWishlistEntry, NewSocialPreview, NewAuditLogEntry } from './schema'
 import { DEFAULT_MAX_INVITES, SETTING_KEY_MAX_INVITES } from '@/lib/constants/invites'
 
@@ -136,37 +136,38 @@ export async function deleteContactsBulk(ids: string[], userId: string) {
 
 export async function addTagToContactsBulk(ids: string[], userId: string, tag: string) {
   if (ids.length === 0) return 0
-  let count = 0
-  for (const id of ids) {
-    const contact = await db.query.contacts.findFirst({
-      where: and(eq(contacts.id, id), eq(contacts.userId, userId)),
-      columns: { id: true, tags: true },
+  const result = await db
+    .update(contacts)
+    .set({
+      tags: sql`array_append(coalesce(${contacts.tags}, '{}'), ${tag})`,
+      updatedAt: new Date(),
     })
-    if (!contact) continue
-    const currentTags = contact.tags || []
-    if (currentTags.includes(tag)) continue
-    await db.update(contacts).set({ tags: [...currentTags, tag], updatedAt: new Date() }).where(eq(contacts.id, id))
-    count++
-  }
-  return count
+    .where(
+      and(
+        inArray(contacts.id, ids),
+        eq(contacts.userId, userId),
+        sql`NOT (${tag} = ANY(coalesce(${contacts.tags}, '{}')))`
+      )
+    )
+  return result.rowCount ?? 0
 }
 
 export async function removeTagFromContactsBulk(ids: string[], userId: string, tag: string) {
   if (ids.length === 0) return 0
-  let count = 0
-  for (const id of ids) {
-    const contact = await db.query.contacts.findFirst({
-      where: and(eq(contacts.id, id), eq(contacts.userId, userId)),
-      columns: { id: true, tags: true },
+  const result = await db
+    .update(contacts)
+    .set({
+      tags: sql`nullif(array_remove(${contacts.tags}, ${tag}), '{}')`,
+      updatedAt: new Date(),
     })
-    if (!contact) continue
-    const currentTags = contact.tags || []
-    if (!currentTags.includes(tag)) continue
-    const updated = currentTags.filter((t) => t !== tag)
-    await db.update(contacts).set({ tags: updated.length > 0 ? updated : null, updatedAt: new Date() }).where(eq(contacts.id, id))
-    count++
-  }
-  return count
+    .where(
+      and(
+        inArray(contacts.id, ids),
+        eq(contacts.userId, userId),
+        sql`${tag} = ANY(coalesce(${contacts.tags}, '{}'))`
+      )
+    )
+  return result.rowCount ?? 0
 }
 
 export async function getInteractionsByContactId(contactId: string, userId: string) {
@@ -381,10 +382,18 @@ export async function createConnection(data: NewContactConnection) {
   return conn
 }
 
-export async function deleteConnection(id: string, userId: string) {
-  await db.delete(contactConnections).where(
-    and(eq(contactConnections.id, id), eq(contactConnections.userId, userId))
+export async function deleteConnectionForContact(id: string, contactId: string, userId: string) {
+  const result = await db.delete(contactConnections).where(
+    and(
+      eq(contactConnections.id, id),
+      eq(contactConnections.userId, userId),
+      or(
+        eq(contactConnections.sourceContactId, contactId),
+        eq(contactConnections.targetContactId, contactId)
+      )
+    )
   )
+  return (result.rowCount ?? 0) > 0
 }
 
 export async function getIntroductionsByUserId(userId: string, page = 1, limit = 50) {
@@ -833,31 +842,32 @@ export async function createCountryConnectionsBulk(data: NewContactCountryConnec
 
 export async function createTagsBulk(userId: string, tagData: { name: string; color?: string | null }[]) {
   if (tagData.length === 0) return []
-  const results: (typeof tags.$inferSelect)[] = []
-  for (const t of tagData) {
-    const tag = await createTag(userId, t.name, t.color ?? undefined)
-    if (tag) results.push(tag)
-  }
-  return results
+  const names = [...new Set(tagData.map((t) => t.name))]
+  await db
+    .insert(tags)
+    .values(tagData.map((t) => ({ userId, name: t.name, color: t.color ?? null })))
+    .onConflictDoNothing({ target: [tags.userId, tags.name] })
+  return db.query.tags.findMany({
+    where: and(eq(tags.userId, userId), inArray(tags.name, names)),
+  })
 }
 
 export async function addVisitedCountriesBulk(userId: string, countries: string[], source: 'manual' | 'derived' = 'derived') {
   if (countries.length === 0) return
-  for (const country of countries) {
-    if (source === 'manual') {
-      await db
-        .insert(visitedCountries)
-        .values({ userId, country, source: 'manual' })
-        .onConflictDoUpdate({
-          target: [visitedCountries.userId, visitedCountries.country],
-          set: { source: 'manual' },
-        })
-    } else {
-      await db
-        .insert(visitedCountries)
-        .values({ userId, country, source: 'derived' })
-        .onConflictDoNothing({ target: [visitedCountries.userId, visitedCountries.country] })
-    }
+  const values = [...new Set(countries)].map((country) => ({ userId, country, source }))
+  if (source === 'manual') {
+    await db
+      .insert(visitedCountries)
+      .values(values)
+      .onConflictDoUpdate({
+        target: [visitedCountries.userId, visitedCountries.country],
+        set: { source: 'manual' },
+      })
+  } else {
+    await db
+      .insert(visitedCountries)
+      .values(values)
+      .onConflictDoNothing({ target: [visitedCountries.userId, visitedCountries.country] })
   }
 }
 
@@ -1052,42 +1062,21 @@ export async function deleteUser(id: string) {
 }
 
 export async function getAdminStats() {
-  const [userCount] = await db.select({ count: sql<number>`cast(count(*) as int)` }).from(users)
-  const [contactCount] = await db.select({ count: sql<number>`cast(count(*) as int)` }).from(contacts)
-  const [connectionCount] = await db.select({ count: sql<number>`cast(count(*) as int)` }).from(contactConnections)
-  const [interactionCount] = await db.select({ count: sql<number>`cast(count(*) as int)` }).from(interactions)
-  const [favorCount] = await db.select({ count: sql<number>`cast(count(*) as int)` }).from(favors)
-  const [tripCount] = await db.select({ count: sql<number>`cast(count(*) as int)` }).from(trips)
-  const [tagCount] = await db.select({ count: sql<number>`cast(count(*) as int)` }).from(tags)
-
-  const usersWithStats = await db
-    .select({
-      userId: users.id,
-      contactCount: sql<number>`cast(count(distinct contacts.id) as int)`,
-    })
-    .from(users)
-    .leftJoin(contacts, eq(users.id, contacts.userId))
-    .groupBy(users.id)
-
-  const [waitlistPending] = await db
-    .select({ count: sql<number>`cast(count(*) as int)` })
-    .from(waitlist)
-    .where(eq(waitlist.status, 'pending'))
-  const [waitlistTotal] = await db
-    .select({ count: sql<number>`cast(count(*) as int)` })
-    .from(waitlist)
+  const [row] = await db.select({
+    totalUsers: sql<number>`cast((select count(*) from users) as int)`,
+    totalContacts: sql<number>`cast((select count(*) from contacts) as int)`,
+    totalConnections: sql<number>`cast((select count(*) from contact_connections) as int)`,
+    totalInteractions: sql<number>`cast((select count(*) from interactions) as int)`,
+    totalFavors: sql<number>`cast((select count(*) from favors) as int)`,
+    totalTrips: sql<number>`cast((select count(*) from trips) as int)`,
+    totalTags: sql<number>`cast((select count(*) from tags) as int)`,
+    waitlistPending: sql<number>`cast((select count(*) from waitlist where status = 'pending') as int)`,
+    waitlistTotal: sql<number>`cast((select count(*) from waitlist) as int)`,
+  }).from(sql`(select 1) as one`)
 
   return {
-    totalUsers: userCount.count,
-    totalContacts: contactCount.count,
-    totalConnections: connectionCount.count,
-    totalInteractions: interactionCount.count,
-    totalFavors: favorCount.count,
-    totalTrips: tripCount.count,
-    totalTags: tagCount.count,
-    avgContactsPerUser: userCount.count > 0 ? Math.round(contactCount.count / userCount.count) : 0,
-    waitlistPending: waitlistPending.count,
-    waitlistTotal: waitlistTotal.count,
+    ...row,
+    avgContactsPerUser: row.totalUsers > 0 ? Math.round(row.totalContacts / row.totalUsers) : 0,
   }
 }
 
@@ -1397,6 +1386,21 @@ export async function getAllInvitedUsers(userId: string) {
 
 export async function writeAuditLog(entry: Omit<NewAuditLogEntry, 'id' | 'createdAt'>) {
   await db.insert(auditLog).values(entry).catch(() => {})
+}
+
+export async function countRecentLoginFailures(email: string, windowMs: number): Promise<number> {
+  const since = new Date(Date.now() - windowMs)
+  const [{ count }] = await db
+    .select({ count: sql<number>`cast(count(*) as int)` })
+    .from(auditLog)
+    .where(
+      and(
+        eq(auditLog.action, 'login_failure'),
+        eq(auditLog.targetId, email),
+        gte(auditLog.createdAt, since)
+      )
+    )
+  return count
 }
 
 export async function getAuditLogs(page = 1, limit = 50) {

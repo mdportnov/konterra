@@ -9,9 +9,31 @@ const LOCALE_ROUTES = new Set(
 
 const { auth } = NextAuth(authConfig)
 
+const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
+
 export default auth((req) => {
   const isLoggedIn = !!req.auth
   const { pathname } = req.nextUrl
+
+  if (
+    pathname.startsWith('/api/') &&
+    !pathname.startsWith('/api/auth') &&
+    MUTATING_METHODS.has(req.method)
+  ) {
+    const origin = req.headers.get('origin')
+    if (origin) {
+      const expectedHost = req.headers.get('x-forwarded-host') ?? req.nextUrl.host
+      let originHost: string | null = null
+      try {
+        originHost = new URL(origin).host
+      } catch {
+        originHost = null
+      }
+      if (originHost !== expectedHost) {
+        return NextResponse.json({ error: 'Invalid origin' }, { status: 403 })
+      }
+    }
+  }
   const isLandingPage = pathname === '/'
   const isLocaleLanding = LOCALE_ROUTES.has(pathname)
   const isAuthPage = pathname.startsWith('/login')

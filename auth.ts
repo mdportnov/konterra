@@ -1,7 +1,7 @@
 import NextAuth from 'next-auth'
 import Credentials from 'next-auth/providers/credentials'
 import { compare } from 'bcryptjs'
-import { getUserByEmail, getUserById, updateLastActive, writeAuditLog } from '@/lib/db/queries'
+import { getUserByEmail, getUserById, updateLastActive, writeAuditLog, countRecentLoginFailures } from '@/lib/db/queries'
 import { rateLimit, getClientIp } from '@/lib/rate-limit'
 import authConfig from './auth.config'
 
@@ -25,19 +25,25 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const ipRl = rateLimit(`login:ip:${ip}`, { windowMs: 15 * 60 * 1000, max: 10 })
         const emailRl = rateLimit(`login:email:${email}`, { windowMs: 15 * 60 * 1000, max: 5 })
         if (!ipRl.ok || !emailRl.ok) {
-          writeAuditLog({ action: 'login_failure', detail: `Rate limited IP=${ip} email=${email}` })
+          writeAuditLog({ action: 'login_failure', targetId: email, targetType: 'email', ip, detail: 'Rate limited (memory)' })
+          return null
+        }
+
+        const recentFailures = await countRecentLoginFailures(email, 15 * 60 * 1000).catch(() => 0)
+        if (recentFailures >= 5) {
+          writeAuditLog({ action: 'login_failure', targetId: email, targetType: 'email', ip, detail: 'Rate limited (persistent)' })
           return null
         }
 
         const user = await getUserByEmail(email)
         if (!user) {
           await compare(password, DUMMY_BCRYPT_HASH)
-          writeAuditLog({ action: 'login_failure', detail: `Unknown email: ${email}` })
+          writeAuditLog({ action: 'login_failure', targetId: email, targetType: 'email', ip, detail: 'Unknown email' })
           return null
         }
         const valid = await compare(password, user.password)
         if (!valid) {
-          writeAuditLog({ userId: user.id, action: 'login_failure', detail: `Wrong password for ${email}` })
+          writeAuditLog({ userId: user.id, action: 'login_failure', targetId: email, targetType: 'email', ip, detail: 'Wrong password' })
           return null
         }
         writeAuditLog({ userId: user.id, action: 'login_success' })
