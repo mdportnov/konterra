@@ -26,6 +26,7 @@ lib/
   validation.ts         → Input validators, enum arrays
   api-utils.ts          → Response helpers (unauthorized, badRequest, success, etc.)
 drizzle/                → Generated SQL migration files + meta journal
+mcp/                    → MCP server for AI clients (contacts/trips/travel tools, see mcp/README.md)
 scripts/                → Utility scripts (seed.ts)
 types/                  → next-auth.d.ts, display.ts
 ```
@@ -54,6 +55,7 @@ Connection string in `.env.local`: `postgresql://konterra:konterra@localhost:543
 | `npm run db:push` | Push schema to local DB (no migration files, fast for dev) |
 | `npm run db:migrate` | Run migration files via drizzle-kit CLI |
 | `npm run db:studio` | Open Drizzle Studio GUI |
+| `npm run mcp` | Start the Konterra MCP server (stdio); requires `KONTERRA_USER_EMAIL` |
 
 ### Env Loading
 `drizzle.config.ts` uses `dotenv` to load `.env.local`. Next.js loads `.env.local` automatically.
