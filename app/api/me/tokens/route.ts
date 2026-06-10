@@ -1,9 +1,10 @@
 import { auth } from '@/auth'
 import { unauthorized, badRequest, success, serverError } from '@/lib/api-utils'
 import { safeParseBody, validateMaxLength } from '@/lib/validation'
-import { createApiToken, getApiTokensByUserId } from '@/lib/db/queries'
+import { createApiToken, getApiTokensByUserId, writeAuditLog } from '@/lib/db/queries'
 import { generateApiToken } from '@/lib/mcp/token'
 import { isValidScopes, MCP_SCOPES } from '@/lib/mcp/scopes'
+import { getClientIp } from '@/lib/rate-limit'
 
 const MAX_TOKENS_PER_USER = 20
 
@@ -57,6 +58,15 @@ export async function POST(req: Request) {
       tokenPrefix: prefix,
       scopes: [...new Set(scopes)],
       expiresAt,
+    })
+
+    writeAuditLog({
+      userId: session.user.id,
+      action: 'token_create',
+      targetId: created.id,
+      targetType: 'api_token',
+      ip: getClientIp(req),
+      detail: `${prefix}… scopes=${created.scopes.join(',')}`,
     })
 
     return success({ ...created, token }, 201)

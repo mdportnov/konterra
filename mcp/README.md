@@ -68,7 +68,17 @@ bearer_token_env_var = "KONTERRA_MCP_TOKEN"
 - Tokens are stored as SHA-256 hashes; the plaintext is shown exactly once at creation.
 - `tools/list` only advertises tools the token's scopes allow; calls outside the granted scopes are rejected.
 - Tokens can be given an expiry and revoked at any time in Settings → MCP.
+- Token creation and revocation are recorded in the audit log (`token_create` / `token_revoke`).
 - The endpoint is stateless JSON-RPC over Streamable HTTP (POST only); sessions and SSE streaming are not used.
+
+### Endpoint behavior
+
+- **Transport:** Streamable HTTP, stateless. `POST` carries JSON-RPC; `OPTIONS` is a CORS preflight; `GET`/`DELETE` return `405` (no server-initiated SSE stream).
+- **CORS:** open (`Access-Control-Allow-Origin: *`) so browser-based clients and the MCP Inspector can connect; auth is Bearer-only, never cookie-based, so this is safe.
+- **Rate limit:** 240 requests/minute per IP; exceeding it returns HTTP `429` with `Retry-After`.
+- **Content-Type:** requests must be `application/json` (otherwise `415`).
+- **Error codes:** `-32001` unauthorized/expired token or missing scope, `-32000` rate limited, `-32700` parse/content-type error, `-32600` invalid request, `-32601` unknown method, `-32602` invalid params, `-32603` internal error. Tool-level failures return a normal result with `isError: true`.
+- **Protocol versions:** negotiates `2025-06-18`, `2025-03-26`, or `2024-11-05`; unknown requests fall back to the newest supported.
 
 ## Local stdio mode
 

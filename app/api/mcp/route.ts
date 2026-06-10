@@ -3,11 +3,19 @@ import { z } from 'zod'
 import { MCP_TOOLS, MCP_TOOL_MAP } from '@/lib/mcp/tools'
 import { hashApiToken } from '@/lib/mcp/token'
 import { getApiTokenByHash, touchApiTokenLastUsed } from '@/lib/db/queries'
+import { rateLimit, getClientIp } from '@/lib/rate-limit'
 
 export const runtime = 'nodejs'
 
 const SUPPORTED_PROTOCOL_VERSIONS = ['2025-06-18', '2025-03-26', '2024-11-05']
 const SERVER_INFO = { name: 'konterra', version: '1.0.0' }
+
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Authorization, Content-Type, MCP-Protocol-Version',
+  'Access-Control-Max-Age': '86400',
+} as const
 
 interface JsonRpcMessage {
   jsonrpc?: string
@@ -32,14 +40,14 @@ function rpcError(id: string | number | null, code: number, message: string) {
 function unauthorizedResponse(message: string) {
   return NextResponse.json(
     { jsonrpc: '2.0', id: null, error: { code: -32001, message } },
-    { status: 401, headers: { 'WWW-Authenticate': 'Bearer realm="konterra-mcp"' } }
+    { status: 401, headers: { ...CORS_HEADERS, 'WWW-Authenticate': 'Bearer realm="konterra-mcp"' } }
   )
 }
 
 async function authenticate(req: Request): Promise<AuthContext | NextResponse> {
   const header = req.headers.get('authorization')
   if (!header?.startsWith('Bearer ')) {
-    return unauthorizedResponse('Missing Authorization header. Create an API token in Konterra Settings → Integrations and send it as "Authorization: Bearer <token>".')
+    return unauthorizedResponse('Missing Authorization header. Create an API token in Konterra Settings → MCP and send it as "Authorization: Bearer <token>".')
   }
   const token = header.slice('Bearer '.length).trim()
   if (!token) return unauthorizedResponse('Empty bearer token')
@@ -124,8 +132,27 @@ async function handleMessage(msg: JsonRpcMessage, auth: AuthContext): Promise<Re
   }
 }
 
+function jsonRpc(body: unknown, status = 200) {
+  return NextResponse.json(body, { status, headers: CORS_HEADERS })
+}
+
 export async function POST(req: Request) {
   try {
+    const ip = getClientIp(req)
+    const rl = rateLimit(`mcp:${ip}`, { windowMs: 60 * 1000, max: 240 })
+    if (!rl.ok) {
+      const retryAfter = Math.max(1, Math.ceil((rl.resetAt - Date.now()) / 1000))
+      return NextResponse.json(
+        rpcError(null, -32000, 'Rate limit exceeded'),
+        { status: 429, headers: { ...CORS_HEADERS, 'Retry-After': String(retryAfter) } }
+      )
+    }
+
+    const contentType = req.headers.get('content-type')
+    if (!contentType || !contentType.includes('application/json')) {
+      return jsonRpc(rpcError(null, -32700, 'Content-Type must be application/json'), 415)
+    }
+
     const auth = await authenticate(req)
     if (auth instanceof NextResponse) return auth
 
@@ -133,29 +160,34 @@ export async function POST(req: Request) {
     try {
       body = await req.json()
     } catch {
-      return NextResponse.json(rpcError(null, -32700, 'Parse error: invalid JSON'), { status: 400 })
+      return jsonRpc(rpcError(null, -32700, 'Parse error: invalid JSON'), 400)
     }
 
     if (Array.isArray(body)) {
+      if (body.length === 0) return jsonRpc(rpcError(null, -32600, 'Invalid request: empty batch'), 400)
       const responses = (await Promise.all(body.map((m) => handleMessage(m as JsonRpcMessage, auth))))
         .filter((r): r is Record<string, unknown> => r !== null)
-      if (responses.length === 0) return new NextResponse(null, { status: 202 })
-      return NextResponse.json(responses)
+      if (responses.length === 0) return new NextResponse(null, { status: 202, headers: CORS_HEADERS })
+      return jsonRpc(responses)
     }
 
     const response = await handleMessage(body as JsonRpcMessage, auth)
-    if (response === null) return new NextResponse(null, { status: 202 })
-    return NextResponse.json(response)
+    if (response === null) return new NextResponse(null, { status: 202, headers: CORS_HEADERS })
+    return jsonRpc(response)
   } catch (e) {
     console.error('MCP endpoint error:', e)
-    return NextResponse.json(rpcError(null, -32603, 'Internal error'), { status: 500 })
+    return jsonRpc(rpcError(null, -32603, 'Internal error'), 500)
   }
 }
 
+export async function OPTIONS() {
+  return new NextResponse(null, { status: 204, headers: CORS_HEADERS })
+}
+
 export async function GET() {
-  return new NextResponse(null, { status: 405, headers: { Allow: 'POST' } })
+  return new NextResponse(null, { status: 405, headers: { ...CORS_HEADERS, Allow: 'POST, OPTIONS' } })
 }
 
 export async function DELETE() {
-  return new NextResponse(null, { status: 405, headers: { Allow: 'POST' } })
+  return new NextResponse(null, { status: 405, headers: { ...CORS_HEADERS, Allow: 'POST, OPTIONS' } })
 }

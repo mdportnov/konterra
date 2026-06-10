@@ -106,10 +106,30 @@ export function McpTab({ open }: { open: boolean }) {
   }, [open, loadTokens])
 
   const copyText = useCallback((text: string, key: string) => {
-    navigator.clipboard.writeText(text).then(() => {
+    const markCopied = () => {
       setCopied(key)
       setTimeout(() => setCopied((c) => (c === key ? null : c)), 1500)
-    }).catch(() => toast.error('Failed to copy'))
+    }
+    const fallback = () => {
+      try {
+        const ta = document.createElement('textarea')
+        ta.value = text
+        ta.style.position = 'fixed'
+        ta.style.opacity = '0'
+        document.body.appendChild(ta)
+        ta.select()
+        document.execCommand('copy')
+        document.body.removeChild(ta)
+        markCopied()
+      } catch {
+        toast.error('Copy failed — select and copy manually')
+      }
+    }
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(text).then(markCopied).catch(fallback)
+    } else {
+      fallback()
+    }
   }, [])
 
   const toggleScope = (scope: McpScope) => {

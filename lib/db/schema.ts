@@ -400,6 +400,7 @@ export const auditActionEnum = pgEnum('audit_action', [
   'invite_create', 'invite_use',
   'waitlist_approve', 'waitlist_reject',
   'export_data',
+  'token_create', 'token_revoke',
 ])
 
 export const auditLog = pgTable('audit_log', {
