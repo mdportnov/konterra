@@ -5,7 +5,6 @@ export const TABS = [
   { value: 'profile', label: 'Profile' },
   { value: 'settings', label: 'Settings' },
   { value: 'countries', label: 'Countries' },
-  { value: 'mcp', label: 'MCP' },
 ] as const
 
 export type Tab = (typeof TABS)[number]['value']
@@ -31,6 +30,7 @@ export interface SettingsTabProps {
   onOpenExport?: () => void
   onOpenDuplicates?: () => void
   onDeleteAllContacts?: () => void
+  onOpenMcp?: () => void
 }
 
 export interface CountriesTabProps {

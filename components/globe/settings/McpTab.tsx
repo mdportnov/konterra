@@ -351,13 +351,13 @@ export function McpTab({ open }: { open: boolean }) {
               type="single"
               value={client}
               onValueChange={(v) => { if (v) setClient(v as ClientId) }}
-              className="w-full flex-wrap"
+              className="grid w-full grid-cols-2 gap-1"
             >
               {CLIENTS.map(({ value, label }) => (
                 <ToggleGroupItem
                   key={value}
                   value={value}
-                  className="flex-1 text-xs data-[state=on]:bg-accent data-[state=on]:text-foreground text-muted-foreground/60 hover:text-muted-foreground hover:bg-accent/50"
+                  className="w-full justify-center text-xs data-[state=on]:bg-accent data-[state=on]:text-foreground text-muted-foreground/60 hover:text-muted-foreground hover:bg-accent/50"
                 >
                   {label}
                 </ToggleGroupItem>

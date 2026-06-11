@@ -437,6 +437,9 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
         onClose={nav.handleCloseSettings}
         initialTab={nav.settingsTab}
         onTabChange={nav.handleSettingsTabChange}
+        mcpOpen={nav.settingsSubview === 'mcp'}
+        onOpenMcp={nav.handleOpenMcp}
+        onCloseMcp={nav.handleCloseMcp}
         displayOptions={displayOptions}
         onDisplayChange={setDisplayOptions}
         defaultTab={dashboardTab}
