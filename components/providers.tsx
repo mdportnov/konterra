@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState, useCallback } from 'react'
+import { createContext, useContext, useEffect, useState, useCallback, useSyncExternalStore } from 'react'
 import { SessionProvider } from 'next-auth/react'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { TooltipProvider } from '@/components/ui/tooltip'
@@ -23,17 +23,16 @@ export function useTheme() {
   return useContext(ThemeContext)
 }
 
-function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>('dark')
-  const [mounted, setMounted] = useState(false)
+const emptySubscribe = () => () => {}
 
-  useEffect(() => {
+function ThemeProvider({ children }: { children: React.ReactNode }) {
+  const [theme, setThemeState] = useState<Theme>(() => {
+    if (typeof window === 'undefined') return 'dark'
     const stored = localStorage.getItem('theme')
-    if (stored === 'light' || stored === 'dark' || stored === 'system') {
-      setThemeState(stored)
-    }
-    setMounted(true)
-  }, [])
+    if (stored === 'light' || stored === 'dark' || stored === 'system') return stored
+    return 'dark'
+  })
+  const mounted = useSyncExternalStore(emptySubscribe, () => true, () => false)
 
   const applyTheme = useCallback((t: Theme) => {
     const isDark =

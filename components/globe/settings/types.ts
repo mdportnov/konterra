@@ -30,6 +30,7 @@ export interface SettingsTabProps {
   onOpenExport?: () => void
   onOpenDuplicates?: () => void
   onDeleteAllContacts?: () => void
+  onOpenMcp?: () => void
 }
 
 export interface CountriesTabProps {

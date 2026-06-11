@@ -6,9 +6,10 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { User, Settings, Globe, ArrowLeft } from 'lucide-react'
 import GlobePanel from '@/components/globe/GlobePanel'
 import { PANEL_WIDTH } from '@/lib/constants/ui'
-import { ProfileTab, SettingsTab, CountriesTab, TABS, isTab } from '@/components/globe/settings'
+import { ProfileTab, SettingsTab, CountriesTab, McpTab, TABS, isTab } from '@/components/globe/settings'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { saveDefaultTab } from '@/hooks/use-dashboard-routing'
 import type { DashboardTab } from '@/hooks/use-dashboard-routing'
 import type { Tab } from '@/components/globe/settings'
@@ -22,6 +23,9 @@ interface SettingsPanelProps {
   onClose: () => void
   initialTab?: Tab
   onTabChange?: (tab: Tab) => void
+  mcpOpen: boolean
+  onOpenMcp: () => void
+  onCloseMcp: () => void
   displayOptions: DisplayOptions
   onDisplayChange: (opts: DisplayOptions) => void
   defaultTab: DashboardTab
@@ -47,6 +51,9 @@ export default function SettingsPanel({
   onClose,
   initialTab,
   onTabChange,
+  mcpOpen,
+  onOpenMcp,
+  onCloseMcp,
   displayOptions,
   onDisplayChange,
   defaultTab,
@@ -75,7 +82,7 @@ export default function SettingsPanel({
     onDefaultTabChange(t)
   }, [onDefaultTabChange])
 
-  const activeLabel = TABS.find((t) => t.value === tab)?.label ?? 'Profile'
+  const activeLabel = mcpOpen ? 'MCP' : (TABS.find((t) => t.value === tab)?.label ?? 'Profile')
 
   return (
     <GlobePanel
@@ -88,68 +95,86 @@ export default function SettingsPanel({
       <div className="flex flex-col h-full">
         <div className="px-6 pt-6 pb-2 space-y-4">
           <div className="flex items-center gap-2">
-            {isMobile && (
+            {mcpOpen ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button size="icon" variant="ghost" className="h-8 w-8 -ml-2 text-muted-foreground" onClick={onCloseMcp}>
+                    <ArrowLeft className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Back to settings</TooltipContent>
+              </Tooltip>
+            ) : isMobile ? (
               <Button size="icon" variant="ghost" className="h-8 w-8 -ml-2 text-muted-foreground" onClick={onClose}>
                 <ArrowLeft className="h-4 w-4" />
               </Button>
-            )}
+            ) : null}
             <h2 className="text-lg font-semibold text-foreground">{activeLabel}</h2>
           </div>
-          <ToggleGroup
-            type="single"
-            value={tab}
-            onValueChange={(v) => { if (v && isTab(v)) setTab(v) }}
-            className="w-full"
-          >
-            {TABS.map(({ value, label }) => {
-              const Icon = TAB_ICONS[value]
-              return (
-                <ToggleGroupItem
-                  key={value}
-                  value={value}
-                  className="flex-1 text-xs gap-1.5 data-[state=on]:bg-accent data-[state=on]:text-foreground text-muted-foreground/60 hover:text-muted-foreground hover:bg-accent/50"
-                >
-                  <Icon className="h-3.5 w-3.5" />
-                  {label}
-                </ToggleGroupItem>
-              )
-            })}
-          </ToggleGroup>
+          {!mcpOpen && (
+            <ToggleGroup
+              type="single"
+              value={tab}
+              onValueChange={(v) => { if (v && isTab(v)) setTab(v) }}
+              className="w-full"
+            >
+              {TABS.map(({ value, label }) => {
+                const Icon = TAB_ICONS[value]
+                return (
+                  <ToggleGroupItem
+                    key={value}
+                    value={value}
+                    className="flex-1 text-xs gap-1.5 data-[state=on]:bg-accent data-[state=on]:text-foreground text-muted-foreground/60 hover:text-muted-foreground hover:bg-accent/50"
+                  >
+                    <Icon className="h-3.5 w-3.5" />
+                    {label}
+                  </ToggleGroupItem>
+                )
+              })}
+            </ToggleGroup>
+          )}
         </div>
 
         <Separator className="bg-border" />
 
         <div className="flex-1 min-h-0">
-          {tab === 'profile' && (
-            <ProfileTab
-              open={open}
-              contactCount={contactCount}
-              connectionCount={connectionCount}
-              visitedCountryCount={visitedCountryCount}
-              visitedCityCount={visitedCityCount}
-            />
-          )}
-          {tab === 'settings' && (
-            <SettingsTab
-              displayOptions={displayOptions}
-              onDisplayChange={onDisplayChange}
-              defaultTab={defaultTab}
-              onDefaultTabChange={handleDefaultTabChange}
-              onOpenImport={onOpenImport}
-              onOpenExport={onOpenExport}
-              onOpenDuplicates={onOpenDuplicates}
-              onDeleteAllContacts={onDeleteAllContacts}
-            />
-          )}
-          {tab === 'countries' && (
-            <CountriesTab
-              visitedCountries={visitedCountries}
-              onToggleVisitedCountry={onToggleVisitedCountry}
-              wishlistCountries={wishlistCountries}
-              onToggleWishlistCountry={onToggleWishlistCountry}
-              onOpenWishlistDetail={onOpenWishlistDetail}
-              contactCountsByCountry={contactCountsByCountry}
-            />
+          {mcpOpen ? (
+            <McpTab open={open} />
+          ) : (
+            <>
+              {tab === 'profile' && (
+                <ProfileTab
+                  open={open}
+                  contactCount={contactCount}
+                  connectionCount={connectionCount}
+                  visitedCountryCount={visitedCountryCount}
+                  visitedCityCount={visitedCityCount}
+                />
+              )}
+              {tab === 'settings' && (
+                <SettingsTab
+                  displayOptions={displayOptions}
+                  onDisplayChange={onDisplayChange}
+                  defaultTab={defaultTab}
+                  onDefaultTabChange={handleDefaultTabChange}
+                  onOpenImport={onOpenImport}
+                  onOpenExport={onOpenExport}
+                  onOpenDuplicates={onOpenDuplicates}
+                  onDeleteAllContacts={onDeleteAllContacts}
+                  onOpenMcp={onOpenMcp}
+                />
+              )}
+              {tab === 'countries' && (
+                <CountriesTab
+                  visitedCountries={visitedCountries}
+                  onToggleVisitedCountry={onToggleVisitedCountry}
+                  wishlistCountries={wishlistCountries}
+                  onToggleWishlistCountry={onToggleWishlistCountry}
+                  onOpenWishlistDetail={onOpenWishlistDetail}
+                  contactCountsByCountry={contactCountsByCountry}
+                />
+              )}
+            </>
           )}
         </div>
       </div>

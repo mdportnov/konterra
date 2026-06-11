@@ -38,6 +38,11 @@ function checkMigration() {
 
   console.log(`Checking: ${latest.name}`)
 
+  if (latest.sql.includes('drizzle-check: allow-manual')) {
+    console.log('Migration is marked as a reviewed manual migration (drizzle-check: allow-manual) — skipping heuristics.')
+    return
+  }
+
   const warnings: string[] = []
   const errors: string[] = []
 

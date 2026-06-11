@@ -1,7 +1,7 @@
 import { auth } from '@/auth'
 import { unauthorized, badRequest, notFound, success } from '@/lib/api-utils'
 import { getCountryConnectionsByContactId, createCountryConnection, updateCountryConnection, deleteCountryConnection, getContactById } from '@/lib/db/queries'
-import { safeParseBody } from '@/lib/validation'
+import { safeParseBody, validateMaxLength, validateTagsArray, MAX_SHORT_TEXT_LENGTH, MAX_NOTES_LENGTH } from '@/lib/validation'
 
 export async function GET(
   _req: Request,
@@ -31,6 +31,11 @@ export async function POST(
   const { country, notes, tags } = body as Record<string, unknown>
   if (!country || typeof country !== 'string') return badRequest('country is required')
 
+  const validationError = validateMaxLength(country, MAX_SHORT_TEXT_LENGTH, 'country')
+    || validateMaxLength(notes, MAX_NOTES_LENGTH, 'notes')
+    || validateTagsArray(tags)
+  if (validationError) return badRequest(validationError)
+
   const contact = await getContactById(id, session.user.id)
   if (!contact) return notFound('Contact')
 
@@ -57,6 +62,9 @@ export async function PATCH(
   const body = await safeParseBody(req)
   if (!body) return badRequest('Invalid JSON body')
   if (!body.connectionId) return badRequest('connectionId required')
+  const validationError = validateMaxLength(body.notes, MAX_NOTES_LENGTH, 'notes')
+    || validateTagsArray(body.tags)
+  if (validationError) return badRequest(validationError)
   const updates: { notes?: string | null; tags?: string[] | null } = {}
   if (body.notes !== undefined) updates.notes = (body.notes as string) || null
   if (body.tags !== undefined) updates.tags = Array.isArray(body.tags) ? body.tags.filter((t): t is string => typeof t === 'string') : null

@@ -23,6 +23,12 @@ export const WISHLIST_STATUSES = ['idea', 'researching', 'planning', 'ready'] as
 export const PASSWORD_MIN_LENGTH = 8
 export const PASSWORD_MAX_LENGTH = 128
 
+export const MAX_SHORT_TEXT_LENGTH = 500
+export const MAX_DESCRIPTION_LENGTH = 2000
+export const MAX_NOTES_LENGTH = 5000
+export const MAX_TAGS_PER_ITEM = 50
+export const MAX_TAG_LENGTH = 100
+
 export const IMPORT_SOURCE_LABELS: Record<string, string> = {
   'manual': 'Manual',
   'konterra-json': 'Konterra',
@@ -66,6 +72,23 @@ export function validateMultiEnum(value: unknown, allowed: readonly string[], fi
   const parts = value.split(',').map((s) => s.trim()).filter(Boolean)
   for (const part of parts) {
     if (!allowed.includes(part)) return `Invalid ${fieldName}: ${part}`
+  }
+  return null
+}
+
+export function validateMaxLength(value: unknown, max: number, fieldName: string): string | null {
+  if (value === null || value === undefined) return null
+  if (typeof value !== 'string') return `Invalid ${fieldName}`
+  if (value.length > max) return `${fieldName} must be ${max} characters or less`
+  return null
+}
+
+export function validateTagsArray(value: unknown, fieldName = 'tags'): string | null {
+  if (value === null || value === undefined) return null
+  if (!Array.isArray(value)) return `Invalid ${fieldName}`
+  if (value.length > MAX_TAGS_PER_ITEM) return `Too many ${fieldName} (max ${MAX_TAGS_PER_ITEM})`
+  for (const t of value) {
+    if (typeof t === 'string' && t.length > MAX_TAG_LENGTH) return `Each tag must be ${MAX_TAG_LENGTH} characters or less`
   }
   return null
 }

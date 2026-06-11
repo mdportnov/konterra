@@ -324,15 +324,16 @@ export default function ConnectionInsightsPanel({
     } catch { toast.error('Failed to create introduction') }
   }, [])
 
-  const now = Date.now()
-  const filteredRisks = useMemo(() =>
-    risks.filter((r) => {
+  const [now] = useState(() => Date.now())
+  const filteredRisks = useMemo(() => {
+    return risks.filter((r) => {
       const key = `${r.contact.id}-${r.type}`
       if (dismissed.has(key)) return false
       const snoozeUntil = snoozed.get(key)
       if (snoozeUntil && snoozeUntil > now) return false
       return true
-    }), [risks, dismissed, snoozed, now])
+    })
+  }, [risks, dismissed, snoozed, now])
 
   if (loading) return <LoadingSkeleton />
 

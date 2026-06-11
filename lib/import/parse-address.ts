@@ -36,7 +36,7 @@ function parseAddressString(address: string): { city?: string; country?: string 
 
 export function enrichLocationFields(contacts: ParsedContact[]): ParsedContact[] {
   return contacts.map((c) => {
-    let updated = { ...c }
+    const updated = { ...c }
 
     if (updated.country) {
       const resolved = resolveCountry(updated.country)

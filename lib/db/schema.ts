@@ -400,6 +400,7 @@ export const auditActionEnum = pgEnum('audit_action', [
   'invite_create', 'invite_use',
   'waitlist_approve', 'waitlist_reject',
   'export_data',
+  'token_create', 'token_revoke',
 ])
 
 export const auditLog = pgTable('audit_log', {
@@ -419,3 +420,20 @@ export const auditLog = pgTable('audit_log', {
 
 export type AuditLogEntry = typeof auditLog.$inferSelect
 export type NewAuditLogEntry = typeof auditLog.$inferInsert
+
+export const apiTokens = pgTable('api_tokens', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: text('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  name: text('name').notNull(),
+  tokenHash: text('token_hash').notNull().unique(),
+  tokenPrefix: text('token_prefix').notNull(),
+  scopes: text('scopes').array().notNull(),
+  lastUsedAt: timestamp('last_used_at'),
+  expiresAt: timestamp('expires_at'),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (t) => [
+  index('api_tokens_user_id_idx').on(t.userId),
+])
+
+export type ApiToken = typeof apiTokens.$inferSelect
+export type NewApiToken = typeof apiTokens.$inferInsert

@@ -1,6 +1,6 @@
 import { auth } from '@/auth'
 import { unauthorized, badRequest, notFound, success } from '@/lib/api-utils'
-import { getConnectionsByContactId, createConnection, deleteConnection, getContactById } from '@/lib/db/queries'
+import { getConnectionsByContactId, createConnection, deleteConnectionForContact, getContactById } from '@/lib/db/queries'
 import { validateConnection, safeParseBody } from '@/lib/validation'
 
 export async function GET(
@@ -59,10 +59,11 @@ export async function DELETE(
 ) {
   const session = await auth()
   if (!session?.user?.id) return unauthorized()
-  await params
+  const { id } = await params
   const body = await safeParseBody(req)
   if (!body) return badRequest('Invalid JSON body')
   if (!body.connectionId) return badRequest('connectionId required')
-  await deleteConnection(body.connectionId as string, session.user.id)
+  const deleted = await deleteConnectionForContact(body.connectionId as string, id, session.user.id)
+  if (!deleted) return notFound('Connection')
   return success({ success: true })
 }

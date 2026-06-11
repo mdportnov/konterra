@@ -92,6 +92,27 @@
       "when": 1776263097512,
       "tag": "0012_long_maddog",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1781106968252,
+      "tag": "0013_repair_schema_drift",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1781117484475,
+      "tag": "0014_fixed_maginty",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1781135179368,
+      "tag": "0015_lively_robbie_robertson",
+      "breakpoints": true
     }
   ]
 }

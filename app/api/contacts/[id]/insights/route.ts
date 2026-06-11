@@ -49,7 +49,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return success({ type: insightType, content: response.content, model: response.model })
   } catch (error) {
     if (error instanceof Error && error.message.includes('OPENROUTER_API_KEY')) {
-      return badRequest('LLM integration is not configured. Please add OPENROUTER_API_KEY to your environment.')
+      return badRequest('AI insights are not available on this deployment.')
     }
     console.error('Insights error:', error)
     return serverError('Failed to generate insights')

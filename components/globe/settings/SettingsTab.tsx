@@ -9,7 +9,7 @@ import { Switch } from '@/components/ui/switch'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { Input } from '@/components/ui/input'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import { Loader2, Upload, Download, Trash2, Copy, UserX, KeyRound, Pencil, Check, X } from 'lucide-react'
+import { Loader2, Upload, Download, Trash2, Copy, UserX, KeyRound, Pencil, Check, X, Plug, ChevronRight } from 'lucide-react'
 import { toast } from 'sonner'
 import { signOut } from 'next-auth/react'
 import { clearOnboardingKeys, subscribeToStorage, RECONNECT_DAYS_KEY } from '@/lib/local-storage'
@@ -50,6 +50,7 @@ export function SettingsTab({
   onOpenExport,
   onOpenDuplicates,
   onDeleteAllContacts,
+  onOpenMcp,
 }: SettingsTabProps) {
   const reconnectDays = useSyncExternalStore(subscribeToStorage, getReconnectDays, getReconnectDaysServer)
   const [deleteConfirm, setDeleteConfirm] = useState(false)
@@ -369,6 +370,26 @@ export function SettingsTab({
                 </div>
               </div>
             )}
+          </div>
+        </div>
+
+        <div className={CARD}>
+          <div className="space-y-3">
+            <span className={SECTION_LABEL}>Integrations</span>
+            <button
+              type="button"
+              className="w-full flex items-center gap-3 rounded-md px-2 py-2.5 hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer"
+              onClick={onOpenMcp}
+            >
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted/60">
+                <Plug className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <div className="flex-1 min-w-0 text-left">
+                <p className="text-sm font-medium text-foreground">MCP &amp; API tokens</p>
+                <p className="text-[11px] text-muted-foreground/60">Connect AI assistants to your Konterra data</p>
+              </div>
+              <ChevronRight className="h-4 w-4 text-muted-foreground/60 shrink-0" />
+            </button>
           </div>
         </div>
 

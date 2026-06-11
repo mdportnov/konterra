@@ -328,6 +328,13 @@ export default memo(function GlobeCanvas({
 
   const hasHighlights = highlightedContactIds && highlightedContactIds.size > 0
 
+  const contactById = useMemo(() => new Map(contacts.map((c) => [c.id, c])), [contacts])
+
+  const geocodedContactMap = useMemo(
+    () => new Map(contacts.filter((c) => c.lat && c.lng).map((c) => [c.id, c])),
+    [contacts]
+  )
+
   const points: GlobePoint[] = useMemo(() => {
     const grouped = new Map<string, Contact[]>()
     contacts.filter((c) => c.lat && c.lng).forEach((c) => {
@@ -380,11 +387,12 @@ export default memo(function GlobeCanvas({
     const noMainArcs = display.arcMode === 'off'
     if (noMainArcs && !selectedContact) return EMPTY_ARCS
 
-    const contactMap = new Map(contacts.filter((c) => c.lat && c.lng).map((c) => [c.id, c]))
+    let contactMap = geocodedContactMap
 
     if (userLocation) {
       for (const c of contacts) {
         if (c.isSelf && !contactMap.has(c.id)) {
+          if (contactMap === geocodedContactMap) contactMap = new Map(geocodedContactMap)
           contactMap.set(c.id, { ...c, lat: userLocation.lat, lng: userLocation.lng })
         }
       }
@@ -414,7 +422,7 @@ export default memo(function GlobeCanvas({
       })
     }
     return result
-  }, [contacts, connections, display.arcMode, selectedContact, userLocation])
+  }, [contacts, geocodedContactMap, connections, display.arcMode, selectedContact, userLocation])
 
   const countryCentroids = useMemo(() => {
     const map = new Map<string, { lat: number; lng: number }>()
@@ -458,7 +466,7 @@ export default memo(function GlobeCanvas({
   const countryArcs: GlobeArc[] = useMemo(() => {
     if (countryConnections.length === 0) return EMPTY_ARCS
     const noMainArcs = display.arcMode === 'off'
-    const contactMap = new Map(contacts.filter((c) => c.lat && c.lng).map((c) => [c.id, c]))
+    const contactMap = geocodedContactMap
     const selectedId = selectedContact?.id
     const result: GlobeArc[] = []
 
@@ -482,11 +490,15 @@ export default memo(function GlobeCanvas({
       })
     }
     return result
-  }, [countryConnections, contacts, countryCentroids, display.arcMode, selectedContact])
+  }, [countryConnections, geocodedContactMap, countryCentroids, display.arcMode, selectedContact])
 
   const { showNetwork, showTravel } = display
 
-  const now = useMemo(() => new Date(), [])
+  const [now, setNow] = useState(() => new Date())
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 60 * 60 * 1000)
+    return () => clearInterval(timer)
+  }, [])
 
   const travelPoints: GlobePoint[] = useMemo(() => {
     if (!showTravel || trips.length === 0) return []
@@ -659,10 +671,10 @@ export default memo(function GlobeCanvas({
       }
 
       closeCluster()
-      const contact = contacts.find((c) => c.id === p.id)
+      const contact = contactById.get(p.id)
       if (contact) onContactClick(contact)
     },
-    [contacts, onContactClick, onTripPointClick, clusterData, clusterOpen, openCluster, closeCluster]
+    [contactById, onContactClick, onTripPointClick, clusterData, clusterOpen, openCluster, closeCluster]
   )
 
   const handleClusterSelect = useCallback(

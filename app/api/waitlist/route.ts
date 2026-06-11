@@ -1,4 +1,3 @@
-import { NextResponse } from 'next/server'
 import { badRequest, success, serverError, tooManyRequests } from '@/lib/api-utils'
 import { safeParseBody } from '@/lib/validation'
 import { createWaitlistEntry, getUserByEmail, getWaitlistEntryByEmail } from '@/lib/db/queries'
@@ -39,18 +38,11 @@ export async function POST(req: Request) {
       return success({ ok: true }, 201)
     }
 
-    const inserted = await createWaitlistEntry({
+    await createWaitlistEntry({
       email: normalizedEmail,
       name: (name as string).trim(),
       message: typeof message === 'string' && message.trim() ? message.trim() : null,
     })
-
-    if (!inserted) {
-      return NextResponse.json(
-        { error: 'A request with this email is already pending' },
-        { status: 409 },
-      )
-    }
 
     return success({ ok: true }, 201)
   } catch {
