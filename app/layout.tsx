@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from 'next/font/google'
 import { Providers } from '@/components/providers'
 import { Toaster } from '@/components/ui/sonner'
 import { Analytics } from '@vercel/analytics/next'
+import { GoogleAnalytics } from '@/components/google-analytics'
 import './globals.css'
 
 const geistSans = Geist({
@@ -88,6 +89,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           {children}
           <Toaster />
           <Analytics />
+          <GoogleAnalytics />
         </Providers>
       </body>
     </html>
