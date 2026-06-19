@@ -1,7 +1,7 @@
 import { db } from './index'
 import { users, contacts, interactions, contactConnections, contactCountryConnections, introductions, favors, visitedCountries, waitlist, tags, trips, countryWishlist, appSettings, socialPreviews, invites, auditLog, apiTokens } from './schema'
 import { and, arrayContains, desc, eq, gte, inArray, lte, or, sql } from 'drizzle-orm'
-import type { NewContact, NewContactConnection, NewContactCountryConnection, NewIntroduction, NewFavor, NewTrip, NewCountryWishlistEntry, NewSocialPreview, NewAuditLogEntry } from './schema'
+import type { Trip, NewContact, NewContactConnection, NewContactCountryConnection, NewIntroduction, NewFavor, NewTrip, NewCountryWishlistEntry, NewSocialPreview, NewAuditLogEntry } from './schema'
 import { DEFAULT_MAX_INVITES, SETTING_KEY_MAX_INVITES } from '@/lib/constants/invites'
 
 export async function deleteAllContactsByUserId(userId: string) {
@@ -72,7 +72,25 @@ export async function getUserGlobeSettings(userId: string) {
 export async function getPublicProfileData(userId: string, privacyLevel: 'countries_only' | 'full_travel') {
   const countries = await getVisitedCountries(userId)
   const tripsData = privacyLevel === 'full_travel' ? await getTripsByUserId(userId) : []
-  return { countries, trips: tripsData }
+  // Public surface: the globe needs city/country/dates/coords, but private free-text
+  // notes, the internal user id, and activity timestamps must never leak over the
+  // unauthenticated profile API. Build the shape explicitly (not `{ ...t }`) so any new
+  // `trips` column raises a type error here and forces a conscious expose/hide decision.
+  const publicTrips: Trip[] = tripsData.map((t) => ({
+    id: t.id,
+    userId: '',
+    arrivalDate: t.arrivalDate,
+    departureDate: t.departureDate,
+    durationDays: t.durationDays,
+    city: t.city,
+    country: t.country,
+    lat: t.lat,
+    lng: t.lng,
+    notes: null,
+    createdAt: null,
+    updatedAt: null,
+  }))
+  return { countries, trips: publicTrips }
 }
 
 export async function updateUserProfile(id: string, data: {
@@ -960,16 +978,30 @@ export async function createTripsBulk(data: NewTrip[]) {
 export async function updateTrip(id: string, userId: string, data: Partial<Omit<NewTrip, 'id' | 'userId'>>) {
   return db.transaction(async (tx) => {
     const before = await tx.query.trips.findFirst({ where: and(eq(trips.id, id), eq(trips.userId, userId)) })
+    if (!before) return undefined
+
+    // Recompute durationDays from the resulting dates whenever a date changes, so the
+    // stored value can never drift out of sync with arrival/departure.
+    const dateChanged = data.arrivalDate !== undefined || data.departureDate !== undefined
+    if (dateChanged) {
+      const arrival = (data.arrivalDate as Date | undefined) ?? before.arrivalDate
+      const departure = data.departureDate !== undefined
+        ? (data.departureDate as Date | null)
+        : before.departureDate
+      if (departure && departure < arrival) throw new Error('INVALID_DATE_RANGE')
+      data.durationDays = departure
+        ? Math.round((new Date(departure).getTime() - new Date(arrival).getTime()) / 86_400_000)
+        : null
+    }
+
     const [trip] = await tx
       .update(trips)
       .set({ ...data, updatedAt: new Date() })
       .where(and(eq(trips.id, id), eq(trips.userId, userId)))
       .returning()
-    if (before) {
-      const countries = new Set<string>([before.country])
-      if (trip?.country) countries.add(trip.country)
-      for (const c of countries) await syncDerivedVisitedForCountryWith(tx, userId, c)
-    }
+    const countries = new Set<string>([before.country])
+    if (trip?.country) countries.add(trip.country)
+    for (const c of countries) await syncDerivedVisitedForCountryWith(tx, userId, c)
     return trip
   })
 }

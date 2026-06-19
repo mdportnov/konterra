@@ -1,6 +1,6 @@
 import { auth } from '@/auth'
 import { deleteTrip, updateTrip } from '@/lib/db/queries'
-import { unauthorized, badRequest, success } from '@/lib/api-utils'
+import { unauthorized, badRequest, success, serverError } from '@/lib/api-utils'
 import { safeParseBody } from '@/lib/validation'
 import { geocode } from '@/lib/geocoding'
 
@@ -32,9 +32,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   if (data.arrivalDate && data.departureDate && (data.departureDate as Date) < (data.arrivalDate as Date)) {
     return badRequest('departureDate must be on or after arrivalDate')
   }
-  if (body.durationDays !== undefined) {
-    data.durationDays = typeof body.durationDays === 'number' ? body.durationDays : null
-  }
+  // durationDays is derived server-side from the resulting dates inside updateTrip,
+  // so it can never drift out of sync. Client-supplied values are ignored.
   if (body.notes !== undefined) {
     data.notes = typeof body.notes === 'string' ? body.notes : null
   }
@@ -54,9 +53,17 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   if (body.lat !== undefined) data.lat = typeof body.lat === 'number' ? body.lat : null
   if (body.lng !== undefined) data.lng = typeof body.lng === 'number' ? body.lng : null
 
-  const trip = await updateTrip(id, session.user.id, data)
-  if (!trip) return badRequest('Trip not found')
-  return success(trip)
+  try {
+    const trip = await updateTrip(id, session.user.id, data)
+    if (!trip) return badRequest('Trip not found')
+    return success(trip)
+  } catch (e) {
+    if (e instanceof Error && e.message === 'INVALID_DATE_RANGE') {
+      return badRequest('departureDate must be on or after arrivalDate')
+    }
+    console.error('[PUT /api/trips/[id]]', e)
+    return serverError('Failed to update trip')
+  }
 }
 
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {

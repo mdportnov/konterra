@@ -190,14 +190,17 @@ export function useGlobeData() {
   const wishlistToggleInFlight = useRef(new Set<string>())
   const wishlistRef = useRef(wishlistCountries)
   wishlistRef.current = wishlistCountries
+  const visitedRef = useRef(visitedCountries)
+  visitedRef.current = visitedCountries
 
   const handleCountryVisitToggle = useCallback((country: string) => {
     if (visitedToggleInFlight.current.has(country)) return
     visitedToggleInFlight.current.add(country)
 
-    let wasVisited = false
+    // Read current truth from a ref before scheduling setState — reading a closure var
+    // assigned inside the updater is unreliable (the updater may run later in concurrent mode).
+    const wasVisited = visitedRef.current.has(country)
     setVisitedCountries((prev) => {
-      wasVisited = prev.has(country)
       const next = new Set(prev)
       if (wasVisited) next.delete(country)
       else next.add(country)
@@ -213,24 +216,37 @@ export function useGlobeData() {
       })
     }
 
-    fetch('/api/visited-countries', {
-      method: wasVisited ? 'DELETE' : 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ country }),
-    })
-      .then((res) => {
+    ;(async () => {
+      try {
+        const res = await fetch('/api/visited-countries', {
+          method: wasVisited ? 'DELETE' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ country }),
+        })
         if (!res.ok) throw new Error()
+
+        // Reconcile with server truth. Visited state is partly derived from trips, so the
+        // server can keep a country visited even after an un-visit (a past trip exists);
+        // trusting the optimistic value here is exactly what made changes "revert" on reload.
+        const list = await res.json().catch(() => null)
+        if (Array.isArray(list)) {
+          const serverSet = new Set<string>(list.map(normalizeToGlobeName))
+          setVisitedCountries(serverSet)
+          if (wasVisited && serverSet.has(country)) {
+            toast.info('Still marked visited — you have a trip there. Delete the trip to remove it.')
+          }
+        }
+
         if (wishlistEntry) {
           const url = wishlistEntry.id ? `/api/wishlist-countries/${wishlistEntry.id}` : '/api/wishlist-countries'
           const body = wishlistEntry.id ? undefined : JSON.stringify({ country })
-          return fetch(url, {
+          await fetch(url, {
             method: 'DELETE',
             headers: { 'Content-Type': 'application/json' },
             ...(body ? { body } : {}),
           })
         }
-      })
-      .catch(() => {
+      } catch {
         setVisitedCountries((prev) => {
           const rollback = new Set(prev)
           if (wasVisited) rollback.add(country)
@@ -245,10 +261,10 @@ export function useGlobeData() {
           })
         }
         toast.error('Failed to update visited country')
-      })
-      .finally(() => {
+      } finally {
         visitedToggleInFlight.current.delete(country)
-      })
+      }
+    })()
   }, [])
 
   const handleWishlistToggle = useCallback((country: string) => {

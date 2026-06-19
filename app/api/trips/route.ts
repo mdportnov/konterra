@@ -1,7 +1,7 @@
 import { auth } from '@/auth'
 import { getTripsByUserId, createTrip, createTripsBulk, deleteAllTrips } from '@/lib/db/queries'
 import { unauthorized, badRequest, success } from '@/lib/api-utils'
-import { safeParseBody, validateMaxLength, validateIntRange, MAX_SHORT_TEXT_LENGTH, MAX_NOTES_LENGTH } from '@/lib/validation'
+import { safeParseBody, validateMaxLength, MAX_SHORT_TEXT_LENGTH, MAX_NOTES_LENGTH } from '@/lib/validation'
 import type { NewTrip } from '@/lib/db/schema'
 
 export async function GET() {
@@ -17,6 +17,15 @@ function parseDate(v: unknown): Date | null {
   return isNaN(d.getTime()) ? null : d
 }
 
+const MAX_BULK_TRIPS = 500
+
+// durationDays is derived from the dates server-side so it can never drift out of
+// sync with arrival/departure (clients and importers must not be trusted for it).
+function computeDurationDays(arrival: Date, departure: Date | null): number | null {
+  if (!departure) return null
+  return Math.round((departure.getTime() - arrival.getTime()) / 86_400_000)
+}
+
 export async function POST(req: Request) {
   const session = await auth()
   if (!session?.user?.id) return unauthorized()
@@ -25,6 +34,10 @@ export async function POST(req: Request) {
   if (!body) return badRequest('Invalid JSON body')
 
   if (Array.isArray(body.trips)) {
+    if (body.trips.length > MAX_BULK_TRIPS) {
+      return badRequest(`Maximum ${MAX_BULK_TRIPS} trips per request`)
+    }
+    const rawCount = body.trips.length
     const tripsData: NewTrip[] = []
     for (const t of body.trips as Record<string, unknown>[]) {
       const arrival = parseDate(t.arrivalDate)
@@ -37,7 +50,7 @@ export async function POST(req: Request) {
         userId: session.user!.id,
         arrivalDate: arrival,
         departureDate: departure,
-        durationDays: typeof t.durationDays === 'number' ? t.durationDays : null,
+        durationDays: computeDurationDays(arrival, departure),
         city: String(t.city),
         country: String(t.country),
         lat: typeof t.lat === 'number' ? t.lat : null,
@@ -47,7 +60,7 @@ export async function POST(req: Request) {
     }
     if (tripsData.length === 0) return badRequest('No valid trips in payload')
     const created = await createTripsBulk(tripsData)
-    return success({ created: created.length })
+    return success({ created: created.length, skipped: rawCount - tripsData.length })
   }
 
   if (!body.city || !body.country || !body.arrivalDate) {
@@ -62,14 +75,13 @@ export async function POST(req: Request) {
   const validationError = validateMaxLength(body.city, MAX_SHORT_TEXT_LENGTH, 'city')
     || validateMaxLength(body.country, MAX_SHORT_TEXT_LENGTH, 'country')
     || validateMaxLength(body.notes, MAX_NOTES_LENGTH, 'notes')
-    || validateIntRange(body.durationDays, 0, 36500, 'durationDays')
   if (validationError) return badRequest(validationError)
 
   const trip = await createTrip({
     userId: session.user.id,
     arrivalDate,
     departureDate,
-    durationDays: typeof body.durationDays === 'number' ? body.durationDays : null,
+    durationDays: computeDurationDays(arrivalDate, departureDate),
     city: String(body.city),
     country: String(body.country),
     lat: typeof body.lat === 'number' ? body.lat : null,

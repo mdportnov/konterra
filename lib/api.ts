@@ -10,7 +10,7 @@ interface PaginatedResponse<T> {
 type InteractionWithContact = Interaction & { contactName: string }
 
 async function apiFetch<T>(url: string, signal?: AbortSignal): Promise<T> {
-  const res = await fetch(url, { signal })
+  const res = await fetch(url, { signal, cache: 'no-store' })
   if (!res.ok) {
     const body = await res.json().catch(() => ({ error: 'Request failed' }))
     throw new Error(body.error || `HTTP ${res.status}`)
