@@ -6,7 +6,7 @@ import { useIsMobile } from '@/hooks/use-mobile'
 import { GLASS, Z, PANEL_WIDTH } from '@/lib/constants/ui'
 import { TENSE_COLORS } from '@/lib/constants/globe-colors'
 import { countryFlag } from '@/lib/country-flags'
-import { toDateStr } from '@/lib/utils'
+import { addDays, formatDateOnly, tripTense } from '@/lib/utils'
 import { ChevronLeft, ChevronRight, X, Calendar, Clock, MapPin, Plus, Pencil, Trash2 } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import TripContextMenu from '@/components/context-menus/trip-menu'
@@ -23,13 +23,8 @@ interface TripPopupProps {
   rightPanelOpen?: boolean
 }
 
-function formatDate(date: Date | null | undefined): string | null {
-  if (!date) return null
-  return new Date(date).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  })
+function formatDate(date: Date | string | null | undefined): string | null {
+  return formatDateOnly(date) || null
 }
 
 function gapDaysBetween(prev: Trip | null, next: Trip | null): number | null {
@@ -74,11 +69,7 @@ export default function TripPopup({ trip, prevTrip, nextTrip, onNavigate, onClos
   const arrival = formatDate(trip.arrivalDate)
   const departure = formatDate(trip.departureDate)
 
-  const now = new Date()
-  const arrDate = new Date(trip.arrivalDate)
-  const depDate = trip.departureDate ? new Date(trip.departureDate) : arrDate
-  const tense: 'past' | 'current' | 'future' =
-    arrDate <= now && depDate >= now ? 'current' : arrDate > now ? 'future' : 'past'
+  const tense = tripTense(trip.arrivalDate, trip.departureDate)
   const colors = TENSE_COLORS[tense]
 
   const actionBtnClass = isMobile
@@ -222,13 +213,7 @@ export default function TripPopup({ trip, prevTrip, nextTrip, onNavigate, onClos
         <div className="mt-2 pt-2 border-t border-border">
           <button
             onClick={() => {
-              const depStr = toDateStr(trip.departureDate || trip.arrivalDate)
-              const nextDay = new Date(depStr + 'T00:00:00')
-              nextDay.setDate(nextDay.getDate() + 1)
-              const y = nextDay.getFullYear()
-              const m = String(nextDay.getMonth() + 1).padStart(2, '0')
-              const d = String(nextDay.getDate()).padStart(2, '0')
-              onAddTrip({ arrivalDate: `${y}-${m}-${d}` })
+              onAddTrip({ arrivalDate: addDays(trip.departureDate || trip.arrivalDate, 1) })
             }}
             className={`flex items-center gap-1 text-[11px] text-blue-400 hover:text-blue-300 transition-colors ${isMobile ? 'min-h-[44px] py-1' : ''}`}
           >

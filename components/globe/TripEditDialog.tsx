@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { DatePickerField, CountrySelect } from '@/components/globe/contact-edit'
 import { toast } from 'sonner'
+import { toDateOnlyStr, addDays } from '@/lib/utils'
 import type { Trip } from '@/lib/db/schema'
 
 interface TripEditDialogProps {
@@ -19,17 +20,8 @@ interface TripEditDialogProps {
   onSaved: (trip?: Trip) => void
 }
 
-function toDateStr(d: Date | string | null | undefined): string {
-  if (!d) return ''
-  const date = typeof d === 'string' ? new Date(d) : d
-  if (isNaN(date.getTime())) return ''
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
-}
-
 function addWeeks(dateStr: string, weeks: number): string {
-  const d = new Date(dateStr + 'T00:00:00')
-  d.setDate(d.getDate() + weeks * 7)
-  return toDateStr(d)
+  return addDays(dateStr, weeks * 7)
 }
 
 function diffDays(a: string, b: string): number | null {
@@ -58,8 +50,8 @@ export default function TripEditDialog({ open, onOpenChange, trip, prefill, trip
     if (trip) {
       setCity(trip.city)
       setCountry(trip.country)
-      setArrivalDate(toDateStr(trip.arrivalDate))
-      setDepartureDate(toDateStr(trip.departureDate))
+      setArrivalDate(toDateOnlyStr(trip.arrivalDate))
+      setDepartureDate(toDateOnlyStr(trip.departureDate))
       setNotes(trip.notes || '')
     } else {
       setCity(prefill?.city || '')
@@ -99,10 +91,10 @@ export default function TripEditDialog({ open, onOpenChange, trip, prefill, trip
     const aEnd = departureDate ? new Date(departureDate + 'T00:00:00').getTime() : aStart
     for (const t of trips) {
       if (trip && t.id === trip.id) continue
-      const tStart = new Date(t.arrivalDate).getTime()
-      const tEnd = t.departureDate ? new Date(t.departureDate).getTime() : tStart
+      const tStart = new Date(toDateOnlyStr(t.arrivalDate) + 'T00:00:00').getTime()
+      const tEnd = t.departureDate ? new Date(toDateOnlyStr(t.departureDate) + 'T00:00:00').getTime() : tStart
       if (aStart <= tEnd && aEnd >= tStart) {
-        return `Overlaps with ${t.city} (${toDateStr(t.arrivalDate)})`
+        return `Overlaps with ${t.city} (${toDateOnlyStr(t.arrivalDate)})`
       }
     }
     return null

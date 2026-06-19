@@ -10,6 +10,7 @@ import { GLASS, Z } from '@/lib/constants/ui'
 import { TENSE_COLORS } from '@/lib/constants/globe-colors'
 import { countryFlag } from '@/lib/country-flags'
 import { PerplexityIcon } from '@/components/icons/perplexity'
+import { formatDateOnly, tripTense } from '@/lib/utils'
 import type { Trip } from '@/lib/db/schema'
 
 interface TripCountryPopupProps {
@@ -29,35 +30,24 @@ const POPUP_W = 340
 const MAX_H = 520
 const SCROLL_MAX = 400
 
-function formatDate(d: Date | string | null): string {
-  if (!d) return ''
-  const date = typeof d === 'string' ? new Date(d) : d
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+function formatDate(d: Date | string | number | null): string {
+  return formatDateOnly(d)
 }
 
-function formatShortDate(d: Date | string | null): string {
-  if (!d) return ''
-  const date = typeof d === 'string' ? new Date(d) : d
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+function formatShortDate(d: Date | string | number | null): string {
+  return formatDateOnly(d, { year: false })
 }
 
 type TripTense = 'past' | 'current' | 'future'
 
-function getTripTense(trip: Trip, now: Date): TripTense {
-  const arrival = new Date(trip.arrivalDate)
-  const departure = trip.departureDate ? new Date(trip.departureDate) : null
-  const endDate = departure ?? arrival
-  if (arrival > now) return 'future'
-  if (endDate >= now) return 'current'
-  return 'past'
+function getTripTense(trip: Trip): TripTense {
+  return tripTense(trip.arrivalDate, trip.departureDate)
 }
 
 export default function TripCountryPopup({ country, trips, allTrips, x, y, open, onTripClick, onClose, onEditTrip, onDeleteTrip }: TripCountryPopupProps) {
   const ref = useRef<HTMLDivElement>(null)
   useClickOutside(ref, onClose, open)
   useHotkey('Escape', onClose, { enabled: open, priority: Z.overlay })
-
-  const now = useMemo(() => new Date(), [])
 
   const sorted = useMemo(() =>
     [...trips].sort((a, b) => new Date(b.arrivalDate).getTime() - new Date(a.arrivalDate).getTime()),
@@ -202,7 +192,7 @@ export default function TripCountryPopup({ country, trips, allTrips, x, y, open,
           <div key={city}>
             {gi > 0 && <div className="mx-4 border-t border-border/40" />}
             {(() => {
-              const tenses = cityTrips.map((t) => getTripTense(t, now))
+              const tenses = cityTrips.map((t) => getTripTense(t))
               const headerTense = tenses.includes('current') ? 'current' : tenses.includes('future') ? 'future' : 'past'
               const hc = TENSE_COLORS[headerTense]
               return (
@@ -215,7 +205,7 @@ export default function TripCountryPopup({ country, trips, allTrips, x, y, open,
             })()}
             {cityTrips.map((trip) => {
               const route = routeMap.get(trip.id)
-              const tense = getTripTense(trip, now)
+              const tense = getTripTense(trip)
               const c = TENSE_COLORS[tense]
               return (
                 <TripContextMenu

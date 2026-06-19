@@ -12,16 +12,12 @@ import {
   ContextMenuSubContent,
 } from '@/components/ui/context-menu'
 import { toast } from 'sonner'
-import { toDateStr, copyToClipboard } from '@/lib/utils'
+import { addDays, formatDateOnly, copyToClipboard } from '@/lib/utils'
 import type { Trip } from '@/lib/db/schema'
 
 function formatDateRange(trip: Trip): string {
-  const fmt = (d: Date | string | null) => {
-    if (!d) return ''
-    return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-  }
-  const arr = fmt(trip.arrivalDate)
-  const dep = fmt(trip.departureDate)
+  const arr = formatDateOnly(trip.arrivalDate)
+  const dep = formatDateOnly(trip.departureDate)
   return dep ? `${arr} – ${dep}` : arr
 }
 
@@ -69,10 +65,7 @@ export default function TripContextMenu({
 
   const handleAddNext = () => {
     if (!onAddTrip) return
-    const depStr = toDateStr(trip.departureDate || trip.arrivalDate)
-    const nextDay = new Date(depStr + 'T00:00:00')
-    nextDay.setDate(nextDay.getDate() + 1)
-    onAddTrip({ arrivalDate: toDateStr(nextDay) })
+    onAddTrip({ arrivalDate: addDays(trip.departureDate || trip.arrivalDate, 1) })
   }
 
   const handleDuplicate = () => {

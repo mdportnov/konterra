@@ -8,7 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { GLASS } from '@/lib/constants/ui'
 import { countryFlag } from '@/lib/country-flags'
-import { toDateStr } from '@/lib/utils'
+import { addDays, formatDateOnly } from '@/lib/utils'
 import TripContextMenu from '@/components/context-menus/trip-menu'
 import type { Trip } from '@/lib/db/schema'
 
@@ -29,9 +29,7 @@ interface TravelJourneyProps {
 }
 
 function formatDate(d: Date | string | null): string {
-  if (!d) return ''
-  const date = typeof d === 'string' ? new Date(d) : d
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  return formatDateOnly(d, { year: false })
 }
 
 function formatYear(d: Date | string): number {
@@ -335,13 +333,9 @@ export default function TravelJourney({ trips, loading, onImport, onTripClick, o
                         <button
                           onClick={() => {
                             if (!onAddTrip) return
-                            const startDate = new Date(gapEndDate)
-                            startDate.setDate(startDate.getDate() + 1)
-                            const endDate = new Date(gapStartDate)
-                            endDate.setDate(endDate.getDate() - 1)
                             onAddTrip({
-                              arrivalDate: toDateStr(startDate),
-                              departureDate: toDateStr(endDate),
+                              arrivalDate: addDays(gapEndDate, 1),
+                              departureDate: addDays(gapStartDate, -1),
                             })
                           }}
                           className="relative ml-5 my-1 flex items-start gap-1.5 w-[calc(100%-1.25rem)] text-left rounded-md bg-yellow-500/10 border border-yellow-500/20 px-2.5 py-1.5 group/gap hover:bg-yellow-500/15 transition-colors cursor-pointer"
