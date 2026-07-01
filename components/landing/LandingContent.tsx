@@ -1,25 +1,41 @@
 import Link from 'next/link'
-import { Particles } from '@/components/magicui/particles'
+import AtlasBackground from '@/components/branding/AtlasBackground'
+import AtlasGlobe from '@/components/branding/AtlasGlobe'
+import Wordmark from '@/components/branding/Wordmark'
 import LocaleSwitcher from '@/components/landing/LocaleSwitcher'
 import type { LandingTranslations } from '@/lib/i18n/landing'
 import type { Locale } from '@/lib/i18n/locales'
 
-const PILLAR_ICONS = [
-  <svg key="map" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="size-6">
-    <circle cx="12" cy="12" r="10" />
-    <ellipse cx="12" cy="12" rx="4" ry="10" />
-    <path d="M2 12h20" />
-  </svg>,
-  <svg key="measure" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="size-6">
-    <path d="M3 3v18h18" />
-    <path d="M7 16l4-8 4 4 5-9" />
-  </svg>,
-  <svg key="mobilize" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="size-6">
-    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.27 5.82 21 7 14.14l-5-4.87 6.91-1.01L12 2z" />
-  </svg>,
+const COORDINATES = [
+  'BERLIN 52.5200°N 13.4050°E',
+  'TOKYO 35.6762°N 139.6503°E',
+  'NEW YORK 40.7128°N 74.0060°W',
+  'SINGAPORE 1.3521°N 103.8198°E',
+  'LISBON 38.7223°N 9.1393°W',
+  'DUBAI 25.2048°N 55.2708°E',
+  'MEXICO CITY 19.4326°N 99.1332°W',
+  'NAIROBI 1.2921°S 36.8219°E',
+  'SEOUL 37.5665°N 126.9780°E',
+  'BUENOS AIRES 34.6037°S 58.3816°W',
 ]
 
-const CATEGORY_COLORS = ['oklch(0.6 0.2 250)', 'oklch(0.65 0.15 55)']
+function ArrowRight() {
+  return (
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" className="size-3.5" aria-hidden="true">
+      <path d="M2 8h11M9 3.5 13.5 8 9 12.5" />
+    </svg>
+  )
+}
+
+function SectionRule({ index, badge }: { index: string; badge?: string }) {
+  return (
+    <div className="flex items-center gap-5 mb-12 sm:mb-16">
+      <span className="k-meta k-meta-terra">{index}</span>
+      <span className="h-px flex-1" style={{ background: 'var(--hairline)' }} />
+      {badge && <span className="k-meta">{badge}</span>}
+    </div>
+  )
+}
 
 interface LandingContentProps {
   t: LandingTranslations
@@ -28,36 +44,25 @@ interface LandingContentProps {
 
 export default function LandingContent({ t, locale }: LandingContentProps) {
   return (
-    <div lang={locale} className="relative min-h-dvh overflow-x-hidden" style={{ background: 'oklch(0.06 0.01 260)' }}>
-      <Particles
-        className="fixed inset-0"
-        quantity={120}
-        staticity={40}
-        ease={60}
-        size={0.5}
-        color="#4db8a4"
-        vx={0}
-        vy={-0.02}
-      />
+    <div lang={locale} className="k-page relative min-h-dvh overflow-x-hidden">
+      <AtlasBackground />
 
       <div className="relative z-10">
-        <header className="landing-header fixed top-0 inset-x-0 z-50">
+        <header className="k-header fixed top-0 inset-x-0 z-50">
           <nav className="mx-auto max-w-6xl px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
-            <span className="font-mono tracking-[0.3em] uppercase text-sm text-white/90">
-              Konterra
-            </span>
-            <div className="flex items-center gap-2 sm:gap-4">
+            <Link href="/" aria-label="Konterra">
+              <Wordmark />
+            </Link>
+            <div className="flex items-center gap-1.5 sm:gap-3">
               <LocaleSwitcher current={locale} />
               <Link
                 href="/login"
-                className="font-mono text-xs text-white/50 hover:text-white/80 transition-colors py-2 px-2"
+                className="hidden sm:inline-block text-[0.8125rem] px-3 py-2 transition-colors"
+                style={{ color: 'var(--bone-70)' }}
               >
                 {t.nav.signIn}
               </Link>
-              <Link
-                href="/login"
-                className="landing-cta-button"
-              >
+              <Link href="/login" className="k-btn k-btn-sm">
                 {t.nav.requestAccess}
               </Link>
             </div>
@@ -65,93 +70,130 @@ export default function LandingContent({ t, locale }: LandingContentProps) {
         </header>
 
         <main>
-          <section className="relative min-h-dvh flex items-center justify-center px-4 sm:px-6">
-            <div className="max-w-3xl mx-auto text-center pt-14">
-              <p className="font-mono text-[10px] sm:text-xs uppercase tracking-[0.25em] text-[oklch(0.6_0.2_250)] mb-4 sm:mb-6">
-                {t.hero.badge}
-              </p>
-              <h1 className="text-[1.75rem] sm:text-4xl md:text-5xl lg:text-6xl font-semibold leading-[1.15] sm:leading-[1.1] text-white tracking-tight">
-                {t.hero.titleStart}{' '}
-                <span className="landing-gradient-text">
-                  {t.hero.titleHighlight}
-                </span>
-              </h1>
-              <p className="mt-5 sm:mt-6 text-sm sm:text-base md:text-lg text-white/50 max-w-2xl mx-auto leading-relaxed">
-                {t.hero.subtitle}
-              </p>
-              <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
-                <Link
-                  href="/login"
-                  className="landing-cta-button-lg w-full sm:w-auto justify-center"
-                >
-                  {t.hero.cta}
-                </Link>
-                <a
-                  href="#why"
-                  className="font-mono text-xs text-white/40 hover:text-white/70 transition-colors py-2 px-4"
-                >
-                  {t.hero.learnMore}
-                </a>
-              </div>
-            </div>
-            <div className="absolute bottom-6 sm:bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
-              <svg viewBox="0 0 24 24" fill="none" stroke="oklch(0.6 0.2 250 / 40%)" strokeWidth="1.5" className="size-5">
-                <path d="M12 5v14M19 12l-7 7-7-7" />
-              </svg>
-            </div>
-          </section>
+          <section className="relative min-h-dvh flex flex-col justify-center px-4 sm:px-6 pt-20 sm:pt-24">
+            <AtlasGlobe className="pointer-events-none absolute top-1/2 -translate-y-1/2 -right-40 sm:-right-24 lg:right-[-4%] w-[560px] sm:w-[640px] max-w-none opacity-60 sm:opacity-80" />
 
-          <section id="why" className="scroll-mt-16 py-16 sm:py-24 md:py-32 px-4 sm:px-6">
-            <div className="max-w-3xl mx-auto">
-              <div className="landing-glass-panel p-6 sm:p-8 md:p-12 rounded-xl sm:rounded-2xl">
-                <h2 className="text-xl sm:text-2xl md:text-3xl font-semibold text-white leading-snug mb-4 sm:mb-6">
-                  {t.problem.title}
-                </h2>
-                <p className="text-sm sm:text-base text-white/50 leading-relaxed mb-3 sm:mb-4">
-                  {t.problem.p1}
+            <div className="mx-auto w-full max-w-6xl relative">
+              <div className="max-w-3xl">
+                <div className="flex items-center gap-3 mb-8">
+                  <span className="k-dot" />
+                  <p className="k-meta">{t.hero.badge}</p>
+                </div>
+                <h1 className="text-[2.35rem] sm:text-6xl lg:text-7xl leading-[1.04] tracking-[-0.03em] font-medium text-balance">
+                  {t.hero.titleStart}
+                  <br />
+                  <span className="k-serif italic tracking-normal" style={{ color: 'var(--terra)' }}>
+                    {t.hero.titleHighlight}
+                  </span>
+                </h1>
+                <p
+                  className="mt-7 sm:mt-8 text-[0.9375rem] sm:text-lg leading-relaxed max-w-xl"
+                  style={{ color: 'var(--bone-70)' }}
+                >
+                  {t.hero.subtitle}
                 </p>
-                <p className="text-sm sm:text-base text-white/50 leading-relaxed mb-6 sm:mb-8">
-                  {t.problem.p2}
-                </p>
-                <div className="grid grid-cols-3 gap-3 sm:gap-6">
-                  {t.problem.stats.map((stat) => (
-                    <div key={stat.value} className="text-center">
-                      <p className="text-2xl sm:text-3xl font-bold landing-gradient-text">
-                        {stat.value}
-                      </p>
-                      <p className="text-[10px] sm:text-xs text-white/40 mt-1 leading-snug sm:leading-relaxed">
-                        {stat.label}
-                      </p>
-                    </div>
-                  ))}
+                <div className="mt-9 sm:mt-11 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
+                  <Link href="/login" className="k-btn">
+                    {t.hero.cta}
+                    <ArrowRight />
+                  </Link>
+                  <a href="#why" className="k-btn-ghost">
+                    {t.hero.learnMore}
+                  </a>
                 </div>
               </div>
             </div>
+
+            <div
+              className="k-marquee absolute bottom-0 inset-x-0 border-t py-3.5"
+              style={{ borderColor: 'var(--hairline)' }}
+              aria-hidden="true"
+            >
+              <div className="k-marquee-track">
+                {[0, 1].map((copy) => (
+                  <div key={copy} className="flex shrink-0">
+                    {COORDINATES.map((c) => (
+                      <span
+                        key={`${copy}-${c}`}
+                        className="font-mono text-[10px] tracking-[0.18em] whitespace-nowrap px-6 flex items-center gap-6"
+                        style={{ color: 'var(--bone-45)' }}
+                      >
+                        {c}
+                        <span style={{ color: 'oklch(0.7 0.16 45 / 50%)' }}>+</span>
+                      </span>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </div>
           </section>
 
-          <section className="py-16 sm:py-24 md:py-32 px-4 sm:px-6">
-            <div className="max-w-5xl mx-auto">
-              <div className="text-center mb-10 sm:mb-16">
-                <p className="font-mono text-[10px] sm:text-xs uppercase tracking-[0.25em] text-[oklch(0.6_0.2_250)] mb-3 sm:mb-4">
-                  {t.pillars.badge}
-                </p>
-                <h2 className="text-2xl sm:text-3xl md:text-4xl font-semibold text-white">
-                  {t.pillars.title}
+          <section id="why" className="scroll-mt-20 py-24 sm:py-36 px-4 sm:px-6">
+            <div className="mx-auto max-w-6xl">
+              <SectionRule index="01" />
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16 k-reveal">
+                <h2 className="lg:col-span-5 text-2xl sm:text-3xl lg:text-[2.5rem] leading-[1.15] tracking-[-0.02em] font-medium text-balance">
+                  {t.problem.title}
                 </h2>
+                <div className="lg:col-span-6 lg:col-start-7 space-y-5">
+                  <p className="text-sm sm:text-base leading-relaxed" style={{ color: 'var(--bone-70)' }}>
+                    {t.problem.p1}
+                  </p>
+                  <p className="text-sm sm:text-base leading-relaxed" style={{ color: 'var(--bone-70)' }}>
+                    {t.problem.p2}
+                  </p>
+                </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
-                {t.pillars.items.map((pillar, i) => (
-                  <div key={pillar.title} className="landing-glass-panel p-6 sm:p-8 rounded-xl group">
-                    <div className="size-10 sm:size-12 rounded-lg bg-[oklch(0.6_0.2_250/10%)] border border-[oklch(0.6_0.2_250/20%)] flex items-center justify-center text-[oklch(0.6_0.2_250)] mb-4 sm:mb-5 group-hover:bg-[oklch(0.6_0.2_250/15%)] transition-colors">
-                      {PILLAR_ICONS[i]}
-                    </div>
-                    <h3 className="text-base sm:text-lg font-semibold text-white mb-1">
-                      {pillar.title}
-                    </h3>
-                    <p className="text-[10px] sm:text-xs font-mono text-[oklch(0.6_0.2_250)] mb-2 sm:mb-3">
-                      {pillar.subtitle}
+              <div
+                className="mt-16 sm:mt-24 grid grid-cols-1 sm:grid-cols-3 border-t k-reveal"
+                style={{ borderColor: 'var(--hairline)' }}
+              >
+                {t.problem.stats.map((stat, i) => (
+                  <div
+                    key={stat.value}
+                    className={`py-8 sm:py-10 sm:px-8 ${i > 0 ? 'border-t sm:border-t-0 sm:border-l' : ''}`}
+                    style={{ borderColor: 'var(--hairline)' }}
+                  >
+                    <p className="text-5xl sm:text-6xl font-light tracking-[-0.03em] tabular-nums">
+                      {stat.value}
                     </p>
-                    <p className="text-xs sm:text-sm text-white/45 leading-relaxed">
+                    <p className="mt-3 text-xs leading-relaxed max-w-[26ch]" style={{ color: 'var(--bone-45)' }}>
+                      {stat.label}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          <section className="py-24 sm:py-36 px-4 sm:px-6">
+            <div className="mx-auto max-w-6xl">
+              <SectionRule index="02" badge={t.pillars.badge} />
+              <h2 className="text-3xl sm:text-5xl lg:text-6xl tracking-[-0.03em] font-medium mb-14 sm:mb-20 k-reveal">
+                {t.pillars.title}
+              </h2>
+              <div className="border-t" style={{ borderColor: 'var(--hairline)' }}>
+                {t.pillars.items.map((pillar, i) => (
+                  <div
+                    key={pillar.title}
+                    className="group grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-8 py-10 sm:py-14 border-b transition-colors hover:bg-[oklch(0.93_0.012_85/2%)] k-reveal"
+                    style={{ borderColor: 'var(--hairline)' }}
+                  >
+                    <span className="k-meta k-meta-terra lg:col-span-1 pt-2">
+                      {String(i + 1).padStart(2, '0')}
+                    </span>
+                    <div className="lg:col-span-4">
+                      <h3 className="text-2xl sm:text-4xl tracking-[-0.02em] font-medium">
+                        {pillar.title}
+                      </h3>
+                      <p className="k-serif italic text-base sm:text-lg mt-1.5" style={{ color: 'var(--bone-45)' }}>
+                        {pillar.subtitle}
+                      </p>
+                    </div>
+                    <p
+                      className="lg:col-span-6 lg:col-start-7 text-sm sm:text-[0.9375rem] leading-relaxed"
+                      style={{ color: 'var(--bone-70)' }}
+                    >
                       {pillar.description}
                     </p>
                   </div>
@@ -160,41 +202,49 @@ export default function LandingContent({ t, locale }: LandingContentProps) {
             </div>
           </section>
 
-          <section className="py-16 sm:py-24 md:py-32 px-4 sm:px-6">
-            <div className="max-w-4xl mx-auto">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 items-center">
-                <div>
-                  <p className="font-mono text-[10px] sm:text-xs uppercase tracking-[0.25em] text-[oklch(0.6_0.2_250)] mb-3 sm:mb-4">
-                    {t.thesis.badge}
-                  </p>
-                  <h2 className="text-xl sm:text-2xl md:text-3xl font-semibold text-white leading-snug mb-4 sm:mb-6">
+          <section className="py-24 sm:py-36 px-4 sm:px-6">
+            <div className="mx-auto max-w-6xl">
+              <SectionRule index="03" badge={t.thesis.badge} />
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16">
+                <div className="lg:col-span-6 k-reveal">
+                  <h2 className="k-serif italic text-3xl sm:text-4xl lg:text-[2.75rem] leading-[1.18] text-balance">
                     {t.thesis.title}
                   </h2>
-                  <p className="text-sm sm:text-base text-white/50 leading-relaxed mb-3 sm:mb-4">
+                  <p className="mt-8 text-sm sm:text-base leading-relaxed" style={{ color: 'var(--bone-70)' }}>
                     {t.thesis.p1}
                   </p>
-                  <p className="text-sm sm:text-base text-white/50 leading-relaxed">
+                  <p className="mt-4 text-sm sm:text-base leading-relaxed" style={{ color: 'var(--bone-70)' }}>
                     {t.thesis.p2}
                   </p>
                 </div>
-                <div className="space-y-3 sm:space-y-4">
-                  <div className="landing-glass-panel p-4 sm:p-5 rounded-xl">
-                    <p className="text-xs sm:text-sm text-white/60 mb-2">{t.thesis.commoditizes}</p>
-                    <div className="space-y-1.5 sm:space-y-2">
+                <div className="lg:col-span-5 lg:col-start-8 k-reveal">
+                  <div className="k-card rounded-2xl overflow-hidden">
+                    <div className="px-6 py-4 border-b" style={{ borderColor: 'var(--hairline)' }}>
+                      <p className="k-meta">{t.thesis.commoditizes}</p>
+                    </div>
+                    <div>
                       {t.thesis.commoditizesList.map((item) => (
-                        <div key={item} className="flex items-center gap-2 text-xs sm:text-sm text-white/35">
-                          <span className="size-1.5 rounded-full bg-white/20 shrink-0" />
-                          {item}
+                        <div
+                          key={item}
+                          className="flex items-center gap-4 px-6 py-3.5 border-b text-sm"
+                          style={{ borderColor: 'var(--hairline)', color: 'var(--bone-45)' }}
+                        >
+                          <span className="font-mono text-[10px]" style={{ color: 'var(--bone-45)' }}>—</span>
+                          <span className="line-through decoration-[oklch(0.93_0.012_85/25%)]">{item}</span>
                         </div>
                       ))}
                     </div>
-                  </div>
-                  <div className="landing-glass-panel landing-glass-panel-accent p-4 sm:p-5 rounded-xl">
-                    <p className="text-xs sm:text-sm text-[oklch(0.7_0.18_240)] mb-2">{t.thesis.remains}</p>
-                    <div className="space-y-1.5 sm:space-y-2">
-                      {t.thesis.remainsList.map((item) => (
-                        <div key={item} className="flex items-center gap-2 text-xs sm:text-sm text-white/60">
-                          <span className="size-1.5 rounded-full bg-[oklch(0.6_0.2_250)] shrink-0" />
+                    <div className="px-6 py-4 border-b" style={{ borderColor: 'var(--hairline)' }}>
+                      <p className="k-meta k-meta-terra">{t.thesis.remains}</p>
+                    </div>
+                    <div>
+                      {t.thesis.remainsList.map((item, i, arr) => (
+                        <div
+                          key={item}
+                          className={`flex items-center gap-4 px-6 py-3.5 text-sm ${i < arr.length - 1 ? 'border-b' : ''}`}
+                          style={{ borderColor: 'var(--hairline)' }}
+                        >
+                          <span className="font-mono text-[10px]" style={{ color: 'var(--terra)' }}>+</span>
                           {item}
                         </div>
                       ))}
@@ -205,99 +255,121 @@ export default function LandingContent({ t, locale }: LandingContentProps) {
             </div>
           </section>
 
-          <section className="py-16 sm:py-24 md:py-32 px-4 sm:px-6">
-            <div className="max-w-5xl mx-auto">
-              <div className="text-center mb-10 sm:mb-16">
-                <p className="font-mono text-[10px] sm:text-xs uppercase tracking-[0.25em] text-[oklch(0.6_0.2_250)] mb-3 sm:mb-4">
-                  {t.features.badge}
-                </p>
-                <h2 className="text-2xl sm:text-3xl md:text-4xl font-semibold text-white">
-                  {t.features.title}
-                </h2>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-                {t.features.categories.map((category, ci) => (
-                  <div key={category.label} className="space-y-3 sm:space-y-4">
-                    <p
-                      className="font-mono text-[10px] sm:text-xs uppercase tracking-[0.2em]"
-                      style={{ color: CATEGORY_COLORS[ci] }}
-                    >
-                      {category.label}
-                    </p>
-                    {category.features.map((feature) => (
-                      <div key={feature.title} className="landing-glass-panel p-5 sm:p-6 rounded-xl">
-                        <h3 className="text-sm font-medium text-white mb-1">
-                          {feature.title}
-                        </h3>
-                        <p className="text-xs text-white/40 leading-relaxed">
-                          {feature.description}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </section>
-
-          <section className="py-16 sm:py-24 md:py-32 px-4 sm:px-6">
-            <div className="max-w-3xl mx-auto text-center">
-              <h2 className="text-xl sm:text-2xl md:text-3xl font-semibold text-white leading-snug mb-4 sm:mb-6">
-                {t.antiCrm.title}
+          <section className="py-24 sm:py-36 px-4 sm:px-6">
+            <div className="mx-auto max-w-6xl">
+              <SectionRule index="04" badge={t.features.badge} />
+              <h2 className="text-3xl sm:text-5xl tracking-[-0.03em] font-medium mb-14 sm:mb-20 max-w-2xl text-balance k-reveal">
+                {t.features.title}
               </h2>
-              <p className="text-sm sm:text-base text-white/50 leading-relaxed mb-6 sm:mb-8 max-w-2xl mx-auto">
-                {t.antiCrm.description}
-              </p>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6 max-w-2xl mx-auto">
-                {t.antiCrm.diffs.map((diff) => (
-                  <div key={diff.label} className="text-center py-2">
-                    <p className="text-sm font-medium text-white mb-0.5">{diff.label}</p>
-                    <p className="text-[10px] sm:text-[11px] text-white/35">{diff.desc}</p>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-16 gap-y-12">
+                {t.features.categories.map((category, ci) => (
+                  <div key={category.label} className="k-reveal">
+                    <p className="k-meta k-meta-terra mb-2">{category.label}</p>
+                    <div className="border-t" style={{ borderColor: 'var(--hairline)' }}>
+                      {category.features.map((feature, fi) => (
+                        <div
+                          key={feature.title}
+                          className="grid grid-cols-[3.5rem_1fr] gap-4 py-6 border-b"
+                          style={{ borderColor: 'var(--hairline)' }}
+                        >
+                          <span className="font-mono text-[10px] pt-1" style={{ color: 'var(--bone-45)' }}>
+                            {ci + 1}.{String(fi + 1).padStart(2, '0')}
+                          </span>
+                          <div>
+                            <h3 className="text-[0.9375rem] font-medium">{feature.title}</h3>
+                            <p className="mt-1 text-[0.8125rem] leading-relaxed" style={{ color: 'var(--bone-45)' }}>
+                              {feature.description}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 ))}
               </div>
             </div>
           </section>
 
-          <section className="py-16 sm:py-24 md:py-32 px-4 sm:px-6">
-            <div className="max-w-2xl mx-auto text-center">
-              <div className="landing-glass-panel landing-glass-panel-accent p-8 sm:p-10 md:p-14 rounded-xl sm:rounded-2xl">
-                <h2 className="text-xl sm:text-2xl md:text-3xl font-semibold text-white mb-3 sm:mb-4">
+          <section className="py-24 sm:py-36 px-4 sm:px-6">
+            <div className="mx-auto max-w-6xl">
+              <SectionRule index="05" />
+              <div className="max-w-3xl k-reveal">
+                <h2 className="k-serif italic text-4xl sm:text-5xl lg:text-6xl leading-[1.1]">
+                  {t.antiCrm.title}
+                </h2>
+                <p className="mt-8 text-sm sm:text-base leading-relaxed" style={{ color: 'var(--bone-70)' }}>
+                  {t.antiCrm.description}
+                </p>
+              </div>
+              <div
+                className="mt-14 sm:mt-20 grid grid-cols-2 lg:grid-cols-4 border-t k-reveal"
+                style={{ borderColor: 'var(--hairline)' }}
+              >
+                {t.antiCrm.diffs.map((diff, i) => (
+                  <div
+                    key={diff.label}
+                    className={`py-7 sm:py-9 pr-4 ${i % 2 === 1 ? 'border-l pl-6' : ''} ${i >= 2 ? 'border-t lg:border-t-0' : ''} ${i >= 2 ? 'lg:border-l lg:pl-6' : ''}`}
+                    style={{ borderColor: 'var(--hairline)' }}
+                  >
+                    <p className="k-meta k-meta-terra mb-2.5">{diff.label}</p>
+                    <p className="text-[0.8125rem]" style={{ color: 'var(--bone-70)' }}>{diff.desc}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          <section className="py-24 sm:py-40 px-4 sm:px-6">
+            <div className="mx-auto max-w-4xl">
+              <div className="k-corners relative border px-6 py-16 sm:px-16 sm:py-24 text-center k-reveal" style={{ borderColor: 'var(--hairline-strong)' }}>
+                <h2 className="text-2xl sm:text-4xl lg:text-[2.75rem] leading-[1.15] tracking-[-0.02em] font-medium text-balance">
                   {t.cta.title}
                   <br />
-                  <span className="landing-gradient-text">{t.cta.highlight}</span>
+                  <span className="k-serif italic tracking-normal" style={{ color: 'var(--terra)' }}>
+                    {t.cta.highlight}
+                  </span>
                 </h2>
-                <p className="text-white/45 text-xs sm:text-sm mb-6 sm:mb-8 max-w-md mx-auto">
+                <p className="mt-6 text-sm max-w-md mx-auto leading-relaxed" style={{ color: 'var(--bone-45)' }}>
                   {t.cta.description}
                 </p>
-                <Link
-                  href="/login"
-                  className="landing-cta-button-lg w-full sm:w-auto justify-center"
-                >
-                  {t.cta.button}
-                </Link>
+                <div className="mt-10">
+                  <Link href="/login" className="k-btn">
+                    {t.cta.button}
+                    <ArrowRight />
+                  </Link>
+                </div>
               </div>
             </div>
           </section>
 
-          <footer className="py-8 sm:py-12 px-4 sm:px-6 border-t border-white/5">
-            <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
-              <div className="flex items-center gap-3">
-                <span className="font-mono tracking-[0.2em] uppercase text-xs text-white/40">
-                  Konterra
-                </span>
-                <span className="text-white/10">|</span>
-                <span className="font-mono text-[10px] text-white/25">
-                  {t.footer.tagline}
-                </span>
-              </div>
-              <div className="flex items-center gap-4">
-                <Link href="/privacy" className="font-mono text-[10px] text-white/30 hover:text-white/50 transition-colors">
-                  {t.footer.privacy}
-                </Link>
-                <p className="font-mono text-[10px] text-white/20">
-                  {t.footer.rights}
-                </p>
+          <footer className="border-t px-4 sm:px-6 pt-16 sm:pt-20 pb-10 overflow-hidden" style={{ borderColor: 'var(--hairline)' }}>
+            <div className="mx-auto max-w-6xl">
+              <p
+                className="k-outline-text font-semibold leading-none select-none text-[17.5vw] lg:text-[11.5rem] text-center"
+                aria-hidden="true"
+              >
+                KONTERRA
+              </p>
+              <div
+                className="mt-12 sm:mt-16 pt-6 border-t flex flex-col sm:flex-row items-center justify-between gap-4"
+                style={{ borderColor: 'var(--hairline)' }}
+              >
+                <div className="flex items-center gap-4">
+                  <Wordmark />
+                  <span className="k-meta hidden md:inline normal-case tracking-[0.12em]">{t.footer.tagline}</span>
+                </div>
+                <div className="flex items-center gap-6">
+                  <Link
+                    href="/privacy"
+                    className="font-mono text-[10px] tracking-[0.14em] uppercase transition-colors hover:text-[var(--bone)]"
+                    style={{ color: 'var(--bone-45)' }}
+                  >
+                    {t.footer.privacy}
+                  </Link>
+                  <p className="font-mono text-[10px] tracking-[0.14em]" style={{ color: 'var(--bone-45)' }}>
+                    {t.footer.rights}
+                  </p>
+                </div>
               </div>
             </div>
           </footer>

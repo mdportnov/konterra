@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import type { Metadata } from 'next'
-import NetworkBackground from '@/components/auth/NetworkBackground'
+import AtlasBackground from '@/components/branding/AtlasBackground'
+import Wordmark from '@/components/branding/Wordmark'
 
 export const metadata: Metadata = {
   title: 'Privacy Policy',
@@ -89,69 +90,72 @@ const SECTIONS = [
 
 export default function PrivacyPolicyPage() {
   return (
-    <div className="relative min-h-dvh overflow-x-hidden">
-      <NetworkBackground />
+    <div className="k-page relative min-h-dvh overflow-x-hidden">
+      <AtlasBackground />
 
       <div className="relative z-10">
-        <header className="landing-header fixed top-0 inset-x-0 z-50">
+        <header className="k-header fixed top-0 inset-x-0 z-50">
           <nav className="mx-auto max-w-6xl px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
-            <Link href="/" className="font-mono tracking-[0.3em] uppercase text-sm text-white/90">
-              Konterra
+            <Link href="/" aria-label="Konterra">
+              <Wordmark />
             </Link>
-            <Link
-              href="/login"
-              className="landing-cta-button"
-            >
+            <Link href="/login" className="k-btn k-btn-sm">
               Sign In
             </Link>
           </nav>
         </header>
 
-        <main className="pt-24 sm:pt-32 pb-16 sm:pb-24 px-4 sm:px-6">
+        <main className="pt-32 sm:pt-44 pb-16 sm:pb-24 px-4 sm:px-6">
           <div className="max-w-3xl mx-auto">
-            <div className="landing-glass-panel p-6 sm:p-8 md:p-12 rounded-xl sm:rounded-2xl">
-              <p className="font-mono text-[10px] sm:text-xs uppercase tracking-[0.25em] text-[oklch(0.6_0.2_250)] mb-3 sm:mb-4">
-                Legal
-              </p>
-              <h1 className="text-2xl sm:text-3xl md:text-4xl font-semibold text-white mb-2">
-                Privacy Policy
-              </h1>
-              <p className="text-xs sm:text-sm text-white/30 mb-8 sm:mb-10 font-mono">
-                Last updated: February 23, 2025
-              </p>
+            <div className="flex items-center gap-5 mb-10">
+              <span className="k-meta k-meta-terra">Legal</span>
+              <span className="h-px flex-1" style={{ background: 'var(--hairline)' }} />
+              <span className="k-meta">2025-02-23</span>
+            </div>
+            <h1 className="text-4xl sm:text-6xl tracking-[-0.03em] font-medium mb-4">
+              Privacy <span className="k-serif italic tracking-normal" style={{ color: 'var(--terra)' }}>Policy</span>
+            </h1>
+            <p className="text-sm leading-relaxed max-w-xl mb-16 sm:mb-20" style={{ color: 'var(--bone-45)' }}>
+              What we collect, why we collect it, and the rights you keep. No ads, no data selling, no third-party sharing.
+            </p>
 
-              <div className="space-y-8 sm:space-y-10">
-                {SECTIONS.map((section) => (
-                  <div key={section.title}>
-                    <h2 className="text-base sm:text-lg font-semibold text-white mb-3">
-                      {section.title}
-                    </h2>
-                    <div className="space-y-2">
-                      {section.content.map((paragraph, i) => (
-                        <p key={i} className="text-xs sm:text-sm text-white/50 leading-relaxed">
-                          {paragraph}
-                        </p>
-                      ))}
-                    </div>
+            <div className="border-t" style={{ borderColor: 'var(--hairline)' }}>
+              {SECTIONS.map((section, si) => (
+                <section
+                  key={section.title}
+                  className="grid grid-cols-1 sm:grid-cols-12 gap-3 sm:gap-8 py-10 sm:py-12 border-b"
+                  style={{ borderColor: 'var(--hairline)' }}
+                >
+                  <span className="k-meta k-meta-terra sm:col-span-1 pt-1">
+                    {String(si + 1).padStart(2, '0')}
+                  </span>
+                  <h2 className="sm:col-span-3 text-lg font-medium leading-snug">
+                    {section.title}
+                  </h2>
+                  <div className="sm:col-span-8 space-y-3">
+                    {section.content.map((paragraph, i) => (
+                      <p key={i} className="text-sm leading-relaxed" style={{ color: 'var(--bone-70)' }}>
+                        {paragraph}
+                      </p>
+                    ))}
                   </div>
-                ))}
-              </div>
+                </section>
+              ))}
             </div>
           </div>
         </main>
 
-        <footer className="py-8 sm:py-12 px-4 sm:px-6 border-t border-white/5">
-          <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
-            <div className="flex items-center gap-3">
-              <Link href="/" className="font-mono tracking-[0.2em] uppercase text-xs text-white/40 hover:text-white/60 transition-colors">
-                Konterra
+        <footer className="py-8 sm:py-10 px-4 sm:px-6 border-t" style={{ borderColor: 'var(--hairline)' }}>
+          <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <Link href="/" aria-label="Konterra">
+                <Wordmark />
               </Link>
-              <span className="text-white/10">|</span>
-              <span className="font-mono text-[10px] text-white/25">
-                Private Intelligence Network
+              <span className="k-meta hidden md:inline normal-case tracking-[0.12em]">
+                Network &amp; Travel Intelligence
               </span>
             </div>
-            <p className="font-mono text-[10px] text-white/20">
+            <p className="font-mono text-[10px] tracking-[0.14em]" style={{ color: 'var(--bone-45)' }}>
               All rights reserved.
             </p>
           </div>

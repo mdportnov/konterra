@@ -5,7 +5,8 @@ import { useFormNavigation } from '@/hooks/use-form-navigation'
 import { signIn } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
-import NetworkBackground from '@/components/auth/NetworkBackground'
+import AtlasBackground from '@/components/branding/AtlasBackground'
+import Wordmark from '@/components/branding/Wordmark'
 
 type Mode = 'signin' | 'waitlist' | 'register'
 type SignInStep = 'email' | 'password'
@@ -199,34 +200,38 @@ function LoginContent() {
   const showTabs = mode !== 'register'
 
   return (
-    <div className="min-h-dvh flex items-center justify-center relative">
-      <NetworkBackground />
+    <div className="k-page min-h-dvh flex items-center justify-center relative">
+      <AtlasBackground />
 
-      <div className="login-card relative z-10 w-full max-w-md mx-4 p-6 sm:p-8 rounded-xl">
-        <div className="text-center mb-8">
-          <img src="/icon.svg" alt="" width={48} height={48} className="mx-auto mb-3" />
-          <h1 className="font-mono tracking-[0.3em] uppercase text-sm text-white/90">
-            Konterra
-          </h1>
-          <p className="font-mono text-xs text-white/40 mt-1">
+      <div
+        className="k-card k-corners relative z-10 w-full max-w-md mx-4 p-6 sm:p-10 rounded-2xl"
+        style={{ background: 'oklch(0.13 0.009 80 / 85%)', backdropFilter: 'blur(16px)' }}
+      >
+        <div className="text-center mb-9">
+          <div className="flex justify-center mb-3">
+            <Wordmark />
+          </div>
+          <p className="k-meta normal-case tracking-[0.14em]">
             private intelligence network
           </p>
         </div>
 
         {inviteLoading ? (
           <div className="flex flex-col items-center justify-center py-12">
-            <div className="h-5 w-5 border-2 border-white/20 border-t-white/60 rounded-full animate-spin" />
-            <p className="font-mono text-xs text-white/40 mt-4">Validating invite...</p>
+            <div className="h-5 w-5 border-2 rounded-full animate-spin" style={{ borderColor: 'var(--hairline-strong)', borderTopColor: 'var(--terra)' }} />
+            <p className="font-mono text-xs mt-4" style={{ color: 'var(--bone-45)' }}>Validating invite...</p>
           </div>
         ) : (
         <>
         {showTabs && (
-          <div className="flex gap-0 mb-8 border-b border-white/10">
+          <div className="flex gap-0 mb-8 border-b" style={{ borderColor: 'var(--hairline)' }}>
             <button
               type="button"
               onClick={() => switchMode('signin')}
-              className={`flex-1 pb-3 font-mono text-xs uppercase tracking-wider transition-colors ${
-                mode === 'signin' ? 'text-white border-b border-[oklch(0.6_0.2_250)]' : 'text-white/40 hover:text-white/60'
+              className={`flex-1 pb-3 font-mono text-xs uppercase tracking-[0.14em] transition-colors border-b -mb-px ${
+                mode === 'signin'
+                  ? 'text-[var(--bone)] border-[var(--terra)]'
+                  : 'text-[var(--bone-45)] border-transparent hover:text-[var(--bone-70)]'
               }`}
             >
               Sign In
@@ -234,8 +239,10 @@ function LoginContent() {
             <button
               type="button"
               onClick={() => switchMode('waitlist')}
-              className={`flex-1 pb-3 font-mono text-xs uppercase tracking-wider transition-colors ${
-                mode === 'waitlist' ? 'text-white border-b border-[oklch(0.6_0.2_250)]' : 'text-white/40 hover:text-white/60'
+              className={`flex-1 pb-3 font-mono text-xs uppercase tracking-[0.14em] transition-colors border-b -mb-px ${
+                mode === 'waitlist'
+                  ? 'text-[var(--bone)] border-[var(--terra)]'
+                  : 'text-[var(--bone-45)] border-transparent hover:text-[var(--bone-70)]'
               }`}
             >
               Request Access
@@ -245,8 +252,8 @@ function LoginContent() {
 
         {mode === 'register' && inviteInfo && (
           <div className="text-center mb-6">
-            <p className="font-mono text-xs text-white/60">
-              Invited by <span className="text-white/90 font-medium">{inviteInfo.inviterName || 'a member'}</span>
+            <p className="font-mono text-xs" style={{ color: 'var(--bone-45)' }}>
+              Invited by <span className="font-medium" style={{ color: 'var(--terra)' }}>{inviteInfo.inviterName || 'a member'}</span>
             </p>
           </div>
         )}
@@ -274,7 +281,7 @@ function LoginContent() {
                   required
                   autoComplete="email"
                   inputMode="email"
-                  className="login-input"
+                  className="k-input"
                 />
                 <div
                   className={`transition-[opacity,transform,max-height] duration-200 ease-out overflow-hidden ${
@@ -291,13 +298,13 @@ function LoginContent() {
                     placeholder="Password"
                     required={signInStep === 'password'}
                     autoComplete="current-password"
-                    className="login-input w-full"
+                    className="k-input w-full"
                   />
                 </div>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="login-button"
+                  className="k-btn w-full"
                 >
                   {signInStep === 'email'
                     ? 'Continue'
@@ -318,7 +325,7 @@ function LoginContent() {
                   required
                   autoComplete="email"
                   inputMode="email"
-                  className="login-input"
+                  className="k-input"
                 />
                 <input
                   type="text"
@@ -328,7 +335,7 @@ function LoginContent() {
                   required
                   minLength={2}
                   autoComplete="name"
-                  className="login-input"
+                  className="k-input"
                 />
                 <textarea
                   value={message}
@@ -336,12 +343,12 @@ function LoginContent() {
                   placeholder="Why do you want access? (optional)"
                   maxLength={500}
                   rows={3}
-                  className="login-input resize-none"
+                  className="k-input resize-none"
                 />
                 <button
                   type="submit"
                   disabled={loading}
-                  className="login-button"
+                  className="k-btn w-full"
                 >
                   {loading ? 'Submitting...' : 'Submit Request'}
                 </button>
@@ -350,7 +357,7 @@ function LoginContent() {
 
             {mode === 'waitlist' && submitted && (
               <div className="text-center py-6">
-                <p className="font-mono text-sm text-white/70">
+                <p className="font-mono text-sm" style={{ color: 'var(--bone-70)' }}>
                   Request logged. You will be contacted if approved.
                 </p>
               </div>
@@ -366,7 +373,7 @@ function LoginContent() {
                   required
                   autoComplete="email"
                   inputMode="email"
-                  className="login-input"
+                  className="k-input"
                 />
                 <input
                   type="text"
@@ -376,7 +383,7 @@ function LoginContent() {
                   required
                   minLength={2}
                   autoComplete="name"
-                  className="login-input"
+                  className="k-input"
                 />
                 <input
                   type="password"
@@ -386,7 +393,7 @@ function LoginContent() {
                   required
                   minLength={8}
                   autoComplete="new-password"
-                  className="login-input"
+                  className="k-input"
                 />
                 <input
                   type="password"
@@ -396,16 +403,16 @@ function LoginContent() {
                   required
                   minLength={8}
                   autoComplete="new-password"
-                  className="login-input"
+                  className="k-input"
                 />
                 <button
                   type="submit"
                   disabled={loading}
-                  className="login-button"
+                  className="k-btn w-full"
                 >
                   {loading ? 'Creating account...' : 'Create Account'}
                 </button>
-                <p className="text-center font-mono text-xs text-white/40 mt-2">
+                <p className="text-center font-mono text-xs mt-2" style={{ color: 'var(--bone-45)' }}>
                   Already have an account?{' '}
                   <button
                     type="button"
@@ -417,7 +424,7 @@ function LoginContent() {
                       setPassword('')
                       setConfirmPassword('')
                     }}
-                    className="text-white/60 hover:text-white/80 underline underline-offset-2 transition-colors"
+                    className="text-[var(--bone-70)] hover:text-[var(--bone)] underline underline-offset-2 transition-colors"
                   >
                     Sign in
                   </button>
@@ -429,7 +436,7 @@ function LoginContent() {
         </>
         )}
 
-        <p className="text-center font-mono text-[10px] text-white/25 mt-8">
+        <p className="text-center font-mono text-[10px] mt-8" style={{ color: 'var(--bone-45)', opacity: 0.7 }}>
           Access is by invitation only. All requests are manually reviewed.
         </p>
       </div>
