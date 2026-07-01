@@ -71,14 +71,14 @@ const en: LandingTranslations = {
   },
   nav: {
     signIn: 'Sign In',
-    requestAccess: 'Request Access',
+    requestAccess: 'Get Started',
   },
   hero: {
     badge: 'Private Intelligence Network',
     titleStart: 'AI can replace your expertise.',
     titleHighlight: "It can't replace your introductions — or your journeys.",
     subtitle: 'Your network and your travels are the last competitive advantages AI cannot commoditize. Konterra maps both on a single globe — a private intelligence system that belongs to you.',
-    cta: 'Request Early Access',
+    cta: 'Create Free Account',
     learnMore: 'Learn more',
   },
   problem: {
@@ -159,8 +159,8 @@ const en: LandingTranslations = {
   cta: {
     title: 'Your network is your net worth. Your travels are your footprint.',
     highlight: 'Start seeing both.',
-    description: "Access is by invitation only. Request early access and we'll review your application personally.",
-    button: 'Request Early Access',
+    description: 'Free to join. Create your account in under a minute — your data stays yours, always.',
+    button: 'Create Free Account',
   },
   footer: {
     tagline: 'Network & Travel Intelligence',
@@ -176,14 +176,14 @@ const ru: LandingTranslations = {
   },
   nav: {
     signIn: 'Войти',
-    requestAccess: 'Получить доступ',
+    requestAccess: 'Начать',
   },
   hero: {
     badge: 'Частная разведывательная сеть',
     titleStart: 'ИИ может заменить вашу экспертизу.',
     titleHighlight: 'Но не ваши знакомства — и не ваши путешествия.',
     subtitle: 'Ваша сеть контактов и ваши путешествия — последние конкурентные преимущества, которые ИИ не может обесценить. Konterra отображает их на одном глобусе — частная разведывательная система, принадлежащая только вам.',
-    cta: 'Запросить ранний доступ',
+    cta: 'Создать бесплатный аккаунт',
     learnMore: 'Узнать больше',
   },
   problem: {
@@ -264,8 +264,8 @@ const ru: LandingTranslations = {
   cta: {
     title: 'Ваша сеть — ваш капитал. Ваши путешествия — ваш след.',
     highlight: 'Начните видеть и то, и другое.',
-    description: 'Доступ только по приглашению. Запросите ранний доступ, и мы лично рассмотрим вашу заявку.',
-    button: 'Запросить ранний доступ',
+    description: 'Регистрация бесплатна. Создайте аккаунт за минуту — ваши данные всегда остаются вашими.',
+    button: 'Создать бесплатный аккаунт',
   },
   footer: {
     tagline: 'Аналитика связей и путешествий',
@@ -281,14 +281,14 @@ const es: LandingTranslations = {
   },
   nav: {
     signIn: 'Iniciar sesión',
-    requestAccess: 'Solicitar acceso',
+    requestAccess: 'Empezar',
   },
   hero: {
     badge: 'Red de Inteligencia Privada',
     titleStart: 'La IA puede reemplazar tu experiencia.',
     titleHighlight: 'Pero no puede reemplazar tus presentaciones — ni tus viajes.',
     subtitle: 'Tu red de contactos y tus viajes son las últimas ventajas competitivas que la IA no puede mercantilizar. Konterra mapea ambos en un solo globo — un sistema de inteligencia privada que te pertenece.',
-    cta: 'Solicitar acceso anticipado',
+    cta: 'Crear cuenta gratis',
     learnMore: 'Más información',
   },
   problem: {
@@ -369,8 +369,8 @@ const es: LandingTranslations = {
   cta: {
     title: 'Tu red es tu patrimonio. Tus viajes son tu huella.',
     highlight: 'Empieza a ver ambos.',
-    description: 'El acceso es solo por invitación. Solicita acceso anticipado y revisaremos tu solicitud personalmente.',
-    button: 'Solicitar acceso anticipado',
+    description: 'Unirse es gratis. Crea tu cuenta en menos de un minuto — tus datos siempre son tuyos.',
+    button: 'Crear cuenta gratis',
   },
   footer: {
     tagline: 'Inteligencia de Red y Viajes',
@@ -386,14 +386,14 @@ const zh: LandingTranslations = {
   },
   nav: {
     signIn: '登录',
-    requestAccess: '申请访问',
+    requestAccess: '立即开始',
   },
   hero: {
     badge: '私人情报网络',
     titleStart: 'AI可以取代你的专业知识。',
     titleHighlight: '但无法取代你的人脉引荐——或你的旅程。',
     subtitle: '你的人脉网络和旅行经历是AI无法商品化的最后竞争优势。Konterra将两者映射在同一个地球上——一个属于你的私人情报系统。',
-    cta: '申请提前访问',
+    cta: '免费创建账户',
     learnMore: '了解更多',
   },
   problem: {
@@ -474,8 +474,8 @@ const zh: LandingTranslations = {
   cta: {
     title: '你的人脉是你的财富。你的旅行是你的足迹。',
     highlight: '开始同时看见两者。',
-    description: '仅限邀请访问。申请提前访问，我们将亲自审核您的申请。',
-    button: '申请提前访问',
+    description: '免费加入。一分钟内创建账户——你的数据永远属于你。',
+    button: '免费创建账户',
   },
   footer: {
     tagline: '人脉与旅行情报',

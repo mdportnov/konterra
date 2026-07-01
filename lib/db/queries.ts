@@ -1359,6 +1359,16 @@ export async function createInvite(userId: string, code: string, expiresAt: Date
   return rows[0] ? { invite: rows[0] } : { error: 'insert_failed' as const }
 }
 
+export async function registerUser(data: { email: string; name: string; password: string }) {
+  const id = crypto.randomUUID()
+  const [user] = await db
+    .insert(users)
+    .values({ id, email: data.email, name: data.name, password: data.password })
+    .onConflictDoNothing({ target: users.email })
+    .returning({ id: users.id, email: users.email, name: users.name, role: users.role })
+  return user ? { user } : { error: 'email_taken' as const }
+}
+
 export async function registerViaInvite(data: { email: string; name: string; password: string }, code: string) {
   return db.transaction(async (tx) => {
     const claimed = await tx

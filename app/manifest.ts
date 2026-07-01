@@ -7,8 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: 'Private Intelligence Network — map, measure, and mobilize your relationships.',
     start_url: '/app',
     display: 'standalone',
-    background_color: '#0a0a0a',
-    theme_color: '#1d4ed8',
+    background_color: '#131110',
+    theme_color: '#131110',
     icons: [
       {
         src: '/icon.svg',

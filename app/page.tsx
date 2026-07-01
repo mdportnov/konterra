@@ -28,7 +28,7 @@ const jsonLd = {
     '@type': 'Offer',
     price: '0',
     priceCurrency: 'USD',
-    availability: 'https://schema.org/InviteOnly',
+    availability: 'https://schema.org/InStock',
   },
   featureList: [
     '3D Globe Visualization',

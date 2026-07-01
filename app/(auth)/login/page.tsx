@@ -1,13 +1,15 @@
 'use client'
 
 import { Suspense, useState, useRef, useEffect, useCallback } from 'react'
+import Link from 'next/link'
 import { useFormNavigation } from '@/hooks/use-form-navigation'
 import { signIn } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
-import NetworkBackground from '@/components/auth/NetworkBackground'
+import AtlasBackground from '@/components/branding/AtlasBackground'
+import Wordmark from '@/components/branding/Wordmark'
 
-type Mode = 'signin' | 'waitlist' | 'register'
+type Mode = 'signin' | 'register'
 type SignInStep = 'email' | 'password'
 
 interface InviteInfo {
@@ -24,16 +26,15 @@ export default function LoginPage() {
 }
 
 function LoginContent() {
-  const [mode, setMode] = useState<Mode>('signin')
+  const searchParams = useSearchParams()
+  const [mode, setMode] = useState<Mode>(searchParams.get('mode') === 'register' ? 'register' : 'signin')
   const [animating, setAnimating] = useState(false)
   const [visible, setVisible] = useState(true)
   const [loading, setLoading] = useState(false)
-  const [submitted, setSubmitted] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [name, setName] = useState('')
-  const [message, setMessage] = useState('')
   const [signInStep, setSignInStep] = useState<SignInStep>('email')
   const [passwordVisible, setPasswordVisible] = useState(false)
   const [inviteInfo, setInviteInfo] = useState<InviteInfo | null>(null)
@@ -45,7 +46,6 @@ function LoginContent() {
   })
   const passwordRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
-  const searchParams = useSearchParams()
 
   const inviteCode = searchParams.get('invite')
   const [inviteLoading, setInviteLoading] = useState(!!inviteCode)
@@ -84,7 +84,6 @@ function LoginContent() {
     setTimeout(() => {
       setMode(next)
       if (next === 'signin') {
-        setSubmitted(false)
         setSignInStep('email')
         setPasswordVisible(false)
         setPassword('')
@@ -105,7 +104,7 @@ function LoginContent() {
       el.style.height = el.scrollHeight + 'px'
     }, 220)
     return () => clearTimeout(id)
-  }, [mode, submitted, signInStep, passwordVisible])
+  }, [mode, signInStep, passwordVisible])
 
   useEffect(() => {
     if (passwordVisible && passwordRef.current) {
@@ -129,29 +128,7 @@ function LoginContent() {
       router.push('/app')
       router.refresh()
     } else {
-      toast.error('Access denied. Authorized operators only.')
-    }
-    setLoading(false)
-  }
-
-  const handleWaitlist = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    try {
-      const res = await fetch('/api/waitlist', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, name, message: message || undefined }),
-      })
-      if (!res.ok) {
-        const data = await res.json()
-        toast.error(data.error || 'Failed to submit request')
-        setLoading(false)
-        return
-      }
-      setSubmitted(true)
-    } catch {
-      toast.error('Failed to submit request. Try again.')
+      toast.error('Invalid email or password.')
     }
     setLoading(false)
   }
@@ -196,57 +173,61 @@ function LoginContent() {
     setLoading(false)
   }
 
-  const showTabs = mode !== 'register'
-
   return (
-    <div className="min-h-dvh flex items-center justify-center relative">
-      <NetworkBackground />
+    <div className="k-page min-h-dvh flex items-center justify-center relative">
+      <AtlasBackground />
 
-      <div className="login-card relative z-10 w-full max-w-md mx-4 p-6 sm:p-8 rounded-xl">
-        <div className="text-center mb-8">
-          <img src="/icon.svg" alt="" width={48} height={48} className="mx-auto mb-3" />
-          <h1 className="font-mono tracking-[0.3em] uppercase text-sm text-white/90">
-            Konterra
-          </h1>
-          <p className="font-mono text-xs text-white/40 mt-1">
+      <div
+        className="k-card k-corners relative z-10 w-full max-w-md mx-4 p-6 sm:p-10 rounded-2xl"
+        style={{ background: 'oklch(0.13 0.009 80 / 85%)', backdropFilter: 'blur(16px)' }}
+      >
+        <div className="text-center mb-9">
+          <div className="flex justify-center mb-3">
+            <Link href="/" aria-label="Konterra">
+              <Wordmark />
+            </Link>
+          </div>
+          <p className="k-meta normal-case tracking-[0.14em]">
             private intelligence network
           </p>
         </div>
 
         {inviteLoading ? (
           <div className="flex flex-col items-center justify-center py-12">
-            <div className="h-5 w-5 border-2 border-white/20 border-t-white/60 rounded-full animate-spin" />
-            <p className="font-mono text-xs text-white/40 mt-4">Validating invite...</p>
+            <div className="h-5 w-5 border-2 rounded-full animate-spin" style={{ borderColor: 'var(--hairline-strong)', borderTopColor: 'var(--terra)' }} />
+            <p className="font-mono text-xs mt-4" style={{ color: 'var(--bone-45)' }}>Validating invite...</p>
           </div>
         ) : (
         <>
-        {showTabs && (
-          <div className="flex gap-0 mb-8 border-b border-white/10">
-            <button
-              type="button"
-              onClick={() => switchMode('signin')}
-              className={`flex-1 pb-3 font-mono text-xs uppercase tracking-wider transition-colors ${
-                mode === 'signin' ? 'text-white border-b border-[oklch(0.6_0.2_250)]' : 'text-white/40 hover:text-white/60'
-              }`}
-            >
-              Sign In
-            </button>
-            <button
-              type="button"
-              onClick={() => switchMode('waitlist')}
-              className={`flex-1 pb-3 font-mono text-xs uppercase tracking-wider transition-colors ${
-                mode === 'waitlist' ? 'text-white border-b border-[oklch(0.6_0.2_250)]' : 'text-white/40 hover:text-white/60'
-              }`}
-            >
-              Request Access
-            </button>
-          </div>
-        )}
+        <div className="flex gap-0 mb-8 border-b" style={{ borderColor: 'var(--hairline)' }}>
+          <button
+            type="button"
+            onClick={() => switchMode('signin')}
+            className={`flex-1 pb-3 font-mono text-xs uppercase tracking-[0.14em] transition-colors border-b -mb-px ${
+              mode === 'signin'
+                ? 'text-[var(--bone)] border-[var(--terra)]'
+                : 'text-[var(--bone-45)] border-transparent hover:text-[var(--bone-70)]'
+            }`}
+          >
+            Sign In
+          </button>
+          <button
+            type="button"
+            onClick={() => switchMode('register')}
+            className={`flex-1 pb-3 font-mono text-xs uppercase tracking-[0.14em] transition-colors border-b -mb-px ${
+              mode === 'register'
+                ? 'text-[var(--bone)] border-[var(--terra)]'
+                : 'text-[var(--bone-45)] border-transparent hover:text-[var(--bone-70)]'
+            }`}
+          >
+            Create Account
+          </button>
+        </div>
 
         {mode === 'register' && inviteInfo && (
           <div className="text-center mb-6">
-            <p className="font-mono text-xs text-white/60">
-              Invited by <span className="text-white/90 font-medium">{inviteInfo.inviterName || 'a member'}</span>
+            <p className="font-mono text-xs" style={{ color: 'var(--bone-45)' }}>
+              Invited by <span className="font-medium" style={{ color: 'var(--terra)' }}>{inviteInfo.inviterName || 'a member'}</span>
             </p>
           </div>
         )}
@@ -274,7 +255,7 @@ function LoginContent() {
                   required
                   autoComplete="email"
                   inputMode="email"
-                  className="login-input"
+                  className="k-input"
                 />
                 <div
                   className={`transition-[opacity,transform,max-height] duration-200 ease-out overflow-hidden ${
@@ -291,69 +272,21 @@ function LoginContent() {
                     placeholder="Password"
                     required={signInStep === 'password'}
                     autoComplete="current-password"
-                    className="login-input w-full"
+                    className="k-input w-full"
                   />
                 </div>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="login-button"
+                  className="k-btn w-full"
                 >
                   {signInStep === 'email'
                     ? 'Continue'
                     : loading
-                      ? 'Authenticating...'
-                      : 'Authenticate'}
+                      ? 'Signing in...'
+                      : 'Sign In'}
                 </button>
               </form>
-            )}
-
-            {mode === 'waitlist' && !submitted && (
-              <form onSubmit={handleWaitlist} className="space-y-4">
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Email address"
-                  required
-                  autoComplete="email"
-                  inputMode="email"
-                  className="login-input"
-                />
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Full name"
-                  required
-                  minLength={2}
-                  autoComplete="name"
-                  className="login-input"
-                />
-                <textarea
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  placeholder="Why do you want access? (optional)"
-                  maxLength={500}
-                  rows={3}
-                  className="login-input resize-none"
-                />
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="login-button"
-                >
-                  {loading ? 'Submitting...' : 'Submit Request'}
-                </button>
-              </form>
-            )}
-
-            {mode === 'waitlist' && submitted && (
-              <div className="text-center py-6">
-                <p className="font-mono text-sm text-white/70">
-                  Request logged. You will be contacted if approved.
-                </p>
-              </div>
             )}
 
             {mode === 'register' && (
@@ -366,7 +299,7 @@ function LoginContent() {
                   required
                   autoComplete="email"
                   inputMode="email"
-                  className="login-input"
+                  className="k-input"
                 />
                 <input
                   type="text"
@@ -376,7 +309,7 @@ function LoginContent() {
                   required
                   minLength={2}
                   autoComplete="name"
-                  className="login-input"
+                  className="k-input"
                 />
                 <input
                   type="password"
@@ -386,7 +319,7 @@ function LoginContent() {
                   required
                   minLength={8}
                   autoComplete="new-password"
-                  className="login-input"
+                  className="k-input"
                 />
                 <input
                   type="password"
@@ -396,32 +329,15 @@ function LoginContent() {
                   required
                   minLength={8}
                   autoComplete="new-password"
-                  className="login-input"
+                  className="k-input"
                 />
                 <button
                   type="submit"
                   disabled={loading}
-                  className="login-button"
+                  className="k-btn w-full"
                 >
                   {loading ? 'Creating account...' : 'Create Account'}
                 </button>
-                <p className="text-center font-mono text-xs text-white/40 mt-2">
-                  Already have an account?{' '}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMode('signin')
-                      setInviteInfo(null)
-                      setSignInStep('email')
-                      setPasswordVisible(false)
-                      setPassword('')
-                      setConfirmPassword('')
-                    }}
-                    className="text-white/60 hover:text-white/80 underline underline-offset-2 transition-colors"
-                  >
-                    Sign in
-                  </button>
-                </p>
               </form>
             )}
           </div>
@@ -429,8 +345,12 @@ function LoginContent() {
         </>
         )}
 
-        <p className="text-center font-mono text-[10px] text-white/25 mt-8">
-          Access is by invitation only. All requests are manually reviewed.
+        <p className="text-center font-mono text-[10px] mt-8" style={{ color: 'var(--bone-45)', opacity: 0.7 }}>
+          Free to join. Your data stays yours —{' '}
+          <Link href="/privacy" className="underline underline-offset-2 hover:text-[var(--bone-70)] transition-colors">
+            privacy policy
+          </Link>
+          .
         </p>
       </div>
     </div>

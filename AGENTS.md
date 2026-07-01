@@ -120,7 +120,7 @@ If a bad migration was deployed and failed on Vercel:
 
 ## Auth
 - NextAuth v5-beta, JWT strategy, Credentials provider (email + password, bcryptjs)
-- Only pre-existing `users` rows can sign in (no self-registration)
+- Open self-registration via `/api/public/register` (optional invite code attributes the inviter); waitlist remains admin-only legacy
 - User type extended with `role` field
 - `middleware.ts` protects all routes except: `/`, `/login`, `/api/auth/**`, `/api/waitlist/**`, `/api/public/**`, `/u/**`
 - Config split: `auth.config.ts` (edge-compatible) + `auth.ts` (full, with DB queries)

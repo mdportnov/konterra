@@ -44,7 +44,7 @@ function buildJsonLd(locale: string, description: string) {
       '@type': 'Offer',
       price: '0',
       priceCurrency: 'USD',
-      availability: 'https://schema.org/InviteOnly',
+      availability: 'https://schema.org/InStock',
     },
   }
 }
