@@ -1,6 +1,7 @@
 'use client'
 
 import { Suspense, useState, useRef, useEffect, useCallback } from 'react'
+import Link from 'next/link'
 import { useFormNavigation } from '@/hooks/use-form-navigation'
 import { signIn } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -8,7 +9,7 @@ import { toast } from 'sonner'
 import AtlasBackground from '@/components/branding/AtlasBackground'
 import Wordmark from '@/components/branding/Wordmark'
 
-type Mode = 'signin' | 'waitlist' | 'register'
+type Mode = 'signin' | 'register'
 type SignInStep = 'email' | 'password'
 
 interface InviteInfo {
@@ -25,16 +26,15 @@ export default function LoginPage() {
 }
 
 function LoginContent() {
-  const [mode, setMode] = useState<Mode>('signin')
+  const searchParams = useSearchParams()
+  const [mode, setMode] = useState<Mode>(searchParams.get('mode') === 'register' ? 'register' : 'signin')
   const [animating, setAnimating] = useState(false)
   const [visible, setVisible] = useState(true)
   const [loading, setLoading] = useState(false)
-  const [submitted, setSubmitted] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [name, setName] = useState('')
-  const [message, setMessage] = useState('')
   const [signInStep, setSignInStep] = useState<SignInStep>('email')
   const [passwordVisible, setPasswordVisible] = useState(false)
   const [inviteInfo, setInviteInfo] = useState<InviteInfo | null>(null)
@@ -46,7 +46,6 @@ function LoginContent() {
   })
   const passwordRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
-  const searchParams = useSearchParams()
 
   const inviteCode = searchParams.get('invite')
   const [inviteLoading, setInviteLoading] = useState(!!inviteCode)
@@ -85,7 +84,6 @@ function LoginContent() {
     setTimeout(() => {
       setMode(next)
       if (next === 'signin') {
-        setSubmitted(false)
         setSignInStep('email')
         setPasswordVisible(false)
         setPassword('')
@@ -106,7 +104,7 @@ function LoginContent() {
       el.style.height = el.scrollHeight + 'px'
     }, 220)
     return () => clearTimeout(id)
-  }, [mode, submitted, signInStep, passwordVisible])
+  }, [mode, signInStep, passwordVisible])
 
   useEffect(() => {
     if (passwordVisible && passwordRef.current) {
@@ -130,29 +128,7 @@ function LoginContent() {
       router.push('/app')
       router.refresh()
     } else {
-      toast.error('Access denied. Authorized operators only.')
-    }
-    setLoading(false)
-  }
-
-  const handleWaitlist = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    try {
-      const res = await fetch('/api/waitlist', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, name, message: message || undefined }),
-      })
-      if (!res.ok) {
-        const data = await res.json()
-        toast.error(data.error || 'Failed to submit request')
-        setLoading(false)
-        return
-      }
-      setSubmitted(true)
-    } catch {
-      toast.error('Failed to submit request. Try again.')
+      toast.error('Invalid email or password.')
     }
     setLoading(false)
   }
@@ -197,8 +173,6 @@ function LoginContent() {
     setLoading(false)
   }
 
-  const showTabs = mode !== 'register'
-
   return (
     <div className="k-page min-h-dvh flex items-center justify-center relative">
       <AtlasBackground />
@@ -209,7 +183,9 @@ function LoginContent() {
       >
         <div className="text-center mb-9">
           <div className="flex justify-center mb-3">
-            <Wordmark />
+            <Link href="/" aria-label="Konterra">
+              <Wordmark />
+            </Link>
           </div>
           <p className="k-meta normal-case tracking-[0.14em]">
             private intelligence network
@@ -223,32 +199,30 @@ function LoginContent() {
           </div>
         ) : (
         <>
-        {showTabs && (
-          <div className="flex gap-0 mb-8 border-b" style={{ borderColor: 'var(--hairline)' }}>
-            <button
-              type="button"
-              onClick={() => switchMode('signin')}
-              className={`flex-1 pb-3 font-mono text-xs uppercase tracking-[0.14em] transition-colors border-b -mb-px ${
-                mode === 'signin'
-                  ? 'text-[var(--bone)] border-[var(--terra)]'
-                  : 'text-[var(--bone-45)] border-transparent hover:text-[var(--bone-70)]'
-              }`}
-            >
-              Sign In
-            </button>
-            <button
-              type="button"
-              onClick={() => switchMode('waitlist')}
-              className={`flex-1 pb-3 font-mono text-xs uppercase tracking-[0.14em] transition-colors border-b -mb-px ${
-                mode === 'waitlist'
-                  ? 'text-[var(--bone)] border-[var(--terra)]'
-                  : 'text-[var(--bone-45)] border-transparent hover:text-[var(--bone-70)]'
-              }`}
-            >
-              Request Access
-            </button>
-          </div>
-        )}
+        <div className="flex gap-0 mb-8 border-b" style={{ borderColor: 'var(--hairline)' }}>
+          <button
+            type="button"
+            onClick={() => switchMode('signin')}
+            className={`flex-1 pb-3 font-mono text-xs uppercase tracking-[0.14em] transition-colors border-b -mb-px ${
+              mode === 'signin'
+                ? 'text-[var(--bone)] border-[var(--terra)]'
+                : 'text-[var(--bone-45)] border-transparent hover:text-[var(--bone-70)]'
+            }`}
+          >
+            Sign In
+          </button>
+          <button
+            type="button"
+            onClick={() => switchMode('register')}
+            className={`flex-1 pb-3 font-mono text-xs uppercase tracking-[0.14em] transition-colors border-b -mb-px ${
+              mode === 'register'
+                ? 'text-[var(--bone)] border-[var(--terra)]'
+                : 'text-[var(--bone-45)] border-transparent hover:text-[var(--bone-70)]'
+            }`}
+          >
+            Create Account
+          </button>
+        </div>
 
         {mode === 'register' && inviteInfo && (
           <div className="text-center mb-6">
@@ -309,58 +283,10 @@ function LoginContent() {
                   {signInStep === 'email'
                     ? 'Continue'
                     : loading
-                      ? 'Authenticating...'
-                      : 'Authenticate'}
+                      ? 'Signing in...'
+                      : 'Sign In'}
                 </button>
               </form>
-            )}
-
-            {mode === 'waitlist' && !submitted && (
-              <form onSubmit={handleWaitlist} className="space-y-4">
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Email address"
-                  required
-                  autoComplete="email"
-                  inputMode="email"
-                  className="k-input"
-                />
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Full name"
-                  required
-                  minLength={2}
-                  autoComplete="name"
-                  className="k-input"
-                />
-                <textarea
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  placeholder="Why do you want access? (optional)"
-                  maxLength={500}
-                  rows={3}
-                  className="k-input resize-none"
-                />
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="k-btn w-full"
-                >
-                  {loading ? 'Submitting...' : 'Submit Request'}
-                </button>
-              </form>
-            )}
-
-            {mode === 'waitlist' && submitted && (
-              <div className="text-center py-6">
-                <p className="font-mono text-sm" style={{ color: 'var(--bone-70)' }}>
-                  Request logged. You will be contacted if approved.
-                </p>
-              </div>
             )}
 
             {mode === 'register' && (
@@ -412,23 +338,6 @@ function LoginContent() {
                 >
                   {loading ? 'Creating account...' : 'Create Account'}
                 </button>
-                <p className="text-center font-mono text-xs mt-2" style={{ color: 'var(--bone-45)' }}>
-                  Already have an account?{' '}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMode('signin')
-                      setInviteInfo(null)
-                      setSignInStep('email')
-                      setPasswordVisible(false)
-                      setPassword('')
-                      setConfirmPassword('')
-                    }}
-                    className="text-[var(--bone-70)] hover:text-[var(--bone)] underline underline-offset-2 transition-colors"
-                  >
-                    Sign in
-                  </button>
-                </p>
               </form>
             )}
           </div>
@@ -437,7 +346,11 @@ function LoginContent() {
         )}
 
         <p className="text-center font-mono text-[10px] mt-8" style={{ color: 'var(--bone-45)', opacity: 0.7 }}>
-          Access is by invitation only. All requests are manually reviewed.
+          Free to join. Your data stays yours —{' '}
+          <Link href="/privacy" className="underline underline-offset-2 hover:text-[var(--bone-70)] transition-colors">
+            privacy policy
+          </Link>
+          .
         </p>
       </div>
     </div>

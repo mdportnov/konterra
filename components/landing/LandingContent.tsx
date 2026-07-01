@@ -62,7 +62,7 @@ export default function LandingContent({ t, locale }: LandingContentProps) {
               >
                 {t.nav.signIn}
               </Link>
-              <Link href="/login" className="k-btn k-btn-sm">
+              <Link href="/login?mode=register" className="k-btn k-btn-sm">
                 {t.nav.requestAccess}
               </Link>
             </div>
@@ -93,7 +93,7 @@ export default function LandingContent({ t, locale }: LandingContentProps) {
                   {t.hero.subtitle}
                 </p>
                 <div className="mt-9 sm:mt-11 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
-                  <Link href="/login" className="k-btn">
+                  <Link href="/login?mode=register" className="k-btn">
                     {t.hero.cta}
                     <ArrowRight />
                   </Link>
@@ -333,7 +333,7 @@ export default function LandingContent({ t, locale }: LandingContentProps) {
                   {t.cta.description}
                 </p>
                 <div className="mt-10">
-                  <Link href="/login" className="k-btn">
+                  <Link href="/login?mode=register" className="k-btn">
                     {t.cta.button}
                     <ArrowRight />
                   </Link>
