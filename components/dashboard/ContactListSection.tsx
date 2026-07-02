@@ -12,6 +12,8 @@ import { toast } from 'sonner'
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
 import { useHotkey } from '@/hooks/use-hotkey'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuLabel } from '@/components/ui/dropdown-menu'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
+import { Label } from '@/components/ui/label'
 import { useSavedViews } from '@/hooks/use-saved-views'
 import { countryFlag } from '@/lib/country-flags'
 import { formatContactTime } from '@/lib/country-timezones'
@@ -29,6 +31,7 @@ import { IMPORT_SOURCE_LABELS } from '@/lib/validation'
 import ContactContextMenu from '@/components/context-menus/contact-menu'
 import SwipeableContactItem from '@/components/dashboard/SwipeableContactItem'
 import type { Contact, ContactConnection, Interaction, Favor } from '@/lib/db/schema'
+import { getInitials } from '@/lib/format'
 
 type SortKey = 'name' | 'rating' | 'lastContacted' | 'updatedAt'
 type ViewMode = 'list' | 'grid' | 'compact'
@@ -120,18 +123,27 @@ export default function ContactListSection({
 
   const { views: savedViews, saveView, deleteView, loadView } = useSavedViews()
 
+  const [saveViewDialogOpen, setSaveViewDialogOpen] = useState(false)
+  const [saveViewName, setSaveViewName] = useState('')
+
   const handleSaveView = useCallback(() => {
-    const name = prompt('View name:')
-    if (!name?.trim()) return
-    saveView(name.trim(), {
+    setSaveViewName('')
+    setSaveViewDialogOpen(true)
+  }, [])
+
+  const handleConfirmSaveView = useCallback(() => {
+    const name = saveViewName.trim()
+    if (!name) return
+    saveView(name, {
       tags: selectedTags,
       countries: selectedCountries,
       ratings: [...selectedRatings],
       relTypes: selectedRelTypes,
       sortKey,
     })
-    toast.success(`Saved view "${name.trim()}"`)
-  }, [selectedTags, selectedCountries, selectedRatings, selectedRelTypes, sortKey, saveView])
+    setSaveViewDialogOpen(false)
+    toast.success(`Saved view "${name}"`)
+  }, [saveViewName, selectedTags, selectedCountries, selectedRatings, selectedRelTypes, sortKey, saveView])
 
   const handleLoadView = useCallback((name: string) => {
     const view = loadView(name)
@@ -451,7 +463,7 @@ export default function ContactListSection({
 
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Contacts</span>
+          <span className="meta-label">Contacts</span>
           <div className="flex items-center gap-1.5">
             <span className="text-xs text-muted-foreground/60">
               {filteredContacts.length} of {contacts.length}
@@ -462,7 +474,7 @@ export default function ContactListSection({
                 <TooltipTrigger asChild>
                   <button
                     onClick={() => selectMode ? exitSelectMode() : setSelectMode(true)}
-                    className={`p-1 rounded-md transition-colors ${selectMode ? 'text-orange-500 bg-orange-500/10' : 'text-muted-foreground/60 hover:text-muted-foreground'}`}
+                    className={`p-1 rounded-md transition-colors ${selectMode ? 'text-primary bg-primary/10' : 'text-muted-foreground/60 hover:text-muted-foreground'}`}
                   >
                     <CheckSquare className="h-3.5 w-3.5" />
                   </button>
@@ -515,7 +527,7 @@ export default function ContactListSection({
               <SlidersHorizontal className="h-3 w-3" />
               <span>Filters</span>
               {activeFilterCount > 0 && (
-                <Badge className="bg-orange-500/20 text-orange-500 border-orange-500/30 text-[9px] px-1 py-0 h-3.5 leading-none">
+                <Badge className="bg-primary/20 text-primary border-primary/30 text-[9px] px-1 py-0 h-3.5 leading-none">
                   {activeFilterCount}
                 </Badge>
               )}
@@ -597,7 +609,7 @@ export default function ContactListSection({
                             variant={selectedTags.includes(tag) ? 'default' : 'outline'}
                             className={`cursor-pointer text-[10px] shrink-0 ${
                               selectedTags.includes(tag)
-                                ? 'bg-orange-500/20 text-orange-600 dark:text-orange-300 border-orange-500/30 hover:bg-orange-500/30'
+                                ? 'bg-primary/20 text-primary border-primary/30 hover:bg-primary/30'
                                 : 'border-border text-muted-foreground hover:bg-muted hover:text-foreground/80'
                             }`}
                             onClick={() => toggleTag(tag)}
@@ -650,7 +662,7 @@ export default function ContactListSection({
                       <Star
                         className={`h-3.5 w-3.5 ${
                           selectedRatings.has(r)
-                            ? 'text-orange-400 fill-orange-400'
+                            ? 'text-primary fill-primary'
                             : 'text-muted-foreground/30'
                         }`}
                       />
@@ -753,6 +765,29 @@ export default function ContactListSection({
           <p className="text-xs text-muted-foreground/60 text-center py-6">No contacts found</p>
         )}
       </div>
+      <Dialog open={saveViewDialogOpen} onOpenChange={setSaveViewDialogOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Save view</DialogTitle>
+            <DialogDescription>Save the current filters and sorting as a named view.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-1">
+            <Label htmlFor="save-view-name" className="text-sm">View name</Label>
+            <Input
+              id="save-view-name"
+              value={saveViewName}
+              onChange={(e) => setSaveViewName(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleConfirmSaveView() }}
+              placeholder="e.g. Investors in Europe"
+              autoFocus
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSaveViewDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleConfirmSaveView} disabled={!saveViewName.trim()}>Save view</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
@@ -762,8 +797,8 @@ function SelfProfileCard({ contact, onOpenProfile }: { contact: Contact; onOpenP
     <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/30 border border-border">
       <Avatar className="h-9 w-9 shrink-0">
         <AvatarImage src={contact.photo || undefined} />
-        <AvatarFallback className="text-xs bg-orange-500/15 text-orange-500">
-          {contact.name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)}
+        <AvatarFallback className="text-xs bg-primary/15 text-primary">
+          {getInitials(contact.name)}
         </AvatarFallback>
       </Avatar>
       <div className="flex-1 min-w-0">
@@ -772,7 +807,7 @@ function SelfProfileCard({ contact, onOpenProfile }: { contact: Contact; onOpenP
           {[contact.city, contact.country].filter(Boolean).join(', ')
             ? <>{[contact.city, contact.country].filter(Boolean).join(', ')} {countryFlag(contact.country)}</>
             : (
-            <button onClick={onOpenProfile} className="text-orange-500 hover:text-orange-600 transition-colors cursor-pointer">
+            <button onClick={onOpenProfile} className="text-primary transition-colors cursor-pointer">
               Set your location
             </button>
           )}
@@ -871,7 +906,7 @@ function BulkActionBar({
           </span>
           <button
             onClick={selectedCount === totalVisible ? onDeselectAll : onSelectAll}
-            className="text-[10px] text-orange-500 hover:text-orange-600 transition-colors shrink-0"
+            className="text-[10px] text-primary transition-colors shrink-0"
           >
             {selectedCount === totalVisible ? 'Deselect all' : 'Select all'}
           </button>
@@ -926,7 +961,7 @@ function BulkActionBar({
               size="sm"
               onClick={onTagSubmit}
               disabled={loading || !tagInput.trim()}
-              className="h-7 px-2 text-xs bg-orange-500 hover:bg-orange-600 text-white shrink-0"
+              className="h-7 px-2 text-xs bg-primary hover:bg-primary/90 text-primary-foreground shrink-0"
             >
               Add
             </Button>
@@ -946,7 +981,7 @@ function BulkActionBar({
           )}
           {commonTags.length > 0 && (
             <div>
-              <span className="text-[9px] text-muted-foreground/50 uppercase tracking-wider">Remove tag:</span>
+              <span className="meta-label text-[9px]">Remove tag:</span>
               <div className="flex flex-wrap gap-1 mt-1">
                 {commonTags.slice(0, 8).map((t) => (
                   <button
@@ -1054,7 +1089,7 @@ function ContactListView({
   if (viewMode === 'compact') {
     return (
       <div className="space-y-0">
-        <div className="grid grid-cols-[auto_1fr_auto_auto] gap-x-2 text-[9px] uppercase tracking-wider text-muted-foreground/50 px-2 pb-1 border-b border-border/50">
+        <div className="grid grid-cols-[auto_1fr_auto_auto] gap-x-2 meta-label text-[9px] px-2 pb-1 border-b border-border/50">
           {selectMode && <span />}
           <span>Name</span>
           <span>Location</span>
@@ -1184,24 +1219,19 @@ function ContactRow({ contact, selectMode, isChecked, onSelect, onToggleSelect }
   onSelect: (c: Contact) => void
   onToggleSelect: () => void
 }) {
-  const initials = contact.name
-    .split(' ')
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2)
+  const initials = getInitials(contact.name)
 
   return (
     <button
       onClick={() => selectMode ? onToggleSelect() : onSelect(contact)}
       className={`w-full text-left px-2 py-1.5 rounded-md flex items-center gap-2 transition-colors ${
-        isChecked ? 'bg-orange-500/10 ring-1 ring-orange-500/20' : 'hover:bg-muted/50'
+        isChecked ? 'bg-primary/10 ring-1 ring-primary/20' : 'hover:bg-muted/50'
       }`}
     >
       {selectMode && (
         <span className="shrink-0 text-muted-foreground">
           {isChecked
-            ? <CheckSquare className="h-3.5 w-3.5 text-orange-500" />
+            ? <CheckSquare className="h-3.5 w-3.5 text-primary" />
             : <Square className="h-3.5 w-3.5" />
           }
         </span>
@@ -1223,7 +1253,7 @@ function ContactRow({ contact, selectMode, isChecked, onSelect, onToggleSelect }
       <FollowUpBadge contact={contact} />
       {contact.rating && contact.rating > 0 && (
         <div className="flex items-center gap-0.5 shrink-0">
-          <Star className="h-2.5 w-2.5 text-orange-400 fill-orange-400" />
+          <Star className="h-2.5 w-2.5 text-primary fill-primary" />
           <span className="text-[10px] text-muted-foreground">{contact.rating}</span>
         </div>
       )}
@@ -1239,7 +1269,7 @@ function ContactCard({ contact, selectMode, isChecked, isSelected, onClick, onTo
   onClick: () => void
   onToggleSelect: () => void
 }) {
-  const initials = contact.name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
+  const initials = getInitials(contact.name)
   const [hovered, setHovered] = useState(false)
   const localTime = useMemo(() => {
     if (!hovered || !contact.timezone) return ''
@@ -1253,7 +1283,7 @@ function ContactCard({ contact, selectMode, isChecked, isSelected, onClick, onTo
       onMouseLeave={() => setHovered(false)}
       className={`relative w-full text-left rounded-lg border p-3 transition-colors ${
         isChecked
-          ? 'border-orange-500/40 bg-orange-500/5'
+          ? 'border-primary/40 bg-primary/5'
           : isSelected
             ? 'border-accent-foreground/20 bg-accent'
             : 'border-border hover:bg-muted/50'
@@ -1262,7 +1292,7 @@ function ContactCard({ contact, selectMode, isChecked, isSelected, onClick, onTo
       {selectMode && (
         <span className="absolute top-2 right-2 text-muted-foreground">
           {isChecked
-            ? <CheckSquare className="h-3.5 w-3.5 text-orange-500" />
+            ? <CheckSquare className="h-3.5 w-3.5 text-primary" />
             : <Square className="h-3.5 w-3.5" />
           }
         </span>
@@ -1302,7 +1332,7 @@ function ContactCard({ contact, selectMode, isChecked, isSelected, onClick, onTo
           {contact.rating && contact.rating > 0 && (
             <div className="flex items-center gap-0.5">
               {Array.from({ length: 5 }).map((_, i) => (
-                <Star key={i} className={`h-2.5 w-2.5 ${i < contact.rating! ? 'text-orange-400 fill-orange-400' : 'text-muted-foreground/20'}`} />
+                <Star key={i} className={`h-2.5 w-2.5 ${i < contact.rating! ? 'text-primary fill-primary' : 'text-muted-foreground/20'}`} />
               ))}
             </div>
           )}
@@ -1345,7 +1375,7 @@ function ContactCompactRow({ contact, selectMode, isChecked, isSelected, onClick
       onMouseLeave={() => setHovered(false)}
       className={`w-full text-left grid grid-cols-[auto_1fr_auto_auto] gap-x-2 items-center px-2 py-1 border-b border-border/30 transition-colors ${
         isChecked
-          ? 'bg-orange-500/10'
+          ? 'bg-primary/10'
           : isSelected
             ? 'bg-accent'
             : 'hover:bg-muted/50'
@@ -1354,7 +1384,7 @@ function ContactCompactRow({ contact, selectMode, isChecked, isSelected, onClick
       {selectMode ? (
         <span className="text-muted-foreground w-4">
           {isChecked
-            ? <CheckSquare className="h-3 w-3 text-orange-500" />
+            ? <CheckSquare className="h-3 w-3 text-primary" />
             : <Square className="h-3 w-3" />
           }
         </span>
@@ -1377,7 +1407,7 @@ function ContactCompactRow({ contact, selectMode, isChecked, isSelected, onClick
         <FollowUpBadge contact={contact} />
         {contact.rating && contact.rating > 0 ? (
           <span className="flex items-center gap-0.5 justify-end">
-            <Star className="h-2.5 w-2.5 text-orange-400 fill-orange-400" />
+            <Star className="h-2.5 w-2.5 text-primary fill-primary" />
             <span className="text-muted-foreground">{contact.rating}</span>
           </span>
         ) : (

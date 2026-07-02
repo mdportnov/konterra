@@ -44,7 +44,7 @@ export function FieldRow({
         onChange={onChange}
         placeholder={placeholder}
         required={required}
-        className="bg-muted/50 border-input text-foreground placeholder:text-muted-foreground/40 h-8 text-sm focus-visible:ring-orange-500/30 focus-visible:border-orange-500/50"
+        className="bg-muted/50 border-input text-foreground placeholder:text-muted-foreground/40 h-8 text-sm focus-visible:ring-primary/30 focus-visible:border-primary/50"
       />
     </div>
   )
@@ -137,7 +137,7 @@ export function MultiSelectField({
                 onClick={() => toggle(opt)}
                 className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent transition-colors cursor-pointer"
               >
-                <div className={`h-3.5 w-3.5 rounded-sm border flex items-center justify-center ${active ? 'bg-orange-500 border-orange-500' : 'border-muted-foreground/30'}`}>
+                <div className={`h-3.5 w-3.5 rounded-sm border flex items-center justify-center ${active ? 'bg-primary border-primary' : 'border-muted-foreground/30'}`}>
                   {active && <Check className="h-2.5 w-2.5 text-white" />}
                 </div>
                 {opt}
@@ -209,7 +209,7 @@ export function ChipInput({
     <div className="space-y-1.5">
       <Label htmlFor={name} className="text-xs text-muted-foreground">{label}</Label>
       <div
-        className="flex flex-wrap gap-1 min-h-8 w-full rounded-md border border-input bg-muted/50 px-2 py-1 text-sm focus-within:ring-1 focus-within:ring-orange-500/30 focus-within:border-orange-500/50 cursor-text"
+        className="flex flex-wrap gap-1 min-h-8 w-full rounded-md border border-input bg-muted/50 px-2 py-1 text-sm focus-within:ring-1 focus-within:ring-primary/30 focus-within:border-primary/50 cursor-text"
         onClick={() => inputRef.current?.focus()}
       >
         {chips.map((chip) => (
@@ -265,7 +265,7 @@ export function RangeField({
         max={max}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="w-full h-2 rounded-full appearance-none cursor-pointer bg-muted accent-orange-500"
+        className="w-full h-2 rounded-full appearance-none cursor-pointer bg-muted accent-primary"
       />
     </div>
   )
@@ -293,7 +293,7 @@ export function PrefixInput({
   }
 
   return (
-    <div className="flex h-8 w-full rounded-md border border-input bg-muted/50 text-sm focus-within:ring-1 focus-within:ring-orange-500/30 focus-within:border-orange-500/50 overflow-hidden">
+    <div className="flex h-8 w-full rounded-md border border-input bg-muted/50 text-sm focus-within:ring-1 focus-within:ring-primary/30 focus-within:border-primary/50 overflow-hidden">
       <span className="flex items-center pl-2.5 text-muted-foreground/50 text-sm select-none shrink-0 pointer-events-none">
         {prefix}
       </span>

@@ -61,7 +61,7 @@ export default function FavorLedger({ favors, contacts, onContactClick, loading 
     <div className="space-y-2">
       <div className="flex items-center gap-2">
         <Gift className="h-3.5 w-3.5 text-purple-400" />
-        <span className="text-xs font-medium text-muted-foreground/60 uppercase tracking-wider">Favor Balance</span>
+        <span className="meta-label">Favor Balance</span>
       </div>
       {ledger.length === 0 ? (
         <p className="text-[11px] text-muted-foreground/40 py-1">No favors recorded yet</p>

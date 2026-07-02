@@ -28,7 +28,7 @@ function gapColor(days: number): string {
   if (days <= 0) return 'text-blue-400 bg-blue-500/10 border-blue-500/20'
   if (days < 7) return 'text-green-400 bg-green-500/10 border-green-500/20'
   if (days <= 30) return 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20'
-  if (days <= 90) return 'text-orange-400 bg-orange-500/10 border-orange-500/20'
+  if (days <= 90) return 'text-primary bg-primary/10 border-primary/20'
   return 'text-red-400 bg-red-500/10 border-red-500/20'
 }
 
@@ -36,7 +36,7 @@ function gapDotColor(days: number): string {
   if (days <= 0) return 'bg-blue-400'
   if (days < 7) return 'bg-green-400'
   if (days <= 30) return 'bg-yellow-400'
-  if (days <= 90) return 'bg-orange-400'
+  if (days <= 90) return 'bg-primary'
   return 'bg-red-400'
 }
 

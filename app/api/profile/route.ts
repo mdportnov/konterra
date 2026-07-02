@@ -25,6 +25,7 @@ export async function GET() {
       profilePrivacyLevel: user?.profilePrivacyLevel ?? 'countries_only',
       bio: user?.bio ?? null,
       globeAutoRotate: user?.globeAutoRotate ?? true,
+      onboardedAt: user?.onboardedAt ?? null,
       createdAt: user?.createdAt ?? null,
       referrer,
     })

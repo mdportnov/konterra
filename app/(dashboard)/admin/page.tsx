@@ -24,6 +24,7 @@ import {
   Clock, CheckCircle2, XCircle, UserPlus, Copy, Mail, Settings, Sparkles,
 } from 'lucide-react'
 import { GLASS, TRANSITION } from '@/lib/constants/ui'
+import { getInitials, formatRelativeTime as formatRelative } from '@/lib/format'
 import { toast } from 'sonner'
 import { LLM_MODELS, SETTING_KEY_LLM_MODEL, DEFAULT_MODEL_ID } from '@/lib/constants/llm-models'
 import { DEFAULT_MAX_INVITES, SETTING_KEY_MAX_INVITES } from '@/lib/constants/invites'
@@ -79,22 +80,12 @@ interface ApproveResult {
 
 function formatRelativeTime(dateStr: string | null): string {
   if (!dateStr) return 'Never'
-  const diffMs = Date.now() - new Date(dateStr).getTime()
-  if (diffMs < 0) return 'Just now'
-  const diffMin = Math.floor(diffMs / 60000)
-  if (diffMin < 1) return 'Just now'
-  if (diffMin < 60) return `${diffMin}m ago`
-  const diffH = Math.floor(diffMin / 60)
-  if (diffH < 24) return `${diffH}h ago`
-  const diffD = Math.floor(diffH / 24)
-  if (diffD < 30) return `${diffD}d ago`
-  const diffMo = Math.floor(diffD / 30)
-  return `${diffMo}mo ago`
+  return formatRelative(dateStr) ?? 'Just now'
 }
 
 const ROLE_CONFIG = {
   admin: { label: 'Admin', icon: ShieldCheck, color: 'text-red-500 dark:text-red-400', bg: 'bg-red-500/10 border-red-500/20' },
-  moderator: { label: 'Moderator', icon: Shield, color: 'text-orange-500 dark:text-orange-400', bg: 'bg-orange-500/10 border-orange-500/20' },
+  moderator: { label: 'Moderator', icon: Shield, color: 'text-primary', bg: 'bg-primary/10 border-primary/20' },
   user: { label: 'User', icon: User, color: 'text-muted-foreground', bg: 'bg-muted/50 border-border' },
 } as const
 
@@ -550,7 +541,7 @@ export default function AdminPage() {
     { label: 'Favors', value: stats.totalFavors, icon: Heart, color: 'text-pink-500' },
     { label: 'Trips', value: stats.totalTrips, icon: Plane, color: 'text-cyan-500' },
     { label: 'Tags', value: stats.totalTags, icon: Tag, color: 'text-indigo-500' },
-    { label: 'Avg/User', value: stats.avgContactsPerUser, icon: Globe, color: 'text-orange-500' },
+    { label: 'Avg/User', value: stats.avgContactsPerUser, icon: Globe, color: 'text-primary' },
   ] : []
 
   return (
@@ -568,7 +559,7 @@ export default function AdminPage() {
             </Tooltip>
           </TooltipProvider>
           <div className="flex items-center gap-2 min-w-0">
-            <Shield className="h-5 w-5 text-orange-500 shrink-0" />
+            <Shield className="h-5 w-5 text-primary shrink-0" />
             <h1 className="text-base sm:text-lg font-semibold text-foreground truncate">Admin</h1>
           </div>
           <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
@@ -758,12 +749,7 @@ export default function AdminPage() {
                 {filteredUsers.map((u) => {
                   const config = ROLE_CONFIG[u.role as keyof typeof ROLE_CONFIG] || ROLE_CONFIG.user
                   const RoleIcon = config.icon
-                  const initials = u.name
-                    ?.split(' ')
-                    .map((n) => n[0])
-                    .join('')
-                    .toUpperCase()
-                    .slice(0, 2) || '?'
+                  const initials = getInitials(u.name)
                   const isExpanded = expandedUser === u.id
                   const isSelf = u.id === session?.user?.id
                   const isDeleteTarget = deleteConfirmId === u.id
@@ -1086,12 +1072,7 @@ export default function AdminPage() {
                     const isExpanded = expandedEntry === entry.id
                     const isDeleteTarget = deleteWaitlistConfirmId === entry.id
                     const isProcessing = processingEntry === entry.id
-                    const initials = entry.name
-                      .split(' ')
-                      .map((n) => n[0])
-                      .join('')
-                      .toUpperCase()
-                      .slice(0, 2)
+                    const initials = getInitials(entry.name)
 
                     return (
                       <div
@@ -1333,10 +1314,10 @@ export default function AdminPage() {
                     const isSelected = selectedModel === model.id
                     const providerColor = model.provider === 'google'
                       ? 'border-blue-500/30 bg-blue-500/5'
-                      : 'border-orange-500/30 bg-orange-500/5'
+                      : 'border-primary/30 bg-primary/5'
                     const providerBadge = model.provider === 'google'
                       ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20'
-                      : 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20'
+                      : 'bg-primary/10 text-primary border-primary/20'
                     return (
                       <button
                         key={model.id}

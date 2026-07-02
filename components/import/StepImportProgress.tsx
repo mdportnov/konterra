@@ -166,7 +166,7 @@ export default function StepImportProgress({ entries, source, konterraData, onCo
         }}
       >
         {hasErrors ? (
-          <AlertCircle className="h-10 w-10 text-orange-500 mx-auto" />
+          <AlertCircle className="h-10 w-10 text-primary mx-auto" />
         ) : (
           <CheckCircle2 className="h-10 w-10 text-green-500 mx-auto" />
         )}

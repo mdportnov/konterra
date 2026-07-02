@@ -12,6 +12,7 @@ import { toast } from 'sonner'
 import { staleContacts, overdueFollowUps, upcomingBirthdays } from '@/lib/metrics'
 import { subscribeToStorage, RECONNECT_DAYS_KEY } from '@/lib/local-storage'
 import type { Contact } from '@/lib/db/schema'
+import { getInitials } from '@/lib/format'
 
 const INTERACTION_TYPES = ['meeting', 'call', 'message', 'email', 'event', 'introduction', 'deal', 'note'] as const
 
@@ -132,7 +133,7 @@ export default memo(function ReconnectAlerts({ contacts, onContactClick, onInter
     <div className="space-y-2">
       <div className="flex items-center gap-2">
         <AlertTriangle className="h-3.5 w-3.5 text-amber-400" />
-        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Reconnect</span>
+        <span className="meta-label">Reconnect</span>
         {total > 0 && (
           <Badge className="bg-amber-500/20 text-amber-600 dark:text-amber-300 border-amber-500/30 text-[10px] px-1.5 py-0">
             {total}
@@ -145,7 +146,7 @@ export default memo(function ReconnectAlerts({ contacts, onContactClick, onInter
       ) : (
       <div className="space-y-1">
         {birthdays.map((c) => {
-          const initials = c.name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
+          const initials = getInitials(c.name)
           const days = daysUntilBirthday(c.birthday!)
           return (
             <button
@@ -169,7 +170,7 @@ export default memo(function ReconnectAlerts({ contacts, onContactClick, onInter
         })}
 
         {overdue.map((c) => {
-          const ini = c.name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
+          const ini = getInitials(c.name)
           return (
             <div key={`overdue-${c.id}`} className="space-y-0">
               <div className="flex items-center gap-2.5 p-2 rounded-lg border border-red-500/30 bg-red-500/5 hover:bg-red-500/10 transition-colors group">
@@ -202,7 +203,7 @@ export default memo(function ReconnectAlerts({ contacts, onContactClick, onInter
                 </button>
                 <button
                   onClick={() => { setQuickAdd(quickAdd === c.id ? null : c.id) }}
-                  className="opacity-0 group-hover:opacity-100 text-muted-foreground/40 hover:text-orange-500 transition-[opacity,color] duration-150 shrink-0 cursor-pointer"
+                  className="opacity-0 group-hover:opacity-100 text-muted-foreground/40 hover:text-primary transition-[opacity,color] duration-150 shrink-0 cursor-pointer"
                   title="Log interaction"
                 >
                   <MessageSquare className="h-3.5 w-3.5" />
@@ -218,7 +219,7 @@ export default memo(function ReconnectAlerts({ contacts, onContactClick, onInter
                     <button onClick={() => setQuickAdd(null)} className="ml-auto text-muted-foreground/40 hover:text-foreground cursor-pointer"><X className="h-3 w-3" /></button>
                   </div>
                   <Input value={quickForm.notes} onChange={(e) => setQuickForm((p) => ({ ...p, notes: e.target.value }))} placeholder="Notes (optional)..." className="h-6 text-[10px] bg-muted/50" />
-                  <Button size="sm" className="h-6 text-[10px] w-full bg-orange-500 hover:bg-orange-600 text-white" disabled={saving} onClick={() => handleQuickLog(c.id)}>
+                  <Button size="sm" className="h-6 text-[10px] w-full bg-primary hover:bg-primary/90 text-primary-foreground" disabled={saving} onClick={() => handleQuickLog(c.id)}>
                     {saving ? 'Saving...' : 'Log interaction'}
                   </Button>
                 </div>
@@ -228,7 +229,7 @@ export default memo(function ReconnectAlerts({ contacts, onContactClick, onInter
         })}
 
         {stale.filter((c) => !overdue.some((o) => o.id === c.id)).map((c) => {
-          const ini = c.name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
+          const ini = getInitials(c.name)
           const days = daysSince(c.lastContactedAt)
 
           return (
@@ -251,7 +252,7 @@ export default memo(function ReconnectAlerts({ contacts, onContactClick, onInter
                 </button>
                 <button
                   onClick={() => setQuickAdd(quickAdd === c.id ? null : c.id)}
-                  className="opacity-0 group-hover:opacity-100 text-muted-foreground/40 hover:text-orange-500 transition-[opacity,color] duration-150 shrink-0 cursor-pointer"
+                  className="opacity-0 group-hover:opacity-100 text-muted-foreground/40 hover:text-primary transition-[opacity,color] duration-150 shrink-0 cursor-pointer"
                   title="Log interaction"
                 >
                   <MessageSquare className="h-3.5 w-3.5" />
@@ -267,7 +268,7 @@ export default memo(function ReconnectAlerts({ contacts, onContactClick, onInter
                     <button onClick={() => setQuickAdd(null)} className="ml-auto text-muted-foreground/40 hover:text-foreground cursor-pointer"><X className="h-3 w-3" /></button>
                   </div>
                   <Input value={quickForm.notes} onChange={(e) => setQuickForm((p) => ({ ...p, notes: e.target.value }))} placeholder="Notes (optional)..." className="h-6 text-[10px] bg-muted/50" />
-                  <Button size="sm" className="h-6 text-[10px] w-full bg-orange-500 hover:bg-orange-600 text-white" disabled={saving} onClick={() => handleQuickLog(c.id)}>
+                  <Button size="sm" className="h-6 text-[10px] w-full bg-primary hover:bg-primary/90 text-primary-foreground" disabled={saving} onClick={() => handleQuickLog(c.id)}>
                     {saving ? 'Saving...' : 'Log interaction'}
                   </Button>
                 </div>

@@ -41,6 +41,9 @@ import { useSwipe } from '@/hooks/use-swipe'
 import { toast } from 'sonner'
 import { ChevronRight, Globe } from 'lucide-react'
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
+import {
+  AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction,
+} from '@/components/ui/alert-dialog'
 
 import { useSession } from 'next-auth/react'
 
@@ -262,20 +265,26 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
     Promise.all([data.reloadTrips(), data.reloadVisitedCountries()])
   }, [data.upsertTripLocal, data.reloadTrips, data.reloadVisitedCountries])
 
-  const handleDeleteTrip = useCallback(async (trip: Trip) => {
-    if (!confirm(`Delete trip to ${trip.city}, ${trip.country}?`)) return
+  const [tripPendingDelete, setTripPendingDelete] = useState<Trip | null>(null)
+
+  const handleDeleteTrip = useCallback((trip: Trip) => {
+    setTripPendingDelete(trip)
+  }, [])
+
+  const confirmDeleteTrip = useCallback(async () => {
+    const trip = tripPendingDelete
+    if (!trip) return
+    setTripPendingDelete(null)
     try {
       const res = await fetch(`/api/trips/${trip.id}`, { method: 'DELETE' })
       if (!res.ok) throw new Error('Failed to delete trip')
-      const { toast } = await import('sonner')
       toast.success('Trip deleted')
       tripSelection.clearSelectedTrip()
       Promise.all([data.reloadTrips(), data.reloadVisitedCountries()])
     } catch {
-      const { toast } = await import('sonner')
       toast.error('Failed to delete trip')
     }
-  }, [tripSelection.clearSelectedTrip, data.reloadTrips, data.reloadVisitedCountries])
+  }, [tripPendingDelete, tripSelection.clearSelectedTrip, data.reloadTrips, data.reloadVisitedCountries])
 
   const visitedCityCount = useMemo(() => {
     const now = new Date()
@@ -400,23 +409,24 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
       {!data.loading && data.contacts.filter(c => !c.isSelf).length === 0 && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ zIndex: Z.controls }}>
           <div className="absolute inset-0 overflow-hidden">
-            <div className="absolute top-[30%] left-[25%] h-2 w-2 rounded-full bg-orange-500/20 animate-pulse" />
-            <div className="absolute top-[45%] right-[30%] h-1.5 w-1.5 rounded-full bg-orange-500/15 animate-pulse [animation-delay:0.5s]" />
-            <div className="absolute bottom-[35%] left-[40%] h-2.5 w-2.5 rounded-full bg-orange-500/10 animate-pulse [animation-delay:1s]" />
+            <div className="absolute top-[30%] left-[25%] h-2 w-2 rounded-full bg-primary/20 animate-pulse" />
+            <div className="absolute top-[45%] right-[30%] h-1.5 w-1.5 rounded-full bg-primary/15 animate-pulse [animation-delay:0.5s]" />
+            <div className="absolute bottom-[35%] left-[40%] h-2.5 w-2.5 rounded-full bg-primary/10 animate-pulse [animation-delay:1s]" />
           </div>
           <svg className="absolute inset-0 w-full h-full opacity-[0.07]" viewBox="0 0 400 400">
-            <path d="M100,200 Q200,100 300,180" fill="none" stroke="currentColor" strokeWidth="1" className="text-orange-500 animate-pulse" />
-            <path d="M150,280 Q250,200 320,260" fill="none" stroke="currentColor" strokeWidth="1" className="text-orange-500 animate-pulse [animation-delay:0.7s]" />
+            <path d="M100,200 Q200,100 300,180" fill="none" stroke="currentColor" strokeWidth="1" className="text-primary animate-pulse" />
+            <path d="M150,280 Q250,200 320,260" fill="none" stroke="currentColor" strokeWidth="1" className="text-primary animate-pulse [animation-delay:0.7s]" />
           </svg>
-          <div className={`${GLASS.panel} rounded-2xl p-6 text-center pointer-events-auto max-w-xs relative`}>
-            <div className="h-10 w-10 rounded-full bg-orange-500/10 flex items-center justify-center mx-auto mb-3">
-              <Globe className="h-5 w-5 text-orange-500/60" />
-            </div>
-            <p className="text-sm font-medium text-foreground mb-1">Your globe awaits</p>
-            <p className="text-xs text-muted-foreground mb-4">Add contacts and trips to see your network come alive on the globe.</p>
+          <div className={`${GLASS.panel} tick-corners rounded-2xl p-7 text-center pointer-events-auto max-w-xs relative`}>
+            <p className="meta-label mb-3 flex items-center justify-center gap-2">
+              <Globe className="h-3.5 w-3.5 text-primary" />
+              Empty atlas
+            </p>
+            <p className="k-serif italic text-[1.7rem] leading-tight text-foreground mb-2">Your globe awaits</p>
+            <p className="text-xs text-muted-foreground mb-5">Add contacts and trips to see your world come alive on the globe.</p>
             <div className="flex gap-2 justify-center">
-              <button onClick={() => nav.handleAddContact()} className="px-3 py-1.5 rounded-md bg-orange-500 text-white text-xs font-medium hover:bg-orange-600 transition-colors">Create contact</button>
-              <button onClick={() => setImportDialogOpen(true)} className="px-3 py-1.5 rounded-md bg-accent text-foreground text-xs font-medium hover:bg-accent/80 transition-colors">Import</button>
+              <button onClick={() => nav.handleAddContact()} className="px-3.5 py-1.5 rounded-full bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors">Create contact</button>
+              <button onClick={() => setImportDialogOpen(true)} className="px-3.5 py-1.5 rounded-full border border-border text-foreground text-xs font-medium hover:bg-accent transition-colors">Import</button>
             </div>
           </div>
         </div>
@@ -505,7 +515,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
       <GlobePanel
         open={nav.activePanel === 'insights'}
         side="right"
-        width={PANEL_WIDTH.dashboard.min}
+        width={PANEL_WIDTH.dashboard}
         glass="panel"
         onClose={nav.handleCloseInsights}
       >
@@ -678,6 +688,33 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
 
   const shortcutsDialog = <KeyboardShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
 
+  const deleteTripDialog = (
+    <AlertDialog open={tripPendingDelete !== null} onOpenChange={(v) => { if (!v) setTripPendingDelete(null) }}>
+      <AlertDialogContent style={{ zIndex: Z.modal }}>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete this trip?</AlertDialogTitle>
+          <AlertDialogDescription>
+            {tripPendingDelete ? `The trip to ${tripPendingDelete.city}, ${tripPendingDelete.country} will be removed from your atlas. This cannot be undone.` : ''}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={confirmDeleteTrip}
+            className="bg-destructive text-white hover:bg-destructive/90"
+          >
+            Delete trip
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  )
+
+  const wizardReload = useCallback(
+    () => Promise.all([data.reloadContacts(), data.reloadVisitedCountries()]),
+    [data.reloadContacts, data.reloadVisitedCountries],
+  )
+
   const mobileViewSwipe = useSwipe({
     threshold: 100,
     velocityThreshold: 0.4,
@@ -726,11 +763,12 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
           <WelcomeWizard
             onAddContact={nav.handleAddContact}
             onOpenImport={() => setImportDialogOpen(true)}
-            onComplete={data.reloadContacts}
+            onComplete={wizardReload}
           />
         )}
         {commandMenu}
         {shortcutsDialog}
+        {deleteTripDialog}
       </div>
     )
   }
@@ -740,8 +778,8 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
       <div
         className={`shrink-0 h-full ${TRANSITION.panel}`}
         style={{
-          width: PANEL_WIDTH.dashboard.min,
-          marginLeft: sidebarOpen ? 0 : -PANEL_WIDTH.dashboard.min,
+          width: PANEL_WIDTH.dashboard,
+          marginLeft: sidebarOpen ? 0 : -PANEL_WIDTH.dashboard,
         }}
       >
         <DashboardPanel
@@ -774,11 +812,12 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
         <WelcomeWizard
           onAddContact={nav.handleAddContact}
           onOpenImport={() => setImportDialogOpen(true)}
-          onComplete={data.reloadContacts}
+          onComplete={wizardReload}
         />
       )}
       {commandMenu}
       {shortcutsDialog}
+      {deleteTripDialog}
     </div>
   )
 }

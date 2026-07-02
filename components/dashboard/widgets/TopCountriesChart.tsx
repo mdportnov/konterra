@@ -43,7 +43,7 @@ export default memo(function TopCountriesChart({ contacts, limit = 8, loading }:
 
   return (
     <div className="space-y-2">
-      <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Top Countries</span>
+      <span className="meta-label">Top Countries</span>
       {data.length === 0 ? (
         <p className="text-[11px] text-muted-foreground/40 py-1">No countries yet</p>
       ) : (

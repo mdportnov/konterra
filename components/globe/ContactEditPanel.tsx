@@ -388,7 +388,7 @@ export default function ContactEditPanel({ contact, open, onSaved, onCancel, ava
                             {Array.from({ length: 5 }, (_, i) => (
                               <Star
                                 key={i}
-                                className={`h-2.5 w-2.5 ${i < level ? 'fill-orange-400 text-orange-400' : 'text-muted-foreground/20'}`}
+                                className={`h-2.5 w-2.5 ${i < level ? 'fill-primary text-primary' : 'text-muted-foreground/20'}`}
                               />
                             ))}
                           </div>
@@ -465,7 +465,7 @@ export default function ContactEditPanel({ contact, open, onSaved, onCancel, ava
                       value={formData[f.key as keyof FormData] as string}
                       onChange={handleChange}
                       placeholder={f.placeholder}
-                      className="flex h-8 w-full rounded-md border border-input bg-muted/50 px-3 py-1 text-sm text-foreground placeholder:text-muted-foreground/40 focus-visible:ring-1 focus-visible:ring-orange-500/30 focus-visible:border-orange-500/50 outline-none"
+                      className="flex h-8 w-full rounded-md border border-input bg-muted/50 px-3 py-1 text-sm text-foreground placeholder:text-muted-foreground/40 focus-visible:ring-1 focus-visible:ring-primary/30 focus-visible:border-primary/50 outline-none"
                     />
                   )}
                 </div>
@@ -492,7 +492,7 @@ export default function ContactEditPanel({ contact, open, onSaved, onCancel, ava
               value={formData.notes}
               onChange={handleChange}
               rows={3}
-              className="bg-muted/50 border-input text-foreground placeholder:text-muted-foreground/40 text-sm resize-none focus-visible:ring-orange-500/30 focus-visible:border-orange-500/50"
+              className="bg-muted/50 border-input text-foreground placeholder:text-muted-foreground/40 text-sm resize-none focus-visible:ring-primary/30 focus-visible:border-primary/50"
             />
           </div>
 
@@ -649,7 +649,7 @@ export default function ContactEditPanel({ contact, open, onSaved, onCancel, ava
           type="submit"
           form="contact-edit-panel-form"
           disabled={loading}
-          className="bg-orange-500 hover:bg-orange-600 text-white"
+          className="bg-primary hover:bg-primary/90 text-primary-foreground"
         >
           {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           {contact ? 'Save' : 'Create'}

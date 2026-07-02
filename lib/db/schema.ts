@@ -73,6 +73,7 @@ export const users = pgTable('users', {
   maxInvites: integer('max_invites'),
   invitedBy: text('invited_by').references((): import('drizzle-orm/pg-core').AnyPgColumn => users.id, { onDelete: 'set null' }),
   lastActiveAt: timestamp('last_active_at'),
+  onboardedAt: timestamp('onboarded_at'),
   createdAt: timestamp('created_at').defaultNow(),
 }, (t) => [
   index('users_invited_by_idx').on(t.invitedBy),

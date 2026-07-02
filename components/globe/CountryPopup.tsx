@@ -13,6 +13,7 @@ import { PerplexityIcon } from '@/components/icons/perplexity'
 import { PRIORITY_LABELS, STATUS_LABELS } from '@/lib/constants/wishlist'
 import type { Contact, CountryWishlistEntry } from '@/lib/db/schema'
 import { formatCountryTimesDisplay } from '@/lib/country-timezones'
+import { getInitials } from '@/lib/format'
 
 function buildPerplexityCountryUrl(country: string): string {
   const query = `Best hidden gems, specialty coffee shops, cocktail bars, popular local spots, and networking-friendly places in ${country}`
@@ -43,12 +44,7 @@ const MAX_H = 520
 const SCROLL_MAX = 380
 
 function ContactRow({ contact, onSelect, className }: { contact: Contact; onSelect: (c: Contact) => void; className?: string }) {
-  const initials = contact.name
-    .split(' ')
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2)
+  const initials = getInitials(contact.name)
 
   return (
     <button
@@ -57,7 +53,7 @@ function ContactRow({ contact, onSelect, className }: { contact: Contact; onSele
     >
       <Avatar className="h-8 w-8 border border-border/50 shrink-0">
         <AvatarImage src={contact.photo || undefined} />
-        <AvatarFallback className="text-[10px] bg-orange-500/20 text-orange-600 dark:text-orange-300">
+        <AvatarFallback className="text-[10px] bg-primary/20 text-primary">
           {initials}
         </AvatarFallback>
       </Avatar>
@@ -74,12 +70,7 @@ function ContactRow({ contact, onSelect, className }: { contact: Contact; onSele
 }
 
 function IndirectContactRow({ contact, onSelect }: { contact: Contact; onSelect: (c: Contact) => void }) {
-  const initials = contact.name
-    .split(' ')
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2)
+  const initials = getInitials(contact.name)
 
   return (
     <button
@@ -299,7 +290,7 @@ export default function CountryPopup({ country, contacts, x, y, open, onSelect, 
           {onAddContact && (
             <button
               onClick={onAddContact}
-              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium bg-orange-500 hover:bg-orange-600 text-white transition-colors cursor-pointer"
+              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium bg-primary hover:bg-primary/90 text-primary-foreground transition-colors cursor-pointer"
             >
               <UserPlus className="h-3.5 w-3.5" />
               Add contact

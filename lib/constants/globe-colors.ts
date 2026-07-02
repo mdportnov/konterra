@@ -14,13 +14,13 @@ export const TRAVEL_COLORS = {
 } as const
 
 export const NETWORK_COLORS = {
-  point: '#f97316',
+  point: '#d97b4f',
   pointHighlighted: '#38bdf8',
   pointClusterPartial: '#7dd3fc',
-  pointCluster: '#fb923c',
+  pointCluster: '#e2946a',
   userPoint: '#22c55e',
   selectedArc: 'rgba(56, 189, 248, 0.6)',
-  defaultArc: 'rgba(251, 146, 60, 0.4)',
+  defaultArc: 'rgba(217, 123, 79, 0.4)',
   countryArcSelected: 'rgba(56, 189, 248, 0.35)',
   countryArcDefault: 'rgba(168, 85, 247, 0.25)',
 } as const
@@ -35,13 +35,13 @@ export const CONNECTION_COLORS: Record<string, string> = {
 }
 
 export const POLYGON_COLORS = {
-  defaultCap: { dark: 'rgba(15, 25, 55, 0.85)', light: 'rgba(180, 195, 220, 0.7)' },
-  defaultSide: { dark: 'rgba(10, 18, 40, 0.6)', light: 'rgba(160, 180, 210, 0.5)' },
-  defaultStroke: { dark: 'rgba(40, 70, 130, 0.35)', light: 'rgba(100, 130, 180, 0.3)' },
-  contactLow: { dark: 'rgba(234, 88, 12, 0.35)', light: 'rgba(234, 88, 12, 0.25)' },
-  contactMed: { dark: 'rgba(234, 88, 12, 0.55)', light: 'rgba(234, 88, 12, 0.4)' },
-  contactHigh: { dark: 'rgba(234, 88, 12, 0.75)', light: 'rgba(234, 88, 12, 0.55)' },
-  contactStroke: { dark: 'rgba(234, 88, 12, 0.5)', light: 'rgba(234, 88, 12, 0.35)' },
+  defaultCap: { dark: 'rgba(46, 38, 31, 0.85)', light: 'rgba(199, 189, 171, 0.7)' },
+  defaultSide: { dark: 'rgba(32, 26, 21, 0.6)', light: 'rgba(178, 167, 148, 0.5)' },
+  defaultStroke: { dark: 'rgba(128, 106, 84, 0.35)', light: 'rgba(138, 122, 100, 0.35)' },
+  contactLow: { dark: 'rgba(217, 123, 79, 0.35)', light: 'rgba(194, 100, 58, 0.25)' },
+  contactMed: { dark: 'rgba(217, 123, 79, 0.55)', light: 'rgba(194, 100, 58, 0.4)' },
+  contactHigh: { dark: 'rgba(217, 123, 79, 0.75)', light: 'rgba(194, 100, 58, 0.55)' },
+  contactStroke: { dark: 'rgba(217, 123, 79, 0.5)', light: 'rgba(194, 100, 58, 0.35)' },
   visitedOnly: { dark: 'rgba(20, 184, 166, 0.25)', light: 'rgba(20, 184, 166, 0.15)' },
   visitedStroke: { dark: 'rgba(20, 184, 166, 0.6)', light: 'rgba(20, 184, 166, 0.45)' },
   visitedContactsStroke: { dark: 'rgba(20, 184, 166, 0.8)', light: 'rgba(20, 184, 166, 0.6)' },
@@ -64,9 +64,9 @@ export const RING_COLORS = {
 } as const
 
 export const HEXBIN_COLORS = {
-  low: { top: 'rgba(251, 146, 60, 0.7)', side: 'rgba(234, 88, 12, 0.5)' },
-  med: { top: 'rgba(234, 88, 12, 0.85)', side: 'rgba(194, 65, 12, 0.6)' },
-  high: { top: 'rgba(194, 65, 12, 0.95)', side: 'rgba(154, 52, 18, 0.7)' },
+  low: { top: 'rgba(226, 148, 106, 0.7)', side: 'rgba(194, 100, 58, 0.5)' },
+  med: { top: 'rgba(194, 100, 58, 0.85)', side: 'rgba(160, 80, 44, 0.6)' },
+  high: { top: 'rgba(160, 80, 44, 0.95)', side: 'rgba(122, 60, 34, 0.7)' },
 } as const
 
 export const TENSE_COLORS = {

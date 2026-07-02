@@ -46,8 +46,17 @@ export async function getUserPasswordHash(id: string) {
 export async function getUserProfile(id: string) {
   return db.query.users.findFirst({
     where: eq(users.id, id),
-    columns: { id: true, email: true, name: true, image: true, role: true, username: true, bio: true, profileVisibility: true, profilePrivacyLevel: true, globeAutoRotate: true, createdAt: true },
+    columns: { id: true, email: true, name: true, image: true, role: true, username: true, bio: true, profileVisibility: true, profilePrivacyLevel: true, globeAutoRotate: true, onboardedAt: true, createdAt: true },
   })
+}
+
+export async function markUserOnboarded(id: string) {
+  const [updated] = await db
+    .update(users)
+    .set({ onboardedAt: new Date() })
+    .where(eq(users.id, id))
+    .returning({ id: users.id, onboardedAt: users.onboardedAt })
+  return updated ?? null
 }
 
 export async function getUserByUsername(username: string) {

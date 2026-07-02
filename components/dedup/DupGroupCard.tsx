@@ -8,6 +8,7 @@ import { Separator } from '@/components/ui/separator'
 import { Loader2, Trash2, Merge, SkipForward } from 'lucide-react'
 import { toast } from 'sonner'
 import ContactMergeFields from './ContactMergeFields'
+import { getInitials } from '@/lib/format'
 import type { Contact } from '@/lib/db/schema'
 import type { DuplicateGroup } from '@/lib/dedup/find-duplicate-groups'
 
@@ -20,14 +21,7 @@ interface DupGroupCardProps {
 
 type Action = 'skip' | 'merge' | 'delete'
 
-function initials(name: string) {
-  return name
-    .split(' ')
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2)
-}
+const initials = getInitials
 
 function getVal(contact: Contact, field: string): unknown {
   return (contact as Record<string, unknown>)[field]
@@ -102,7 +96,7 @@ export default function DupGroupCard({ group, index, total, onResolved }: DupGro
   }
 
   const confidenceColor = group.confidence === 'exact'
-    ? 'bg-orange-500/15 text-orange-600 dark:text-orange-300'
+    ? 'bg-primary/15 text-primary'
     : 'bg-yellow-500/15 text-yellow-600 dark:text-yellow-300'
 
   return (

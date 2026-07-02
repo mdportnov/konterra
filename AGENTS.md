@@ -132,7 +132,7 @@ Always import `GLASS`, `Z`, `TRANSITION`, `PANEL_WIDTH` from `lib/constants/ui.t
 - **Glass morphism**: `GLASS.panel`, `GLASS.control`, `GLASS.heavy` — never ad-hoc backdrop-blur
 - **Z-index**: `Z.globe`, `Z.controls`, `Z.sidebar`, `Z.sidebarToggle`, `Z.detail`, `Z.overlay`, `Z.modal`, `Z.toast` — never raw numbers
 - **Transitions**: `TRANSITION.panel` (300ms), `TRANSITION.fade` (200ms), `TRANSITION.color` (150ms)
-- **Panel widths**: `PANEL_WIDTH.sidebar` (320), `PANEL_WIDTH.detail` (400)
+- **Panel widths**: `PANEL_WIDTH.detail` (400), `PANEL_WIDTH.dashboard` (480)
 
 ### Components
 - `GlobePanel` (`components/globe/GlobePanel.tsx`) for slide-in/out overlays — never raw `fixed` + `translate-x`
@@ -313,7 +313,7 @@ export default function MyPanel({ open, onClose }: MyPanelProps) {
 
 GlobePanel props:
 - `side`: `'left'` (sidebar-level z-index) or `'right'` (detail-level z-index)
-- `width`: use `PANEL_WIDTH.sidebar` or `PANEL_WIDTH.detail`
+- `width`: use `PANEL_WIDTH.detail` or `PANEL_WIDTH.dashboard`
 - `glass`: `'panel'` (default), `'control'`, or `'heavy'`
 - `onClose`: enables Escape key + click-outside + close chevron button
 - Auto-fullscreen on mobile

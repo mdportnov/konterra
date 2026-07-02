@@ -307,7 +307,7 @@ export default function GlobeFilters({
           }}
         >
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+            <span className="meta-label">
               Filters
             </span>
             <div className="flex items-center gap-2">
@@ -359,7 +359,7 @@ export default function GlobeFilters({
                             key={i}
                             className={`h-2.5 w-2.5 ${
                               active
-                                ? 'fill-orange-400 text-orange-400'
+                                ? 'fill-primary text-primary'
                                 : 'text-muted-foreground/30'
                             }`}
                           />
@@ -393,7 +393,7 @@ export default function GlobeFilters({
                     onClick={() => setManagingTags(!managingTags)}
                     className={`text-[10px] transition-colors ${
                       managingTags
-                        ? 'text-orange-500 hover:text-orange-600'
+                        ? 'text-primary'
                         : 'text-muted-foreground/60 hover:text-muted-foreground'
                     }`}
                   >
@@ -411,7 +411,7 @@ export default function GlobeFilters({
                           variant={activeTags.has(tag) ? 'default' : 'outline'}
                           className={`cursor-pointer text-[10px] ${
                             activeTags.has(tag)
-                              ? 'bg-orange-500/20 text-orange-600 dark:text-orange-300 border-orange-500/30 hover:bg-orange-500/30'
+                              ? 'bg-primary/20 text-primary border-primary/30 hover:bg-primary/30'
                               : 'border-border text-muted-foreground/50 hover:bg-muted hover:text-muted-foreground'
                           } ${managingTags && userTag ? 'pr-5' : ''}`}
                           onClick={() => toggleTag(tag)}
@@ -449,7 +449,7 @@ export default function GlobeFilters({
                       }
                     }}
                     placeholder="New tag..."
-                    className="bg-muted/50 border-input text-foreground placeholder:text-muted-foreground/40 h-6 text-[10px] focus-visible:ring-orange-500/30 focus-visible:border-orange-500/50 flex-1"
+                    className="bg-muted/50 border-input text-foreground placeholder:text-muted-foreground/40 h-6 text-[10px] focus-visible:ring-primary/30 focus-visible:border-primary/50 flex-1"
                   />
                   <Button
                     size="sm"
@@ -751,7 +751,7 @@ export default function GlobeFilters({
               >
                 <Filter className="h-4 w-4" />
                 {activeFilterCount > 0 && (
-                  <span className="absolute -top-1 -right-1 h-4 min-w-4 px-0.5 rounded-full bg-orange-500 text-white text-[10px] font-medium flex items-center justify-center">
+                  <span className="absolute -top-1 -right-1 h-4 min-w-4 px-0.5 rounded-full bg-primary text-primary-foreground text-[10px] font-medium flex items-center justify-center">
                     {activeFilterCount}
                   </span>
                 )}

@@ -325,7 +325,7 @@ export default function TripCalendar({ trips, onTripClick, onAddTrip }: TripCale
                     >
                       <span className={`
                         text-[10px] leading-none inline-flex items-center justify-center
-                        ${isToday ? 'bg-orange-500 text-white rounded-full w-4.5 h-4.5' : 'text-foreground/70'}
+                        ${isToday ? 'bg-primary text-primary-foreground rounded-full w-4.5 h-4.5' : 'text-foreground/70'}
                       `}>
                         {day.getDate()}
                       </span>

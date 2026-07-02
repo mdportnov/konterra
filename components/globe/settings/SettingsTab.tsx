@@ -39,7 +39,7 @@ function getReconnectDaysServer() {
 }
 
 const CARD = 'rounded-lg border border-border bg-muted/20 p-4'
-const SECTION_LABEL = 'text-[11px] font-medium text-muted-foreground/70 uppercase tracking-wider'
+const SECTION_LABEL = 'meta-label text-[10px]'
 
 export function SettingsTab({
   displayOptions,

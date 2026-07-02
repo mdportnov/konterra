@@ -139,15 +139,15 @@ export default memo(function GlobeCanvas({
   const globeMaterial = useMemo(() => {
     if (isDark) {
       return new MeshPhongMaterial({
-        color: new Color('#080d25'),
-        emissive: new Color('#040818'),
+        color: new Color('#191412'),
+        emissive: new Color('#0e0b09'),
         emissiveIntensity: 0.8,
         shininess: 5,
       })
     }
     return new MeshPhongMaterial({
-      color: new Color('#b8c8e0'),
-      emissive: new Color('#a0b4d0'),
+      color: new Color('#ddd4c4'),
+      emissive: new Color('#cfc5b2'),
       emissiveIntensity: 0.3,
       shininess: 15,
     })
@@ -898,7 +898,7 @@ export default memo(function GlobeCanvas({
   }, [display.arcMode])
 
   return (
-    <div ref={containerRef} className="absolute inset-0 bg-[#e8edf2] dark:bg-[#050816]">
+    <div ref={containerRef} className="absolute inset-0 globe-bg">
       <GlobeGL
         ref={globeRef}
         width={dimensions.width}
@@ -906,7 +906,7 @@ export default memo(function GlobeCanvas({
         globeMaterial={globeMaterial}
         rendererConfig={{ antialias: true, alpha: true }}
         backgroundColor="rgba(0,0,0,0)"
-        atmosphereColor={isDark ? '#1a3a7a' : '#6b8cc7'}
+        atmosphereColor={isDark ? '#a85b36' : '#c98a63'}
         atmosphereAltitude={0.18}
         showGraticules={display.showGraticules}
         polygonsData={countries}
@@ -999,7 +999,7 @@ export default memo(function GlobeCanvas({
             </div>
           )
           const SectionHeader = ({ children }: { children: React.ReactNode }) => (
-            <div className="text-[9px] uppercase tracking-wider text-muted-foreground/50 mb-0.5">{children}</div>
+            <div className="meta-label text-[9px] mb-0.5">{children}</div>
           )
           const Sep = () => <div className="h-px bg-border/40 my-1.5" />
 
