@@ -7,18 +7,18 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import {
-  Globe, UserPlus, Upload, LayoutDashboard, Settings, ArrowRight, ArrowLeft, Loader2, Check, ChevronsUpDown, Search, X, ArrowLeftRight,
+  Globe, UserPlus, Upload, LayoutDashboard, Settings, ArrowRight, ArrowLeft, Loader2, Check, ChevronsUpDown, Search, X, ArrowLeftRight, MapPin, Share2,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { GLASS, Z, TRANSITION } from '@/lib/constants/ui'
 import { CountrySelect } from '@/components/globe/contact-edit/CountrySelect'
+import { countryFlag } from '@/lib/country-flags'
 import { useIsMobile } from '@/hooks/use-mobile'
-
-const STORAGE_KEY = 'konterra-onboarded'
 
 const RAW_TIMEZONES = Intl.supportedValuesOf('timeZone')
 
@@ -102,6 +102,11 @@ export default function WelcomeWizard({ onAddContact, onOpenImport, onComplete }
   const [saving, setSaving] = useState(false)
   const [tzOpen, setTzOpen] = useState(false)
   const [tzSearch, setTzSearch] = useState('')
+  const [visited, setVisited] = useState<string[]>([])
+  const [savingVisited, setSavingVisited] = useState(false)
+  const [username, setUsername] = useState('')
+  const [makePublic, setMakePublic] = useState(true)
+  const [savingClaim, setSavingClaim] = useState(false)
   const tzInputRef = useRef<HTMLInputElement>(null)
   const isMobile = useIsMobile()
 
@@ -129,22 +134,17 @@ export default function WelcomeWizard({ onAddContact, onOpenImport, onComplete }
   }, [timezone, timezones])
 
   useEffect(() => {
-    if (localStorage.getItem(STORAGE_KEY)) return
-    fetch('/api/me/location')
+    fetch('/api/profile')
       .then((r) => r.ok ? r.json() : null)
       .then((data) => {
-        if (data?.country) {
-          localStorage.setItem(STORAGE_KEY, '1')
-        } else {
-          setOpen(true)
-        }
+        if (data && !data.onboardedAt) setOpen(true)
       })
-      .catch(() => setOpen(true))
+      .catch(() => {})
   }, [])
 
   const finish = useCallback(() => {
-    localStorage.setItem(STORAGE_KEY, '1')
     setOpen(false)
+    fetch('/api/me/onboarding', { method: 'POST' }).catch(() => {})
   }, [])
 
   const handleSaveHomeBase = useCallback(async () => {
@@ -171,13 +171,67 @@ export default function WelcomeWizard({ onAddContact, onOpenImport, onComplete }
       }
       toast.success('Home base saved')
       await onComplete()
+      if (country.trim() && !visited.includes(country.trim())) {
+        setVisited((v) => [...v, country.trim()])
+      }
       setStep(2)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to save home base')
     } finally {
       setSaving(false)
     }
-  }, [country, city, timezone, onComplete])
+  }, [country, city, timezone, visited, onComplete])
+
+  const handleSaveVisited = useCallback(async () => {
+    if (visited.length === 0) {
+      setStep(3)
+      return
+    }
+    setSavingVisited(true)
+    try {
+      const res = await fetch('/api/visited-countries', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ countries: visited }),
+      })
+      if (!res.ok) throw new Error('Failed to save countries')
+      toast.success(`${visited.length} ${visited.length === 1 ? 'country' : 'countries'} on your atlas`)
+      await onComplete()
+      setStep(3)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to save countries')
+    } finally {
+      setSavingVisited(false)
+    }
+  }, [visited, onComplete])
+
+  const handleClaim = useCallback(async () => {
+    const u = username.trim().toLowerCase()
+    if (!u) {
+      setStep(4)
+      return
+    }
+    setSavingClaim(true)
+    try {
+      const body: Record<string, unknown> = { username: u }
+      if (makePublic) body.profileVisibility = 'public'
+      const res = await fetch('/api/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({ error: 'Failed' }))
+        throw new Error(data.error || 'Failed to claim username')
+      }
+      toast.success(makePublic ? 'Your atlas is live' : 'Username claimed')
+      setStep(4)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to claim username')
+    } finally {
+      setSavingClaim(false)
+    }
+  }, [username, makePublic])
 
   const handleCreateManually = useCallback(() => {
     finish()
@@ -194,14 +248,14 @@ export default function WelcomeWizard({ onAddContact, onOpenImport, onComplete }
   const steps = [
     {
       title: 'Welcome to Konterra',
-      description: 'Your personal network, visualized on a globe. Let\'s get you set up in a few quick steps.',
+      description: 'Your world — people, places, journeys — mapped on one globe. Four quick steps and your atlas takes shape.',
       content: (
         <div className="flex flex-col items-center gap-4 py-6">
           <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
             <Globe className="h-8 w-8 text-primary" />
           </div>
           <p className="text-sm text-muted-foreground text-center max-w-sm px-2">
-            Map your contacts across the world, track relationships, and never lose sight of your network.
+            Map your contacts across the world, log your travels, and share a living atlas of where you&apos;ve been.
           </p>
         </div>
       ),
@@ -308,6 +362,106 @@ export default function WelcomeWizard({ onAddContact, onOpenImport, onComplete }
       ),
     },
     {
+      title: 'Where have you been?',
+      description: 'Mark the countries you\'ve visited — they light up on your globe instantly.',
+      content: (
+        <div className="space-y-3 py-2">
+          <CountrySelect
+            value=""
+            onChange={(c) => {
+              if (c && !visited.includes(c)) setVisited((v) => [...v, c])
+            }}
+            label="Add a country"
+          />
+          {visited.length > 0 ? (
+            <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto thin-scrollbar">
+              {visited.map((c) => (
+                <span
+                  key={c}
+                  className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/40 pl-2 pr-1 py-0.5 text-xs text-foreground"
+                >
+                  <span>{countryFlag(c)}</span>
+                  <span>{c}</span>
+                  <button
+                    type="button"
+                    onClick={() => setVisited((v) => v.filter((x) => x !== c))}
+                    className="rounded-full p-0.5 text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+              <MapPin className="h-3.5 w-3.5" />
+              Nothing yet — pick a few from the list above.
+            </p>
+          )}
+        </div>
+      ),
+      footer: (
+        <DialogFooter className="flex-row justify-between sm:justify-between">
+          <Button variant="ghost" onClick={() => setStep(1)}>
+            <ArrowLeft className="h-4 w-4" />
+            Back
+          </Button>
+          <Button onClick={handleSaveVisited} disabled={savingVisited}>
+            {savingVisited && <Loader2 className="h-4 w-4 animate-spin" />}
+            {visited.length > 0 ? 'Save and continue' : 'Skip for now'}
+            {!savingVisited && <ArrowRight className="h-4 w-4" />}
+          </Button>
+        </DialogFooter>
+      ),
+    },
+    {
+      title: 'Claim your atlas',
+      description: 'Pick a username to get a shareable public page of your travels. You control what\'s visible — contacts stay private, always.',
+      content: (
+        <div className="space-y-4 py-2">
+          <div className="space-y-2">
+            <Label htmlFor="wizard-username" className="text-sm">Username</Label>
+            <div className="flex items-center gap-0 rounded-md border border-input bg-transparent focus-within:border-ring">
+              <span className="pl-3 text-sm text-muted-foreground font-mono shrink-0">konterra.space/u/</span>
+              <input
+                id="wizard-username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value.toLowerCase())}
+                placeholder="yourname"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                className="flex-1 min-w-0 bg-transparent h-10 sm:h-9 pr-3 pl-0.5 text-sm text-foreground placeholder:text-muted-foreground/40 outline-none font-mono"
+              />
+            </div>
+          </div>
+          <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2.5">
+            <div className="flex items-center gap-2.5">
+              <Share2 className="h-4 w-4 text-primary shrink-0" />
+              <div>
+                <p className="text-sm text-foreground">Make my atlas public</p>
+                <p className="text-[11px] text-muted-foreground">Countries and trip count only — never your contacts</p>
+              </div>
+            </div>
+            <Switch checked={makePublic} onCheckedChange={setMakePublic} />
+          </div>
+        </div>
+      ),
+      footer: (
+        <DialogFooter className="flex-row justify-between sm:justify-between">
+          <Button variant="ghost" onClick={() => setStep(2)}>
+            <ArrowLeft className="h-4 w-4" />
+            Back
+          </Button>
+          <Button onClick={handleClaim} disabled={savingClaim}>
+            {savingClaim && <Loader2 className="h-4 w-4 animate-spin" />}
+            {username.trim() ? 'Claim and continue' : 'Skip for now'}
+            {!savingClaim && <ArrowRight className="h-4 w-4" />}
+          </Button>
+        </DialogFooter>
+      ),
+    },
+    {
       title: 'Add your first contact',
       description: 'Start building your network. You can always add more later.',
       content: (
@@ -344,11 +498,11 @@ export default function WelcomeWizard({ onAddContact, onOpenImport, onComplete }
       ),
       footer: (
         <DialogFooter className="flex-row justify-between sm:justify-between">
-          <Button variant="ghost" onClick={() => setStep(1)}>
+          <Button variant="ghost" onClick={() => setStep(3)}>
             <ArrowLeft className="h-4 w-4" />
             Back
           </Button>
-          <Button variant="outline" onClick={() => setStep(3)}>
+          <Button variant="outline" onClick={() => setStep(5)}>
             Skip for now
             <ArrowRight className="h-4 w-4" />
           </Button>
@@ -409,7 +563,7 @@ export default function WelcomeWizard({ onAddContact, onOpenImport, onComplete }
         style={{ zIndex: Z.modal }}
       >
         <DialogHeader>
-          <DialogTitle className="text-center sm:text-left">{current.title}</DialogTitle>
+          <DialogTitle className="k-serif italic text-[1.6rem] leading-tight font-normal text-center sm:text-left">{current.title}</DialogTitle>
           <DialogDescription className="text-center sm:text-left">{current.description}</DialogDescription>
         </DialogHeader>
         {current.content}
