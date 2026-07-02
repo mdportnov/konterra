@@ -35,6 +35,7 @@ import type {
   WeakConnectionAlert,
 } from '@/lib/connection-insights'
 import type { Contact, ContactConnection, Interaction, Favor } from '@/lib/db/schema'
+import { getInitials } from '@/lib/format'
 
 interface ConnectionInsightsPanelProps {
   contacts: Contact[]
@@ -70,7 +71,7 @@ const SEVERITY_STYLES: Record<string, { border: string; bg: string; text: string
 }
 
 function initials(name: string): string {
-  return name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
+  return getInitials(name)
 }
 
 function Section({ title, icon: Icon, badge, children, defaultOpen = true }: {
@@ -88,11 +89,11 @@ function Section({ title, icon: Icon, badge, children, defaultOpen = true }: {
         className="w-full flex items-center gap-2 group rounded-md focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
       >
         <Icon className="h-3.5 w-3.5 text-muted-foreground group-hover:text-foreground transition-colors" />
-        <span className="text-xs font-medium text-muted-foreground/60 uppercase tracking-wider group-hover:text-muted-foreground transition-colors">
+        <span className="meta-label transition-colors">
           {title}
         </span>
         {badge !== undefined && (
-          <Badge className="bg-orange-500/20 text-orange-600 dark:text-orange-300 border-orange-500/30 text-[10px] px-1.5 py-0">
+          <Badge className="bg-primary/20 text-primary border-primary/30 text-[10px] px-1.5 py-0">
             {badge}
           </Badge>
         )}
@@ -122,7 +123,7 @@ function MetricCard({ label, value, subtext, trend }: {
   return (
     <div className={`${GLASS.control} rounded-lg p-3 space-y-1`}>
       <div className="flex items-center justify-between">
-        <span className="text-[10px] text-muted-foreground uppercase tracking-wide">{label}</span>
+        <span className="meta-label text-[9px]">{label}</span>
         {trend && (
           trend === 'up' ? <TrendingUp className="h-3 w-3 text-green-500" /> :
           trend === 'down' ? <TrendingDown className="h-3 w-3 text-red-400" /> :
@@ -388,7 +389,7 @@ export default function ConnectionInsightsPanel({
 
         <div className={`${GLASS.control} rounded-xl p-3 space-y-1.5`}>
           <div className="flex items-center justify-between">
-            <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Network Reach</span>
+            <span className="meta-label text-[9px]">Network Reach</span>
             <GlobeIcon className="h-3 w-3 text-muted-foreground/40" />
           </div>
           <div className="flex items-center gap-3">
@@ -607,7 +608,7 @@ export default function ConnectionInsightsPanel({
                   {(['meeting', 'call', 'message', 'email', 'event', 'note'] as const).map((t) => <option key={t} value={t}>{t}</option>)}
                 </select>
                 <Input value={quickLogForm.notes} onChange={(e) => setQuickLogForm((p) => ({ ...p, notes: e.target.value }))} placeholder="Notes..." className="h-6 text-[10px] bg-muted/50" />
-                <Button size="sm" className="h-6 text-[10px] w-full bg-orange-500 hover:bg-orange-600 text-white" onClick={submitQuickLog}>Log</Button>
+                <Button size="sm" className="h-6 text-[10px] w-full bg-primary hover:bg-primary/90 text-primary-foreground" onClick={submitQuickLog}>Log</Button>
               </div>
             )}
           </Section>
@@ -696,7 +697,7 @@ function ClusterCard({ cluster, onContactClick }: {
       {cluster.sharedTags.length > 0 && (
         <div className="flex flex-wrap gap-1">
           {cluster.sharedTags.slice(0, 4).map((tag) => (
-            <Badge key={tag} variant="outline" className="text-[9px] px-1 py-0 border-orange-500/20 text-orange-500/70">
+            <Badge key={tag} variant="outline" className="text-[9px] px-1 py-0 border-primary/20 text-primary/70">
               {tag}
             </Badge>
           ))}
@@ -812,7 +813,7 @@ function RiskCard({ risk, onContactClick, onDismiss, onSnooze, onQuickLog }: {
       </button>
       <div className="flex gap-1 mt-1.5 ml-3.5">
         {onQuickLog && (
-          <button onClick={() => onQuickLog(risk.contact)} className="text-[9px] px-1.5 py-0.5 rounded bg-orange-500/10 hover:bg-orange-500/20 text-orange-500 cursor-pointer transition-colors">Reach out</button>
+          <button onClick={() => onQuickLog(risk.contact)} className="text-[9px] px-1.5 py-0.5 rounded bg-primary/10 hover:bg-primary/20 text-primary cursor-pointer transition-colors">Reach out</button>
         )}
         {onSnooze && (
           <button onClick={() => onSnooze(key)} className="text-[9px] px-1.5 py-0.5 rounded bg-muted hover:bg-accent text-muted-foreground cursor-pointer transition-colors">Snooze 30d</button>

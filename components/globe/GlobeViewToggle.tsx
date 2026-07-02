@@ -32,7 +32,7 @@ export default function GlobeViewToggle({
                 onClick={() => onToggle('network')}
                 className={`h-7 w-7 flex items-center justify-center rounded-md transition-colors ${
                   showNetwork
-                    ? 'bg-orange-500/20 text-orange-400'
+                    ? 'bg-primary/20 text-primary'
                     : 'text-muted-foreground/40 hover:text-muted-foreground/70'
                 }`}
               >

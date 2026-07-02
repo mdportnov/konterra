@@ -3,7 +3,6 @@
 import { useMemo, memo } from 'react'
 import { Users, Globe, Heart, TrendingUp } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
-import { GLASS } from '@/lib/constants/ui'
 import { countryNames } from '@/components/globe/data/country-centroids'
 import type { Contact } from '@/lib/db/schema'
 
@@ -32,41 +31,34 @@ export default memo(function StatsRow({ contacts, loading, visitedCount = 0, wis
       label: 'Contacts',
       value: String(contactCount),
       icon: Users,
-      accent: 'bg-orange-500/10 text-orange-400',
     },
     {
       label: 'Visited',
       value: String(visitedCount),
       sub: `${pct(visitedCount)} of ${TOTAL_COUNTRIES}`,
       icon: Globe,
-      accent: 'bg-teal-500/10 text-teal-400',
     },
     {
       label: 'Wishlist',
       value: String(wishlistCount),
       sub: wishlistCount > 0 ? `${wishlistCount} to explore` : undefined,
       icon: Heart,
-      accent: 'bg-rose-500/10 text-rose-400',
     },
     {
       label: 'With wishlist',
       value: String(potential),
       sub: potential > visitedCount ? pct(potential) : undefined,
       icon: TrendingUp,
-      accent: potential > visitedCount ? 'bg-amber-500/10 text-amber-400' : 'bg-muted text-muted-foreground/40',
     },
   ]
 
   if (loading) {
     return (
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-2 border-y border-border divide-x divide-border">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className={`${GLASS.control} rounded-xl p-3 flex items-center gap-3`}>
-            <Skeleton className="h-8 w-8 rounded-lg" />
-            <div className="space-y-1.5">
-              <Skeleton className="h-5 w-10" />
-              <Skeleton className="h-3 w-14" />
-            </div>
+          <div key={i} className={`p-3 space-y-1.5 ${i >= 2 ? 'border-t border-border' : ''}`}>
+            <Skeleton className="h-7 w-12" />
+            <Skeleton className="h-3 w-16" />
           </div>
         ))}
       </div>
@@ -74,25 +66,20 @@ export default memo(function StatsRow({ contacts, loading, visitedCount = 0, wis
   }
 
   return (
-    <div className="grid grid-cols-2 gap-2">
-      {cards.map((card) => (
+    <div className="grid grid-cols-2 border-y border-border divide-x divide-border">
+      {cards.map((card, i) => (
         <div
           key={card.label}
-          className={`${GLASS.control} rounded-xl p-3 flex items-center gap-3 text-left`}
+          className={`p-3 text-left min-w-0 ${i >= 2 ? 'border-t border-border' : ''}`}
         >
-          <div className={`rounded-lg p-2 ${card.accent}`}>
-            <card.icon className="h-4 w-4" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-lg font-semibold text-foreground leading-tight">{card.value}</p>
-            <p className="text-[11px] text-muted-foreground truncate">
-              {card.sub ? (
-                <><span>{card.label}</span> <span className="text-muted-foreground/50">{card.sub}</span></>
-              ) : (
-                card.label
-              )}
-            </p>
-          </div>
+          <p className="stat-figure text-[1.65rem] leading-none text-foreground">{card.value}</p>
+          <p className="meta-label text-[9px] mt-1.5 flex items-center gap-1 truncate">
+            <card.icon className="h-3 w-3 shrink-0 text-primary/70" />
+            <span className="truncate">{card.label}</span>
+          </p>
+          {card.sub && (
+            <p className="text-[10px] text-muted-foreground/60 mt-0.5 truncate tabular-nums">{card.sub}</p>
+          )}
         </div>
       ))}
     </div>

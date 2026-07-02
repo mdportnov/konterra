@@ -127,6 +127,7 @@ export default function DashboardPanel({
         onCollapse={onCollapse}
         onSettings={onOpenSettings}
         onInsights={onOpenInsights}
+        onOpenProfile={onOpenProfile}
         dashboardTab={dashboardTab}
         onDashboardTabChange={setDashboardTab}
       />

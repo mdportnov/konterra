@@ -126,8 +126,8 @@ export default function GettingStartedCard({
   return (
     <div className={`${GLASS.control} rounded-xl p-4 space-y-3`}>
       <div className="flex items-center justify-between">
-        <span className="text-xs font-medium text-foreground">Getting Started</span>
-        <Badge className="bg-orange-500/15 text-orange-500 border-orange-500/25 text-[10px] px-1.5 py-0 h-4">
+        <span className="meta-label text-[10px]">Getting Started</span>
+        <Badge className="bg-primary/15 text-primary border-primary/25 text-[10px] px-1.5 py-0 h-4">
           {completed}/{total}
         </Badge>
       </div>
@@ -135,7 +135,7 @@ export default function GettingStartedCard({
       <div className="space-y-1">
         <div className="h-1.5 rounded-full bg-muted overflow-hidden">
           <div
-            className="h-full rounded-full bg-orange-500 transition-[width] duration-500"
+            className="h-full rounded-full bg-primary transition-[width] duration-500"
             style={{ width: `${pct}%` }}
           />
         </div>
@@ -169,7 +169,7 @@ export default function GettingStartedCard({
                   size="sm"
                   variant="ghost"
                   onClick={step.action.onClick}
-                  className="h-6 px-2 text-[10px] text-orange-500 hover:text-orange-600 hover:bg-orange-500/10"
+                  className="h-6 px-2 text-[10px] text-primary hover:text-primary hover:bg-primary/10"
                 >
                   {step.action.label}
                 </Button>

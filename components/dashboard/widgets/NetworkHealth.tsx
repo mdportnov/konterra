@@ -88,7 +88,7 @@ export default memo(function NetworkHealth({ contacts, interactions, loading }: 
 
   return (
     <div className="space-y-2">
-      <span className="text-xs font-medium text-muted-foreground/60 uppercase tracking-wider">Network Health</span>
+      <span className="meta-label">Network Health</span>
       <div className={`${GLASS.control} rounded-xl p-4`}>
         <div className="flex items-center gap-5">
           <div className="shrink-0">

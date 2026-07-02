@@ -29,7 +29,7 @@ const COLORS: Record<string, string> = {
   meeting: 'bg-blue-500/20 text-blue-400',
   call: 'bg-green-500/20 text-green-400',
   message: 'bg-purple-500/20 text-purple-400',
-  email: 'bg-orange-500/20 text-orange-400',
+  email: 'bg-primary/20 text-primary',
   event: 'bg-cyan-500/20 text-cyan-400',
   introduction: 'bg-pink-500/20 text-pink-400',
   deal: 'bg-amber-500/20 text-amber-400',
@@ -79,7 +79,7 @@ export default function ActivityTimeline({ interactions, onContactClick, loading
 
   return (
     <div className="space-y-2">
-      <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Recent Activity</span>
+      <span className="meta-label">Recent Activity</span>
       {interactions.length === 0 ? (
         <p className="text-[11px] text-muted-foreground/40 py-1">No recent activity</p>
       ) : (
@@ -97,7 +97,7 @@ export default function ActivityTimeline({ interactions, onContactClick, loading
                 <div className="flex items-center gap-1.5">
                   <button
                     onClick={() => onContactClick?.(item.contactId)}
-                    className="text-xs font-medium text-foreground hover:text-orange-500 dark:hover:text-orange-300 transition-colors truncate"
+                    className="text-xs font-medium text-foreground hover:text-primary transition-colors truncate"
                   >
                     {item.contactName}
                   </button>

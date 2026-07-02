@@ -166,7 +166,7 @@ export default function GlobeRegionSelect({
     >
       {drawRect && drawRect.width > 2 && drawRect.height > 2 && (
         <div
-          className="absolute border-2 border-dashed border-orange-500 bg-orange-500/10 rounded-sm pointer-events-none"
+          className="absolute border-2 border-dashed border-primary bg-primary/10 rounded-sm pointer-events-none"
           style={{
             left: drawRect.left,
             top: drawRect.top,

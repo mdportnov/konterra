@@ -135,7 +135,7 @@ export default function TravelJourney({ trips, loading, onImport, onTripClick, o
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+        <span className="meta-label flex items-center gap-1.5">
           <Plane className="h-3 w-3" />
           Travel
         </span>
@@ -146,7 +146,7 @@ export default function TravelJourney({ trips, loading, onImport, onTripClick, o
                 <TooltipTrigger asChild>
                   <button
                     onClick={onToggleCompareMode}
-                    className={`h-6 w-6 flex items-center justify-center rounded transition-colors ${compareMode ? 'text-orange-500 bg-orange-500/10' : 'text-muted-foreground hover:text-foreground hover:bg-accent'}`}
+                    className={`h-6 w-6 flex items-center justify-center rounded transition-colors ${compareMode ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-foreground hover:bg-accent'}`}
                   >
                     <ArrowLeftRight className="h-3 w-3" />
                   </button>
@@ -211,7 +211,7 @@ export default function TravelJourney({ trips, loading, onImport, onTripClick, o
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by city or country..."
-            className="w-full h-7 rounded-md border border-input bg-muted/50 pl-7 pr-7 text-xs text-foreground placeholder:text-muted-foreground/40 outline-none focus:ring-1 focus:ring-orange-500/30 focus:border-orange-500/50"
+            className="w-full h-7 rounded-md border border-input bg-muted/50 pl-7 pr-7 text-xs text-foreground placeholder:text-muted-foreground/40 outline-none focus:ring-1 focus:ring-primary/30 focus:border-primary/50"
           />
           {search && (
             <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground/40 hover:text-foreground transition-colors">

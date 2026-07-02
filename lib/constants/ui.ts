@@ -24,7 +24,6 @@ export const TRANSITION = {
 } as const
 
 export const PANEL_WIDTH = {
-  sidebar: 320,
   detail: 400,
-  dashboard: { min: 480, max: 720, collapsed: 380 },
+  dashboard: 480,
 } as const

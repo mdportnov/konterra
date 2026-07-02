@@ -15,7 +15,7 @@ import { toast } from 'sonner'
 import { MCP_SCOPES, MCP_SCOPE_LABELS, type McpScope } from '@/lib/mcp/scopes'
 
 const CARD = 'rounded-lg border border-border bg-muted/20 p-4'
-const SECTION_LABEL = 'text-[11px] font-medium text-muted-foreground/70 uppercase tracking-wider'
+const SECTION_LABEL = 'meta-label text-[10px]'
 const CODE_BLOCK = 'rounded-md bg-muted/60 border border-border p-3 text-[11px] font-mono whitespace-pre-wrap break-all leading-relaxed'
 
 interface TokenRow {

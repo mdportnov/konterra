@@ -11,6 +11,7 @@ import { PANEL_WIDTH } from '@/lib/constants/ui'
 import { WISHLIST_PRIORITIES, WISHLIST_STATUSES, PRIORITY_LABELS, STATUS_LABELS } from '@/lib/constants/wishlist'
 import { countryFlag } from '@/lib/country-flags'
 import type { Contact, CountryWishlistEntry } from '@/lib/db/schema'
+import { getInitials } from '@/lib/format'
 
 interface WishlistDetailPanelProps {
   open: boolean
@@ -98,7 +99,7 @@ export default function WishlistDetailPanel({
         <div className="flex-1 min-h-0 overflow-y-auto thin-scrollbar">
           <div className="px-6 py-4 space-y-5">
             <div className="space-y-2">
-              <span className="text-xs font-medium text-muted-foreground/60 uppercase tracking-wider">Priority</span>
+              <span className="meta-label">Priority</span>
               <ToggleGroup
                 type="single"
                 value={entry?.priority ?? 'medium'}
@@ -118,7 +119,7 @@ export default function WishlistDetailPanel({
             </div>
 
             <div className="space-y-2">
-              <span className="text-xs font-medium text-muted-foreground/60 uppercase tracking-wider">Status</span>
+              <span className="meta-label">Status</span>
               <ToggleGroup
                 type="single"
                 value={entry?.status ?? 'idea'}
@@ -138,7 +139,7 @@ export default function WishlistDetailPanel({
             </div>
 
             <div className="space-y-2">
-              <span className="text-xs font-medium text-muted-foreground/60 uppercase tracking-wider">Notes</span>
+              <span className="meta-label">Notes</span>
               <Textarea
                 value={notes}
                 onChange={(e) => handleNotesChange(e.target.value)}
@@ -149,7 +150,7 @@ export default function WishlistDetailPanel({
 
             {contacts.length > 0 && (
               <div className="space-y-2">
-                <span className="text-xs font-medium text-muted-foreground/60 uppercase tracking-wider">
+                <span className="meta-label">
                   Contacts in {country}
                 </span>
                 <div className="space-y-0.5">
@@ -161,8 +162,8 @@ export default function WishlistDetailPanel({
                     >
                       <Avatar className="h-7 w-7 border border-border/50 shrink-0">
                         <AvatarImage src={c.photo || undefined} />
-                        <AvatarFallback className="text-[9px] bg-orange-500/20 text-orange-600 dark:text-orange-300">
-                          {c.name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)}
+                        <AvatarFallback className="text-[9px] bg-primary/20 text-primary">
+                          {getInitials(c.name)}
                         </AvatarFallback>
                       </Avatar>
                       <div className="min-w-0 flex-1">
@@ -192,7 +193,7 @@ export default function WishlistDetailPanel({
                       <Avatar className="h-7 w-7 border border-purple-500/20 shrink-0">
                         <AvatarImage src={c.photo || undefined} />
                         <AvatarFallback className="text-[9px] bg-purple-500/15 text-purple-600 dark:text-purple-300">
-                          {c.name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)}
+                          {getInitials(c.name)}
                         </AvatarFallback>
                       </Avatar>
                       <div className="min-w-0 flex-1">

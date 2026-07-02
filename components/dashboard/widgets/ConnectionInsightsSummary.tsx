@@ -52,7 +52,7 @@ export default function ConnectionInsightsSummary({
     return (
       <div className="space-y-2">
         <div className="flex items-center gap-2">
-          <Network className="h-3.5 w-3.5 text-orange-400" />
+          <Network className="h-3.5 w-3.5 text-primary" />
           <Skeleton className="h-3.5 w-32" />
         </div>
         <div className={`${GLASS.control} rounded-xl p-3 space-y-2`}>
@@ -82,12 +82,12 @@ export default function ConnectionInsightsSummary({
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2">
-        <Network className="h-3.5 w-3.5 text-orange-400" />
-        <span className="text-xs font-medium text-muted-foreground/60 uppercase tracking-wider">
+        <Network className="h-3.5 w-3.5 text-primary" />
+        <span className="meta-label">
           Connection Insights
         </span>
         {summary.actionableCount > 0 && (
-          <Badge className="bg-orange-500/20 text-orange-600 dark:text-orange-300 border-orange-500/30 text-[10px] px-1.5 py-0">
+          <Badge className="bg-primary/20 text-primary border-primary/30 text-[10px] px-1.5 py-0">
             {summary.actionableCount}
           </Badge>
         )}

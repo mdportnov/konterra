@@ -25,7 +25,7 @@ export function StarRating({ value, onChange, size = 'md' }: StarRatingProps) {
           <Star
             className={`${px} ${
               star <= value
-                ? 'fill-orange-400 text-orange-400'
+                ? 'fill-primary text-primary'
                 : 'text-muted-foreground/30'
             }`}
           />

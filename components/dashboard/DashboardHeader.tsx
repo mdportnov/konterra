@@ -3,8 +3,9 @@
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { ChevronLeft, ChevronDown, Plus, Globe as GlobeIcon, Settings, Sparkles, LogOut } from 'lucide-react'
+import { ChevronLeft, ChevronDown, Plus, Globe as GlobeIcon, Settings, Sparkles, LogOut, ExternalLink } from 'lucide-react'
 import { signOut } from 'next-auth/react'
+import Wordmark from '@/components/branding/Wordmark'
 
 interface DashboardHeaderProps {
   isMobile?: boolean
@@ -13,6 +14,7 @@ interface DashboardHeaderProps {
   onCollapse?: () => void
   onSettings?: () => void
   onInsights?: () => void
+  onOpenProfile?: () => void
   dashboardTab: 'connections' | 'travel'
   onDashboardTabChange: (tab: 'connections' | 'travel') => void
 }
@@ -24,9 +26,25 @@ export default function DashboardHeader({
   onCollapse,
   onSettings,
   onInsights,
+  onOpenProfile,
   dashboardTab,
   onDashboardTabChange,
 }: DashboardHeaderProps) {
+  const handleViewPublicAtlas = async () => {
+    try {
+      const res = await fetch('/api/profile')
+      if (!res.ok) throw new Error()
+      const data = await res.json()
+      if (data.username && data.profileVisibility === 'public') {
+        window.open(`/u/${data.username}`, '_blank', 'noopener')
+      } else {
+        onOpenProfile?.()
+      }
+    } catch {
+      onOpenProfile?.()
+    }
+  }
+
   return (
     <>
       <div className="px-4 pt-4 md:px-5 md:pt-5">
@@ -34,12 +52,12 @@ export default function DashboardHeader({
           <div className="min-w-0">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-1 hover:opacity-80 transition-opacity cursor-pointer">
-                  <span className="text-lg font-semibold text-foreground truncate">Konterra</span>
+                <button className="flex items-center gap-1.5 hover:opacity-80 transition-opacity cursor-pointer">
+                  <Wordmark className="text-foreground" />
                   <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-48">
+              <DropdownMenuContent align="start" className="w-52">
                 <DropdownMenuItem onClick={onAddContact}>
                   <Plus className="h-4 w-4 mr-2" />
                   Add Contact
@@ -47,6 +65,10 @@ export default function DashboardHeader({
                 <DropdownMenuItem onClick={onInsights}>
                   <Sparkles className="h-4 w-4 mr-2" />
                   Insights
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleViewPublicAtlas}>
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  My Public Atlas
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={onSettings}>
@@ -59,7 +81,7 @@ export default function DashboardHeader({
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <p className="text-xs text-muted-foreground">Your network command center</p>
+            <p className="meta-label text-[9px] mt-1">Network command center</p>
           </div>
           <div className="flex items-center gap-1 shrink-0">
             {isMobile && onSwitchToGlobe && (

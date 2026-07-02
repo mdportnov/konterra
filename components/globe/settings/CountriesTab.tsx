@@ -86,7 +86,7 @@ export function CountriesTab({ visitedCountries, onToggleVisitedCountry, wishlis
     <div className="flex flex-col h-full">
       <div className="px-6 pt-6 pb-3 space-y-3">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-medium text-muted-foreground/60 uppercase tracking-wider">
+          <span className="meta-label">
             {viewMode === 'visited' && "Countries I've visited"}
             {viewMode === 'wishlist' && 'My wishlist'}
             {viewMode === 'all' && 'All countries'}

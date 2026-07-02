@@ -9,6 +9,7 @@ import { Separator } from '@/components/ui/separator'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Settings, Plus, LayoutDashboard, Search, Sparkles, BoxSelect } from 'lucide-react'
 import { GLASS, Z } from '@/lib/constants/ui'
+import { getInitials } from '@/lib/format'
 import { Kbd } from '@/components/ui/kbd'
 
 interface GlobeControlsProps {
@@ -64,12 +65,7 @@ export default function GlobeControls({ onAddContact, onQuickAddContact, onSearc
     onAddContact?.(prefill)
   }
 
-  const initials = user?.name
-    ?.split(' ')
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2) || '?'
+  const initials = getInitials(user?.name)
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -116,7 +112,7 @@ export default function GlobeControls({ onAddContact, onQuickAddContact, onSearc
               <Button
                 size="icon"
                 variant="ghost"
-                className={`${btnSize} ${regionSelectActive ? '!text-orange-500 !bg-orange-500/15' : '!text-muted-foreground hover:!text-foreground hover:!bg-accent'}`}
+                className={`${btnSize} ${regionSelectActive ? '!text-primary !bg-primary/15' : '!text-muted-foreground hover:!text-foreground hover:!bg-accent'}`}
                 onClick={onToggleRegionSelect}
               >
                 <BoxSelect className={iconSize} />
@@ -174,7 +170,7 @@ export default function GlobeControls({ onAddContact, onQuickAddContact, onSearc
             <Button
               variant="default"
               size="sm"
-              className="w-full h-8 text-xs bg-orange-500 hover:bg-orange-600 text-white"
+              className="w-full h-8 text-xs bg-primary hover:bg-primary/90 text-primary-foreground"
               disabled={!quickName.trim() || quickAddLoading}
               onClick={handleQuickAdd}
             >
@@ -223,7 +219,7 @@ export default function GlobeControls({ onAddContact, onQuickAddContact, onSearc
             >
               <Avatar className={`${isMobile ? 'h-8 w-8' : 'h-6 w-6'} border border-border`}>
                 <AvatarImage src={user?.image || undefined} />
-                <AvatarFallback className="text-[10px] bg-orange-500/20 text-orange-600 dark:text-orange-300">
+                <AvatarFallback className="text-[10px] bg-primary/20 text-primary">
                   {initials}
                 </AvatarFallback>
               </Avatar>

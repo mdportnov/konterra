@@ -72,7 +72,7 @@ export function TagSelector({
           {selected.map((tag) => (
             <Badge
               key={tag}
-              className="cursor-pointer text-[10px] bg-orange-500/20 text-orange-600 dark:text-orange-300 border-orange-500/30 hover:bg-orange-500/30 gap-1"
+              className="cursor-pointer text-[10px] bg-primary/20 text-primary border-primary/30 hover:bg-primary/30 gap-1"
               onClick={() => toggle(tag)}
             >
               {tag}
@@ -101,7 +101,7 @@ export function TagSelector({
           onChange={(e) => setNewTagInput(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="New tag..."
-          className="bg-muted/50 border-input text-foreground placeholder:text-muted-foreground/40 h-7 text-xs focus-visible:ring-orange-500/30 focus-visible:border-orange-500/50 flex-1"
+          className="bg-muted/50 border-input text-foreground placeholder:text-muted-foreground/40 h-7 text-xs focus-visible:ring-primary/30 focus-visible:border-primary/50 flex-1"
         />
         <Button
           type="button"

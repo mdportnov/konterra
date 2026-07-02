@@ -8,6 +8,7 @@ import { useClickOutside } from '@/hooks/use-click-outside'
 import { useHotkey } from '@/hooks/use-hotkey'
 import { GLASS } from '@/lib/constants/ui'
 import type { Contact } from '@/lib/db/schema'
+import { getInitials } from '@/lib/format'
 
 interface ClusterPopupProps {
   contacts: Contact[]
@@ -69,12 +70,7 @@ export default function ClusterPopup({ contacts, x, y, city, open, onSelect, onC
       <ScrollArea className="max-h-[340px]">
         <div className="py-1">
           {contacts.map((c) => {
-            const initials = c.name
-              .split(' ')
-              .map((n) => n[0])
-              .join('')
-              .toUpperCase()
-              .slice(0, 2)
+            const initials = getInitials(c.name)
 
             return (
               <button
@@ -84,7 +80,7 @@ export default function ClusterPopup({ contacts, x, y, city, open, onSelect, onC
               >
                 <Avatar className="h-8 w-8 border border-border shrink-0">
                   <AvatarImage src={c.photo || undefined} />
-                  <AvatarFallback className="text-[10px] bg-orange-500/20 text-orange-600 dark:text-orange-300">
+                  <AvatarFallback className="text-[10px] bg-primary/20 text-primary">
                     {initials}
                   </AvatarFallback>
                 </Avatar>

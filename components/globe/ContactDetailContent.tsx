@@ -40,6 +40,7 @@ import InteractionContextMenu from '@/components/context-menus/interaction-menu'
 import FavorContextMenu from '@/components/context-menus/favor-menu'
 import ConnectionContextMenu from '@/components/context-menus/connection-menu'
 import CountryTieContextMenu from '@/components/context-menus/country-tie-menu'
+import { getInitials } from '@/lib/format'
 
 function buildPerplexityUrl(city: string | null, country: string | null): string {
   const location = [city, country].filter(Boolean).join(', ')
@@ -195,12 +196,7 @@ export default function ContactDetailContent({
     return () => controller.abort()
   }, [contact])
 
-  const initials = contact.name
-    .split(' ')
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2)
+  const initials = getInitials(contact.name)
 
   const handleDelete = () => {
     setConfirmDelete(false)
@@ -707,7 +703,7 @@ export default function ContactDetailContent({
             <circle cx="18" cy="18" r="16" fill="none" stroke="currentColor" className="text-border" strokeWidth="2" />
             <circle
               cx="18" cy="18" r="16" fill="none"
-              className={completeness.percent >= 80 ? 'text-green-500' : completeness.percent >= 50 ? 'text-orange-500' : 'text-red-400'}
+              className={completeness.percent >= 80 ? 'text-green-500' : completeness.percent >= 50 ? 'text-primary' : 'text-red-400'}
               strokeWidth="2" strokeLinecap="round"
               strokeDasharray={`${completeness.percent} ${100 - completeness.percent}`}
               strokeDashoffset="25"
@@ -715,7 +711,7 @@ export default function ContactDetailContent({
           </svg>
           <Avatar className="h-20 w-20 border-2 border-border shadow-lg">
             <AvatarImage src={contact.photo || undefined} />
-            <AvatarFallback className="text-xl bg-orange-500/20 text-orange-600 dark:text-orange-300">
+            <AvatarFallback className="text-xl bg-primary/20 text-primary">
               {initials}
             </AvatarFallback>
           </Avatar>
@@ -741,7 +737,7 @@ export default function ContactDetailContent({
           )}
           <div className="flex items-center gap-2 mt-1">
             {strengthScore > 0 && (
-              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-orange-500/15 text-orange-600 dark:text-orange-300 font-medium">
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/15 text-primary font-medium">
                 {strengthScore}/100
               </span>
             )}
@@ -782,7 +778,7 @@ export default function ContactDetailContent({
         )}
         <button
           onClick={() => setShowFollowUpPicker(!showFollowUpPicker)}
-          className="text-[10px] px-1.5 py-0.5 rounded bg-orange-500/10 hover:bg-orange-500/20 text-orange-600 dark:text-orange-300 cursor-pointer transition-colors ml-auto"
+          className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 hover:bg-primary/20 text-primary cursor-pointer transition-colors ml-auto"
         >
           {contact.nextFollowUp ? 'Reschedule' : 'Schedule follow-up'}
         </button>
@@ -913,7 +909,7 @@ export default function ContactDetailContent({
             {contact.email && (
               <a
                 href={`mailto:${contact.email}`}
-                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-orange-500 dark:hover:text-orange-300 transition-colors cursor-pointer"
+                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors cursor-pointer"
               >
                 <Mail className="h-4 w-4 text-muted-foreground/60 shrink-0" />
                 <span>{contact.email}</span>
@@ -922,7 +918,7 @@ export default function ContactDetailContent({
             {contact.phone && (
               <a
                 href={`tel:${contact.phone}`}
-                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-orange-500 dark:hover:text-orange-300 transition-colors cursor-pointer"
+                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors cursor-pointer"
               >
                 <Phone className="h-4 w-4 text-muted-foreground/60 shrink-0" />
                 <span>{contact.phone}</span>
@@ -959,7 +955,7 @@ export default function ContactDetailContent({
 
         {(contact.personalInterests && contact.personalInterests.length > 0) && (
           <div className="space-y-1">
-            <span className="text-[10px] text-muted-foreground/50 uppercase tracking-wider">Interests</span>
+            <span className="meta-label text-[9px]">Interests</span>
             <div className="flex flex-wrap gap-1">
               {contact.personalInterests.map((item) => (
                 <Badge key={item} className="text-[10px] bg-sky-500/15 text-sky-600 dark:text-sky-300 border-sky-500/20">{item}</Badge>
@@ -970,7 +966,7 @@ export default function ContactDetailContent({
 
         {(contact.professionalGoals && contact.professionalGoals.length > 0) && (
           <div className="space-y-1">
-            <span className="text-[10px] text-muted-foreground/50 uppercase tracking-wider">Goals</span>
+            <span className="meta-label text-[9px]">Goals</span>
             <div className="flex flex-wrap gap-1">
               {contact.professionalGoals.map((item) => (
                 <Badge key={item} className="text-[10px] bg-green-500/15 text-green-600 dark:text-green-300 border-green-500/20">{item}</Badge>
@@ -981,7 +977,7 @@ export default function ContactDetailContent({
 
         {(contact.painPoints && contact.painPoints.length > 0) && (
           <div className="space-y-1">
-            <span className="text-[10px] text-muted-foreground/50 uppercase tracking-wider">Pain Points</span>
+            <span className="meta-label text-[9px]">Pain Points</span>
             <div className="flex flex-wrap gap-1">
               {contact.painPoints.map((item) => (
                 <Badge key={item} className="text-[10px] bg-red-500/15 text-red-600 dark:text-red-300 border-red-500/20">{item}</Badge>
@@ -1016,7 +1012,7 @@ export default function ContactDetailContent({
             <div className="relative h-8 w-8 shrink-0">
               <svg viewBox="0 0 36 36" className="h-8 w-8 -rotate-90">
                 <circle cx="18" cy="18" r="14" fill="none" className="text-border" stroke="currentColor" strokeWidth="3" />
-                <circle cx="18" cy="18" r="14" fill="none" className={completeness.percent >= 50 ? 'text-orange-500' : 'text-red-400'} stroke="currentColor" strokeWidth="3" strokeDasharray={`${completeness.percent * 0.88} ${88 - completeness.percent * 0.88}`} />
+                <circle cx="18" cy="18" r="14" fill="none" className={completeness.percent >= 50 ? 'text-primary' : 'text-red-400'} stroke="currentColor" strokeWidth="3" strokeDasharray={`${completeness.percent * 0.88} ${88 - completeness.percent * 0.88}`} />
               </svg>
               <span className="absolute inset-0 flex items-center justify-center text-[8px] font-bold text-muted-foreground">{completeness.percent}%</span>
             </div>
@@ -1031,7 +1027,7 @@ export default function ContactDetailContent({
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <MapPin className="h-3.5 w-3.5 text-muted-foreground/40" />
-              <span className="text-xs font-medium text-muted-foreground/60 uppercase tracking-wider">Also in</span>
+              <span className="meta-label">Also in</span>
             </div>
             <div className="flex flex-wrap gap-1.5">
               {contact.secondaryLocations.map((loc) => (
@@ -1051,7 +1047,7 @@ export default function ContactDetailContent({
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <Users className="h-3.5 w-3.5 text-sky-500 dark:text-sky-400/60" />
-              <span className="text-xs font-medium text-muted-foreground/60 uppercase tracking-wider">Connected</span>
+              <span className="meta-label">Connected</span>
             </div>
             <div className="flex flex-wrap gap-1.5">
               {connectedContacts.map((cc) => (
@@ -1123,7 +1119,7 @@ export default function ContactDetailContent({
                 className="h-7 text-xs bg-muted/50"
               />
               <div className="flex gap-1">
-                <Button size="sm" className="h-6 text-[10px] bg-orange-500 hover:bg-orange-600 text-white" onClick={handleAddInteraction} disabled={savingInteraction}>{savingInteraction ? 'Adding...' : 'Add'}</Button>
+                <Button size="sm" className="h-6 text-[10px] bg-primary hover:bg-primary/90 text-primary-foreground" onClick={handleAddInteraction} disabled={savingInteraction}>{savingInteraction ? 'Adding...' : 'Add'}</Button>
                 <Button size="sm" variant="ghost" className="h-6 text-[10px]" onClick={() => setShowAddInteraction(false)} disabled={savingInteraction}>Cancel</Button>
               </div>
             </div>
@@ -1161,7 +1157,7 @@ export default function ContactDetailContent({
                       className="h-7 text-xs bg-muted/50"
                     />
                     <div className="flex gap-1">
-                      <Button size="sm" className="h-6 text-[10px] bg-orange-500 hover:bg-orange-600 text-white" onClick={() => handleEditInteraction(item.id)}>Save</Button>
+                      <Button size="sm" className="h-6 text-[10px] bg-primary hover:bg-primary/90 text-primary-foreground" onClick={() => handleEditInteraction(item.id)}>Save</Button>
                       <Button size="sm" variant="ghost" className="h-6 text-[10px]" onClick={() => setEditingInteraction(null)}>Cancel</Button>
                     </div>
                   </div>
@@ -1218,8 +1214,8 @@ export default function ContactDetailContent({
               )
             })}
             {interactions.length === 0 && (
-              <div className="rounded-lg border border-dashed border-orange-500/30 bg-orange-500/5 p-4 text-center">
-                <MessageSquare className="h-5 w-5 text-orange-500/60 mx-auto mb-2" />
+              <div className="rounded-lg border border-dashed border-primary/30 bg-primary/5 p-4 text-center">
+                <MessageSquare className="h-5 w-5 text-primary/60 mx-auto mb-2" />
                 <p className="text-xs text-muted-foreground">No interactions yet</p>
                 <p className="text-[10px] text-muted-foreground/60">Log your first meeting, call, or message</p>
               </div>
@@ -1291,7 +1287,7 @@ export default function ContactDetailContent({
                     key={s}
                     onClick={() => setNewConnection((p) => ({ ...p, strength: s }))}
                     className={`w-5 h-5 rounded text-[10px] font-medium cursor-pointer ${
-                      s <= newConnection.strength ? 'bg-orange-500 text-white' : 'bg-muted text-muted-foreground'
+                      s <= newConnection.strength ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
                     }`}
                   >
                     {s}
@@ -1299,7 +1295,7 @@ export default function ContactDetailContent({
                 ))}
               </div>
               <div className="flex gap-1">
-                <Button size="sm" className="h-6 text-[10px] bg-orange-500 hover:bg-orange-600 text-white" onClick={handleAddConnection} disabled={savingConnection || !newConnection.targetContactId}>{savingConnection ? 'Adding...' : 'Add'}</Button>
+                <Button size="sm" className="h-6 text-[10px] bg-primary hover:bg-primary/90 text-primary-foreground" onClick={handleAddConnection} disabled={savingConnection || !newConnection.targetContactId}>{savingConnection ? 'Adding...' : 'Add'}</Button>
                 <Button size="sm" variant="ghost" className="h-6 text-[10px]" onClick={() => setShowAddConnection(false)} disabled={savingConnection}>Cancel</Button>
               </div>
             </div>
@@ -1331,7 +1327,7 @@ export default function ContactDetailContent({
                           <TooltipTrigger asChild>
                             <button
                               onClick={() => onConnectedContactClick?.({ id: other.id, name: other.name, lat: other.lat, lng: other.lng })}
-                              className="text-[11px] text-foreground font-medium hover:text-orange-500 transition-colors cursor-pointer truncate"
+                              className="text-[11px] text-foreground font-medium hover:text-primary transition-colors cursor-pointer truncate"
                             >
                               {other.name}
                             </button>
@@ -1347,7 +1343,7 @@ export default function ContactDetailContent({
                     </Badge>
                     <div className="flex gap-0.5 ml-auto shrink-0">
                       {Array.from({ length: 5 }, (_, i) => (
-                        <div key={i} className={`w-1.5 h-1.5 rounded-full ${i < (conn.strength || 0) ? 'bg-orange-500' : 'bg-border'}`} />
+                        <div key={i} className={`w-1.5 h-1.5 rounded-full ${i < (conn.strength || 0) ? 'bg-primary' : 'bg-border'}`} />
                       ))}
                     </div>
                     {confirmDeleteConnId === conn.id ? (
@@ -1537,7 +1533,7 @@ export default function ContactDetailContent({
                 className="h-7 text-xs bg-muted/50"
               />
               <div className="flex gap-1">
-                <Button size="sm" className="h-6 text-[10px] bg-orange-500 hover:bg-orange-600 text-white" onClick={handleAddFavor} disabled={savingFavor}>{savingFavor ? 'Saving...' : 'Record'}</Button>
+                <Button size="sm" className="h-6 text-[10px] bg-primary hover:bg-primary/90 text-primary-foreground" onClick={handleAddFavor} disabled={savingFavor}>{savingFavor ? 'Saving...' : 'Record'}</Button>
                 <Button size="sm" variant="ghost" className="h-6 text-[10px]" onClick={() => setShowAddFavor(false)} disabled={savingFavor}>Cancel</Button>
               </div>
             </div>
@@ -1757,7 +1753,7 @@ function CollapsibleSection({
       >
         <ChevronRight className={`h-3 w-3 text-muted-foreground/60 transition-transform duration-200 ${expanded ? 'rotate-90' : ''}`} />
         <Icon className="h-3.5 w-3.5 text-muted-foreground/60" />
-        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{title}</span>
+        <span className="meta-label">{title}</span>
         {count !== undefined && count > 0 && (
           <span className="text-[10px] text-muted-foreground/50">{count}</span>
         )}

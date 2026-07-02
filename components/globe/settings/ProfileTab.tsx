@@ -13,6 +13,7 @@ import { LogOut, Loader2, Pencil, Check, X, Users, Globe, Link2, Shield, MapPin,
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
 import { PROFILE_NUDGE_KEY } from '@/lib/local-storage'
+import { getInitials, formatRelativeTime } from '@/lib/format'
 import type { ProfileTabProps } from './types'
 
 interface SessionUser {
@@ -44,21 +45,6 @@ interface HomebaseData {
 
 const STALE_MS = 7 * 24 * 60 * 60 * 1000
 
-function formatRelativeTime(iso: string | null | undefined): string | null {
-  if (!iso) return null
-  const diff = Date.now() - new Date(iso).getTime()
-  if (diff < 0) return null
-  const mins = Math.floor(diff / 60000)
-  if (mins < 1) return 'just now'
-  if (mins < 60) return `${mins}m ago`
-  const hrs = Math.floor(mins / 60)
-  if (hrs < 24) return `${hrs}h ago`
-  const days = Math.floor(hrs / 24)
-  if (days < 30) return `${days}d ago`
-  const months = Math.floor(days / 30)
-  return `${months}mo ago`
-}
-
 interface GeoSuggestion {
   formatted: string
   lat: number
@@ -80,7 +66,7 @@ interface InvitedUser {
 
 const CARD = 'rounded-lg border border-border bg-muted/20 p-4'
 const SECTION_HEADER = 'flex items-center gap-1.5'
-const SECTION_LABEL = 'text-[11px] font-medium text-muted-foreground/70 uppercase tracking-wider'
+const SECTION_LABEL = 'meta-label text-[10px]'
 
 export function ProfileTab({ open, contactCount, connectionCount, visitedCountryCount, visitedCityCount }: ProfileTabProps) {
   const [user, setUser] = useState<SessionUser | null>(null)
@@ -296,12 +282,7 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
     }
   }
 
-  const initials = user?.name
-    ?.split(' ')
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2) || '?'
+  const initials = getInitials(user?.name)
 
   const handleSignOut = async () => {
     setSigningOut(true)
@@ -506,8 +487,8 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
             if (!homebase?.city) missing.push('homebase')
             if (missing.length === 0) return null
             return (
-              <div className="rounded-lg border border-orange-500/20 bg-orange-500/5 px-4 py-3 flex items-center gap-3">
-                <Info className="h-4 w-4 text-orange-500 shrink-0" />
+              <div className="rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 flex items-center gap-3">
+                <Info className="h-4 w-4 text-primary shrink-0" />
                 <p className="text-xs text-foreground flex-1">
                   Complete your profile — add {missing.join(missing.length === 2 ? ' and ' : ', ').replace(/, ([^,]*)$/, ', and $1')}.
                 </p>
@@ -545,7 +526,7 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
               <>
                 <Avatar className="h-20 w-20 border-2 border-border">
                   <AvatarImage src={user.image || undefined} />
-                  <AvatarFallback className="bg-orange-500/20 text-orange-600 dark:text-orange-300 text-xl">
+                  <AvatarFallback className="bg-primary/15 text-primary text-xl">
                     {initials}
                   </AvatarFallback>
                 </Avatar>
@@ -553,7 +534,7 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
                   <div className="flex items-center gap-1.5" role="progressbar" aria-valuenow={completeness} aria-valuemin={0} aria-valuemax={100} aria-label={`Profile ${completeness}% complete`}>
                     <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true">
                       <circle cx="14" cy="14" r="10" fill="none" strokeWidth="3" stroke="currentColor" className="text-muted-foreground/20" />
-                      <circle cx="14" cy="14" r="10" fill="none" strokeWidth="3" stroke="currentColor" className="text-orange-500" strokeDasharray="62.83" strokeDashoffset={62.83 * (1 - completeness / 100)} strokeLinecap="round" transform="rotate(-90 14 14)" />
+                      <circle cx="14" cy="14" r="10" fill="none" strokeWidth="3" stroke="currentColor" className="text-primary" strokeDasharray="62.83" strokeDashoffset={62.83 * (1 - completeness / 100)} strokeLinecap="round" transform="rotate(-90 14 14)" />
                     </svg>
                     <span className="text-[10px] text-muted-foreground/60">{completeness}% complete</span>
                   </div>
@@ -641,7 +622,7 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
                 )}
 
                 {user.role && user.role !== 'user' && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-orange-500/10 border border-orange-500/20 px-2.5 py-0.5 text-xs font-medium text-orange-600 dark:text-orange-300">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 border border-primary/20 px-2.5 py-0.5 text-xs font-medium text-primary">
                     <Shield className="h-3 w-3" />
                     {user.role === 'admin' ? 'Administrator' : 'Moderator'}
                   </span>
@@ -675,7 +656,7 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
                 {editingUsername ? (
                   <div className="space-y-2">
                     <div className="flex items-center gap-1">
-                      <span className="text-xs text-muted-foreground shrink-0">konterra.app/u/</span>
+                      <span className="text-xs text-muted-foreground shrink-0 font-mono">konterra.space/u/</span>
                       <Input
                         value={usernameValue}
                         onChange={(e) => setUsernameValue(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ''))}
@@ -706,8 +687,8 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
                     </div>
                   </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground">
-                    {user.username ? `konterra.app/u/${user.username}` : 'Not set'}
+                  <p className="text-sm text-muted-foreground font-mono">
+                    {user.username ? `konterra.space/u/${user.username}` : 'Not set'}
                   </p>
                 )}
 
@@ -779,15 +760,26 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
                       />
                     </div>
 
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full h-8 text-xs"
-                      onClick={handleCopyLink}
-                    >
-                      <Copy className="h-3 w-3 mr-1.5" />
-                      Copy profile link
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 h-8 text-xs"
+                        onClick={handleCopyLink}
+                      >
+                        <Copy className="h-3 w-3 mr-1.5" />
+                        Copy link
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 h-8 text-xs"
+                        onClick={() => window.open(`/u/${user.username}`, '_blank', 'noopener')}
+                      >
+                        <ExternalLink className="h-3 w-3 mr-1.5" />
+                        View atlas
+                      </Button>
+                    </div>
                   </>
                 )}
               </div>
@@ -823,7 +815,7 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
                         const updatedAt = homebase.currentLocationUpdatedAt ? new Date(homebase.currentLocationUpdatedAt).getTime() : 0
                         const isStale = updatedAt > 0 && Date.now() - updatedAt >= STALE_MS
                         return (
-                          <span className={`text-[10px] ${isStale ? 'text-orange-500/80' : 'text-muted-foreground/50'}`}>
+                          <span className={`text-[10px] ${isStale ? 'text-primary/80' : 'text-muted-foreground/50'}`}>
                             {isStale ? `Stale — detected ${rel}` : `Detected ${rel}`}
                           </span>
                         )
@@ -942,12 +934,14 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
-            {stats.map(({ label, value, icon: Icon }) => (
-              <div key={label} className="rounded-lg border border-border bg-muted/30 p-3 text-center space-y-1">
-                <Icon className="h-4 w-4 mx-auto text-muted-foreground/60" />
-                <p className="text-lg font-semibold text-foreground">{value}</p>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{label}</p>
+          <div className="grid grid-cols-2 border-y border-border divide-x divide-border">
+            {stats.map(({ label, value, icon: Icon }, i) => (
+              <div key={label} className={`p-3.5 text-center space-y-1 ${i >= 2 ? 'border-t border-border' : ''}`}>
+                <p className="stat-figure text-2xl text-foreground">{value}</p>
+                <p className="meta-label text-[9px] flex items-center justify-center gap-1">
+                  <Icon className="h-3 w-3" />
+                  {label}
+                </p>
               </div>
             ))}
           </div>
@@ -955,16 +949,13 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
           {user && (
             <div className={CARD}>
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className={SECTION_HEADER}>
-                    <Ticket className="h-3.5 w-3.5 text-muted-foreground/60" />
-                    <span className={SECTION_LABEL}>Invites</span>
-                  </div>
-                  <span className="text-[10px] text-muted-foreground/60">
-                    {inviteUsedCount + activeInvites.length}/{inviteMaxInvites}
-                    {activeInvites.length > 0 ? ` (${activeInvites.length} pending)` : ' used'}
-                  </span>
+                <div className={SECTION_HEADER}>
+                  <Ticket className="h-3.5 w-3.5 text-muted-foreground/60" />
+                  <span className={SECTION_LABEL}>Share Konterra</span>
                 </div>
+                <p className="text-xs text-muted-foreground">
+                  Konterra is free to join. Share your link — people who sign up through it show up here as brought by you.
+                </p>
 
                 {inviteLoading ? (
                   <Skeleton className="h-8 w-full" />
@@ -972,6 +963,7 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
                   <div className="space-y-2">
                     {invitedUsers.length > 0 && (
                       <div className="space-y-1.5">
+                        <p className="text-[10px] text-muted-foreground/60">You brought {invitedUsers.length} {invitedUsers.length === 1 ? 'person' : 'people'} to Konterra</p>
                         {invitedUsers.map((iu) => (
                           <div key={iu.id} className="flex items-center gap-2 rounded-md border border-border bg-muted/30 px-3 py-2">
                             <Avatar className="h-5 w-5">
@@ -989,7 +981,7 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
                       </div>
                     )}
 
-                    {activeInvites.length > 0 && (
+                    {activeInvites.length > 0 ? (
                       <div className="space-y-1.5">
                         {activeInvites.map((inv) => {
                           const days = getExpiresInDays(inv.expiresAt)
@@ -1002,23 +994,19 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
                                 onClick={() => handleCopyInvite(inv.code)}
                               >
                                 <Copy className="h-3 w-3 mr-1.5" />
-                                Copy invite link
+                                Copy your share link
                               </Button>
                               <p className="text-[10px] text-muted-foreground/60 text-center">
-                                {days === 0 ? 'Expires today' : `Expires in ${days} ${days === 1 ? 'day' : 'days'}`}
+                                {days === 0 ? 'Link expires today' : `Link expires in ${days} ${days === 1 ? 'day' : 'days'}`}
                               </p>
                             </div>
                           )
                         })}
                       </div>
-                    )}
-
-                    {inviteLimitReached ? (
-                      activeInvites.length === 0 && (
-                        <p className="text-xs text-muted-foreground/60 text-center py-1">
-                          All invites used
-                        </p>
-                      )
+                    ) : inviteLimitReached ? (
+                      <p className="text-xs text-muted-foreground/60 text-center py-1">
+                        Share limit reached for now
+                      </p>
                     ) : (
                       <Button
                         variant="outline"
@@ -1028,7 +1016,7 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
                         disabled={generatingInvite}
                       >
                         {generatingInvite ? <Loader2 className="h-3 w-3 animate-spin mr-1.5" /> : <UserPlus className="h-3 w-3 mr-1.5" />}
-                        Generate Invite Link
+                        Create share link
                       </Button>
                     )}
                   </div>
@@ -1043,7 +1031,7 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
         {user && (user.role === 'admin' || user.role === 'moderator') && (
           <Button
             variant="outline"
-            className="w-full justify-start border-orange-500/30 text-orange-600 dark:text-orange-300 hover:bg-orange-500/10"
+            className="w-full justify-start border-primary/30 text-primary hover:bg-primary/10"
             onClick={() => window.location.href = '/admin'}
           >
             <Shield className="mr-2 h-4 w-4" />

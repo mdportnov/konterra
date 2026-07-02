@@ -69,7 +69,7 @@ export default memo(function MeetingOrigins({ contacts, limit = 8, loading }: Me
     <div className="space-y-2">
       <div className="flex items-center gap-2">
         <MapPin className="h-3.5 w-3.5 text-teal-400" />
-        <span className="text-xs font-medium text-muted-foreground/60 uppercase tracking-wider">Meeting Origins</span>
+        <span className="meta-label">Meeting Origins</span>
       </div>
       {data.length === 0 ? (
         <p className="text-[11px] text-muted-foreground/40 py-1">No meeting places recorded yet</p>
@@ -103,7 +103,7 @@ export default memo(function MeetingOrigins({ contacts, limit = 8, loading }: Me
                   <p>{item.count} contact{item.count !== 1 ? 's' : ''} met here</p>
                   {item.avgRating != null && (
                     <p className="flex items-center gap-1">
-                      <Star className="h-3 w-3 text-orange-400 fill-orange-400" />
+                      <Star className="h-3 w-3 text-primary fill-primary" />
                       {item.avgRating.toFixed(1)} avg rating
                     </p>
                   )}

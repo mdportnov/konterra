@@ -535,7 +535,7 @@ function MonthGrid({ year, month, today, tripDayMap, countryColorMap, tripCount,
         {onMonthClick ? (
           <button
             onClick={() => onMonthClick(month)}
-            className={`text-sm font-semibold mb-2 cursor-pointer hover:text-foreground text-left ${isCurrentMonth ? 'text-orange-500' : 'text-foreground/80'}`}
+            className={`text-sm font-semibold mb-2 cursor-pointer hover:text-foreground text-left ${isCurrentMonth ? 'text-primary' : 'text-foreground/80'}`}
           >
             {MONTH_NAMES_SHORT[month]}
             {tripCount > 0 && (
@@ -543,7 +543,7 @@ function MonthGrid({ year, month, today, tripDayMap, countryColorMap, tripCount,
             )}
           </button>
         ) : (
-          <h3 className={`text-sm font-semibold mb-2 ${isCurrentMonth ? 'text-orange-500' : 'text-foreground/80'}`}>
+          <h3 className={`text-sm font-semibold mb-2 ${isCurrentMonth ? 'text-primary' : 'text-foreground/80'}`}>
             {MONTH_NAMES_SHORT[month]}
             {tripCount > 0 && (
               <span className="text-muted-foreground font-normal"> &middot; {tripCount}</span>
@@ -604,7 +604,7 @@ function MonthGrid({ year, month, today, tripDayMap, countryColorMap, tripCount,
                       <span
                         className={`
                           relative z-10
-                          ${isToday ? 'bg-orange-500 text-white rounded-full w-5 h-5 sm:w-[22px] sm:h-[22px] flex items-center justify-center text-[10px]' : ''}
+                          ${isToday ? 'bg-primary text-primary-foreground rounded-full w-5 h-5 sm:w-[22px] sm:h-[22px] flex items-center justify-center text-[10px]' : ''}
                           ${!hasTrips && !isToday ? 'text-foreground/60' : ''}
                         `}
                         style={hasTrips && !isToday ? { color: getCountryTextColor(info.colors[0]) } : undefined}
