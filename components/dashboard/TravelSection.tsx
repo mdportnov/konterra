@@ -3,7 +3,9 @@ import { List, CalendarDays } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import TravelJourney from './widgets/TravelJourney'
 import TripCalendar from './widgets/TripCalendar'
+import TripPeriodFocus from './widgets/TripPeriodFocus'
 import type { Trip } from '@/lib/db/schema'
+import type { TripFocusRange } from '@/hooks/use-trip-focus'
 
 interface TravelSectionProps {
   trips: Trip[]
@@ -19,13 +21,24 @@ interface TravelSectionProps {
   canOpenCompare?: boolean
   onOpenCompare?: () => void
   onToggleCompareMode?: () => void
+  tripFocusRange?: TripFocusRange | null
+  onTripFocusChange?: (range: TripFocusRange | null) => void
+  focusedTripCount?: number
 }
 
-export default function TravelSection({ trips, tripsLoading, onImportTrips, onTripClick, onAddTrip, onEditTrip, onDeleteTrip, compareMode, selectedCompareIds, onToggleCompareTrip, canOpenCompare, onOpenCompare, onToggleCompareMode }: TravelSectionProps) {
+export default function TravelSection({ trips, tripsLoading, onImportTrips, onTripClick, onAddTrip, onEditTrip, onDeleteTrip, compareMode, selectedCompareIds, onToggleCompareTrip, canOpenCompare, onOpenCompare, onToggleCompareMode, tripFocusRange, onTripFocusChange, focusedTripCount }: TravelSectionProps) {
   const [view, setView] = useState<'list' | 'calendar'>('list')
 
   return (
     <div className="p-4 md:p-5">
+      {trips.length > 0 && !tripsLoading && onTripFocusChange && (
+        <TripPeriodFocus
+          trips={trips}
+          range={tripFocusRange ?? null}
+          focusedCount={focusedTripCount ?? trips.length}
+          onChange={onTripFocusChange}
+        />
+      )}
       {trips.length > 0 && !tripsLoading && (
         <div className="flex justify-end mb-3">
           <div className="flex items-center bg-muted/40 rounded-md p-0.5">

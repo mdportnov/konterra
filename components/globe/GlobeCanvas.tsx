@@ -11,6 +11,7 @@ import { Info, ChevronUp } from 'lucide-react'
 import ClusterPopup from './ClusterPopup'
 import GlobeRegionSelect from './GlobeRegionSelect'
 import { useTheme } from '@/components/providers'
+import { formatDateOnly, tripTense } from '@/lib/utils'
 import { GLASS, Z } from '@/lib/constants/ui'
 import { TRAVEL_COLORS, NETWORK_COLORS, CONNECTION_COLORS, POLYGON_COLORS, RING_COLORS, HEXBIN_COLORS } from '@/lib/constants/globe-colors'
 
@@ -63,6 +64,7 @@ interface GlobeCanvasProps {
   highlightedContactIds?: Set<string>
   trips?: Trip[]
   selectedTripId?: string | null
+  focusMode?: boolean
   readOnly?: boolean
   regionSelectActive?: boolean
   onRegionSelect?: (ids: string[]) => void
@@ -88,6 +90,7 @@ export default memo(function GlobeCanvas({
   highlightedContactIds,
   trips = [],
   selectedTripId,
+  focusMode = false,
   readOnly = false,
   regionSelectActive = false,
   onRegionSelect,
@@ -315,6 +318,31 @@ export default memo(function GlobeCanvas({
     }
   }, [flyTarget])
 
+  const focusFitKey = useMemo(() => {
+    if (!focusMode) return ''
+    return trips.filter((t) => t.lat != null && t.lng != null).map((t) => t.id).join('|')
+  }, [focusMode, trips])
+
+  useEffect(() => {
+    if (!focusMode || !globeRef.current) return
+    const pts = trips.filter((t) => t.lat != null && t.lng != null)
+    if (pts.length === 0) return
+    let minLat = 90, maxLat = -90, minLng = 180, maxLng = -180
+    for (const t of pts) {
+      minLat = Math.min(minLat, t.lat!)
+      maxLat = Math.max(maxLat, t.lat!)
+      minLng = Math.min(minLng, t.lng!)
+      maxLng = Math.max(maxLng, t.lng!)
+    }
+    const span = Math.max(maxLat - minLat, maxLng - minLng)
+    const altitude = Math.min(3.2, Math.max(1.1, span / 45 + 1))
+    globeRef.current.pointOfView(
+      { lat: (minLat + maxLat) / 2, lng: (minLng + maxLng) / 2, altitude },
+      1000
+    )
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusFitKey])
+
   const openCluster = useCallback((data: ClusterData) => {
     if (closingTimer.current) clearTimeout(closingTimer.current)
     setClusterData(data)
@@ -492,7 +520,8 @@ export default memo(function GlobeCanvas({
     return result
   }, [countryConnections, geocodedContactMap, countryCentroids, display.arcMode, selectedContact])
 
-  const { showNetwork, showTravel } = display
+  const showNetwork = display.showNetwork && !focusMode
+  const showTravel = display.showTravel || focusMode
 
   const [now, setNow] = useState(() => new Date())
   useEffect(() => {
@@ -871,12 +900,57 @@ export default memo(function GlobeCanvas({
     return `<div style="background:${bg};color:${textColor};padding:4px 8px;border-radius:6px;font-size:11px;backdrop-filter:blur(12px);border:1px solid ${border};font-family:system-ui,sans-serif"><b>${count}</b> contact${count === 1 ? '' : 's'}</div>`
   }, [isDark])
 
-  const htmlElements = useMemo(() => {
-    if (!userLocation) return []
-    return [{ lat: userLocation.lat, lng: userLocation.lng }]
-  }, [userLocation])
+  const tripLabelElements = useMemo(() => {
+    if (!focusMode) return []
+    return trips
+      .filter((t) => t.lat != null && t.lng != null)
+      .map((t) => {
+        const dates = t.departureDate
+          ? `${formatDateOnly(t.arrivalDate, { year: false })} – ${formatDateOnly(t.departureDate, { year: false })}`
+          : formatDateOnly(t.arrivalDate, { year: false })
+        return {
+          kind: 'trip' as const,
+          lat: t.lat!,
+          lng: t.lng!,
+          city: t.city,
+          dates,
+          tense: tripTense(t.arrivalDate, t.departureDate),
+        }
+      })
+  }, [focusMode, trips])
 
-  const getHtmlElement = useCallback(() => {
+  const htmlElements = useMemo(() => {
+    const els: Array<{ kind: 'user' | 'trip'; lat: number; lng: number; city?: string; dates?: string; tense?: 'past' | 'current' | 'future' }> = []
+    if (userLocation) els.push({ kind: 'user', lat: userLocation.lat, lng: userLocation.lng })
+    els.push(...tripLabelElements)
+    return els
+  }, [userLocation, tripLabelElements])
+
+  const getHtmlElement = useCallback((d: object) => {
+    const datum = d as { kind: 'user' | 'trip'; city?: string; dates?: string; tense?: 'past' | 'current' | 'future' }
+    if (datum.kind === 'trip') {
+      const accent = datum.tense === 'current' ? TRAVEL_COLORS.currentPoint : datum.tense === 'future' ? TRAVEL_COLORS.futurePoint : TRAVEL_COLORS.pastPoint
+      const bg = isDark ? 'rgba(15,12,10,0.88)' : 'rgba(255,255,255,0.92)'
+      const textColor = isDark ? 'rgba(255,255,255,0.96)' : 'rgba(20,20,25,0.92)'
+      const subColor = isDark ? 'rgba(255,255,255,0.6)' : 'rgba(20,20,25,0.6)'
+      const wrapper = document.createElement('div')
+      wrapper.style.cssText = 'position:relative;width:0;height:0;pointer-events:none'
+      const stem = document.createElement('div')
+      stem.style.cssText = `position:absolute;left:0;top:0;transform:translate(-50%,-9px);width:1.5px;height:9px;background:${accent};opacity:0.7`
+      wrapper.appendChild(stem)
+      const pill = document.createElement('div')
+      pill.style.cssText = `position:absolute;left:0;top:0;transform:translate(-50%,calc(-100% - 9px));display:flex;flex-direction:column;align-items:center;white-space:nowrap;padding:3px 8px;border-radius:8px;background:${bg};border:1px solid ${accent};box-shadow:0 2px 8px rgba(0,0,0,0.35);backdrop-filter:blur(10px);font-family:system-ui,sans-serif;line-height:1.2`
+      const city = document.createElement('div')
+      city.style.cssText = `font-size:11px;font-weight:600;color:${textColor}`
+      city.textContent = datum.city ?? ''
+      pill.appendChild(city)
+      const dates = document.createElement('div')
+      dates.style.cssText = `font-size:9px;color:${subColor}`
+      dates.textContent = datum.dates ?? ''
+      pill.appendChild(dates)
+      wrapper.appendChild(pill)
+      return wrapper
+    }
     const wrapper = document.createElement('div')
     wrapper.style.cssText = 'position:relative;width:0;height:0;pointer-events:none'
     const ring = document.createElement('div')
@@ -889,7 +963,7 @@ export default memo(function GlobeCanvas({
     dot.style.cssText = 'position:absolute;left:-6px;top:-6px;width:12px;height:12px;border-radius:50%;background:#22c55e;box-shadow:0 0 8px rgba(34,197,94,0.6),0 0 2px rgba(34,197,94,0.8);border:2px solid white'
     wrapper.appendChild(dot)
     return wrapper
-  }, [])
+  }, [isDark])
 
   const getArcColor = useCallback((arc: object) => (arc as GlobeArc).color, [])
   const getArcAnimateTime = useCallback((arc: object) => {
