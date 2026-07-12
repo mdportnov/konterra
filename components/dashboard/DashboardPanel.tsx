@@ -9,6 +9,7 @@ import TravelSection from './TravelSection'
 import type { Contact, ContactConnection, ContactCountryConnection, Trip } from '@/lib/db/schema'
 import type { ConnectedContact } from '@/components/globe/ContactDetail'
 import type { SidebarView } from '@/hooks/use-panel-navigation'
+import type { TripFocusRange } from '@/hooks/use-trip-focus'
 
 interface DashboardPanelProps {
   contacts: Contact[]
@@ -50,6 +51,9 @@ interface DashboardPanelProps {
   canOpenCompare?: boolean
   onOpenCompare?: () => void
   onToggleCompareMode?: () => void
+  tripFocusRange?: TripFocusRange | null
+  onTripFocusChange?: (range: TripFocusRange | null) => void
+  focusedTripCount?: number
   dashboardTab?: 'connections' | 'travel'
   onDashboardTabChange?: (tab: 'connections' | 'travel') => void
 }
@@ -94,6 +98,9 @@ export default function DashboardPanel({
   canOpenCompare,
   onOpenCompare,
   onToggleCompareMode,
+  tripFocusRange,
+  onTripFocusChange,
+  focusedTripCount,
   dashboardTab: dashboardTabProp,
   onDashboardTabChange,
 }: DashboardPanelProps) {
@@ -148,6 +155,9 @@ export default function DashboardPanel({
             canOpenCompare={canOpenCompare}
             onOpenCompare={onOpenCompare}
             onToggleCompareMode={onToggleCompareMode}
+            tripFocusRange={tripFocusRange}
+            onTripFocusChange={onTripFocusChange}
+            focusedTripCount={focusedTripCount}
           />
         ) : (
           <ContactListSection

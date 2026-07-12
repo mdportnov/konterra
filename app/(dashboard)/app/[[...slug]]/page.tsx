@@ -34,6 +34,7 @@ import { useContactFilters } from '@/hooks/use-contact-filters'
 import { usePanelNavigation } from '@/hooks/use-panel-navigation'
 import { useTripSelection } from '@/hooks/use-trip-selection'
 import { useTripCompare } from '@/hooks/use-trip-compare'
+import { useTripFocus, type TripFocusRange } from '@/hooks/use-trip-focus'
 import { usePopupState } from '@/hooks/use-popup-state'
 import { useDashboardRouting } from '@/hooks/use-dashboard-routing'
 import { useHotkey } from '@/hooks/use-hotkey'
@@ -106,6 +107,13 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
   })
 
   const tripCompare = useTripCompare({ trips: data.trips })
+
+  const tripFocus = useTripFocus({ trips: data.trips })
+
+  const handleTripFocusChange = useCallback((range: TripFocusRange | null) => {
+    tripFocus.setRange(range)
+    if (range) setDisplayOptions((prev) => (prev.showTravel ? prev : { ...prev, showTravel: true }))
+  }, [tripFocus.setRange])
 
   const handleOpenTripCompare = useCallback(() => {
     if (nav.activePanel) {
@@ -379,6 +387,9 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
     canOpenCompare: tripCompare.canOpenCompare,
     onOpenCompare: handleOpenTripCompare,
     onToggleCompareMode: tripCompare.toggleCompareMode,
+    tripFocusRange: tripFocus.range,
+    onTripFocusChange: handleTripFocusChange,
+    focusedTripCount: tripFocus.focusedTrips.length,
     dashboardTab,
     onDashboardTabChange: setDashboardTab,
   } as const
@@ -399,8 +410,9 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
         connections={data.connections}
         countryConnections={data.countryConnections}
         highlightedContactIds={highlightedContactIds}
-        trips={data.trips}
+        trips={tripFocus.focusedTrips}
         selectedTripId={tripSelection.selectedTripId}
+        focusMode={tripFocus.focusActive}
         regionSelectActive={regionSelectActive}
         onRegionSelect={handleRegionSelect}
         onRegionSelectDeactivate={handleRegionSelectDeactivate}
