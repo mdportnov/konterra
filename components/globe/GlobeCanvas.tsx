@@ -40,6 +40,27 @@ interface GlobeArc {
   isTravel?: boolean
 }
 
+interface TripLabelEl {
+  wrapper: HTMLDivElement
+  stem: HTMLDivElement
+  pill: HTMLDivElement
+  cityEl: HTMLDivElement
+  datesEl: HTMLDivElement
+  lat: number
+  lng: number
+  city: string
+  dates: string
+  arrivalMs: number
+  departureMs: number
+  w: number
+  h: number
+  lastStem: number
+  lastBelow: boolean
+  lastCityText: string
+  lastDatesText: string
+  lastHidden: boolean
+}
+
 interface ClusterData {
   contacts: Contact[]
   x: number
@@ -653,7 +674,7 @@ export default memo(function GlobeCanvas({
   }, [showNetwork, showTravel, travelArcs, arcs, countryArcs])
 
   const getArcStroke = useCallback((arc: object) => {
-    if ((arc as GlobeArc).isTravel) return 1.2
+    if ((arc as GlobeArc).isTravel) return 0.85
     return (arc as GlobeArc).type === 'country' ? 0.25 : 0.4
   }, [])
 
@@ -900,7 +921,7 @@ export default memo(function GlobeCanvas({
     return `<div style="background:${bg};color:${textColor};padding:4px 8px;border-radius:6px;font-size:11px;backdrop-filter:blur(12px);border:1px solid ${border};font-family:system-ui,sans-serif"><b>${count}</b> contact${count === 1 ? '' : 's'}</div>`
   }, [isDark])
 
-  const tripLabelElsRef = useRef(new Map<string, { wrapper: HTMLDivElement; stem: HTMLDivElement; pill: HTMLDivElement; lat: number; lng: number; w: number; h: number; lastStem: number; lastBelow: boolean }>())
+  const tripLabelElsRef = useRef(new Map<string, TripLabelEl>())
   const tripLabelGenRef = useRef(0)
 
   const declutterTripLabels = useCallback(() => {
@@ -908,23 +929,82 @@ export default memo(function GlobeCanvas({
     if (!globe) return
     const LABEL_GAP = 9
     const RECT_PAD = 3
-    const MAX_LEVELS = 8
-    type LabelEntry = { stem: HTMLDivElement; pill: HTMLDivElement; w: number; h: number; lastStem: number; lastBelow: boolean }
-    const entries: Array<{ e: LabelEntry; x: number; y: number }> = []
+    const MAX_LEVELS = 3
+    const CLUSTER_R = 56
+
+    const visible: Array<{ e: TripLabelEl; x: number; y: number }> = []
     for (const e of tripLabelElsRef.current.values()) {
       if (!e.wrapper.isConnected) continue
       if (e.wrapper.style.display === 'none' || e.wrapper.style.visibility === 'hidden') continue
       const coords = getScreenCoords(e.lat, e.lng, 0.02)
       if (!coords) continue
+      visible.push({ e, x: coords.x, y: coords.y })
+    }
+    visible.sort((a, b) => a.y - b.y || a.x - b.x)
+
+    const setHidden = (e: TripLabelEl, hidden: boolean) => {
+      if (e.lastHidden === hidden) return
+      e.lastHidden = hidden
+      const v = hidden ? 'hidden' : ''
+      e.pill.style.visibility = v
+      e.stem.style.visibility = v
+    }
+
+    const clusters: Array<{ cx: number; cy: number; members: Array<{ e: TripLabelEl; x: number; y: number }> }> = []
+    for (const v of visible) {
+      let target = null
+      for (const c of clusters) {
+        const dx = c.cx - v.x
+        const dy = c.cy - v.y
+        if (dx * dx + dy * dy < CLUSTER_R * CLUSTER_R) {
+          target = c
+          break
+        }
+      }
+      if (target) {
+        target.members.push(v)
+        target.cx = target.members.reduce((s, m) => s + m.x, 0) / target.members.length
+        target.cy = target.members.reduce((s, m) => s + m.y, 0) / target.members.length
+      } else {
+        clusters.push({ cx: v.x, cy: v.y, members: [v] })
+      }
+    }
+
+    const placed: Array<{ x1: number; y1: number; x2: number; y2: number }> = []
+    for (const c of clusters) {
+      const members = c.members.slice().sort((a, b) => a.e.arrivalMs - b.e.arrivalMs)
+      const rep = members[0]
+      const e = rep.e
+      let cityText = e.city
+      let datesText = e.dates
+      if (members.length > 1) {
+        cityText = `${e.city} +${members.length - 1}`
+        let minArr = Infinity
+        let maxDep = -Infinity
+        for (const m of members) {
+          minArr = Math.min(minArr, m.e.arrivalMs)
+          maxDep = Math.max(maxDep, m.e.departureMs)
+        }
+        datesText = `${formatDateOnly(minArr, { year: false })} – ${formatDateOnly(maxDep, { year: false })}`
+        for (let i = 1; i < members.length; i++) setHidden(members[i].e, true)
+      }
+      setHidden(e, false)
+      if (cityText !== e.lastCityText) {
+        e.cityEl.textContent = cityText
+        e.lastCityText = cityText
+        e.w = 0
+      }
+      if (datesText !== e.lastDatesText) {
+        e.datesEl.textContent = datesText
+        e.lastDatesText = datesText
+        e.w = 0
+      }
       if (!e.w || !e.h) {
         e.w = e.pill.offsetWidth
         e.h = e.pill.offsetHeight
       }
-      entries.push({ e, x: coords.x, y: coords.y })
-    }
-    entries.sort((a, b) => a.y - b.y || a.x - b.x)
-    const placed: Array<{ x1: number; y1: number; x2: number; y2: number }> = []
-    for (const { e, x, y } of entries) {
+
+      const { x, y } = rep
       const w = e.w || 80
       const h = e.h || 32
       const rectFor = (stem: number, below: boolean) => {
@@ -1012,6 +1092,8 @@ export default memo(function GlobeCanvas({
           lng: t.lng!,
           city: t.city,
           dates,
+          arrivalMs: new Date(t.arrivalDate).getTime(),
+          departureMs: new Date(t.departureDate ?? t.arrivalDate).getTime(),
           tense: tripTense(t.arrivalDate, t.departureDate),
         }
       })
@@ -1025,14 +1107,14 @@ export default memo(function GlobeCanvas({
   }, [tripLabelElements])
 
   const htmlElements = useMemo(() => {
-    const els: Array<{ kind: 'user' | 'trip'; id?: string; lat: number; lng: number; city?: string; dates?: string; tense?: 'past' | 'current' | 'future' }> = []
+    const els: Array<{ kind: 'user' | 'trip'; id?: string; lat: number; lng: number; city?: string; dates?: string; arrivalMs?: number; departureMs?: number; tense?: 'past' | 'current' | 'future' }> = []
     if (userLocation) els.push({ kind: 'user', lat: userLocation.lat, lng: userLocation.lng })
     els.push(...tripLabelElements)
     return els
   }, [userLocation, tripLabelElements])
 
   const getHtmlElement = useCallback((d: object) => {
-    const datum = d as { kind: 'user' | 'trip'; id?: string; lat?: number; lng?: number; city?: string; dates?: string; tense?: 'past' | 'current' | 'future' }
+    const datum = d as { kind: 'user' | 'trip'; id?: string; lat?: number; lng?: number; city?: string; dates?: string; arrivalMs?: number; departureMs?: number; tense?: 'past' | 'current' | 'future' }
     if (datum.kind === 'trip') {
       const accent = datum.tense === 'current' ? TRAVEL_COLORS.currentPoint : datum.tense === 'future' ? TRAVEL_COLORS.futurePoint : TRAVEL_COLORS.pastPoint
       const bg = isDark ? 'rgba(15,12,10,0.88)' : 'rgba(255,255,255,0.92)'
@@ -1055,7 +1137,26 @@ export default memo(function GlobeCanvas({
       pill.appendChild(dates)
       wrapper.appendChild(pill)
       if (datum.id != null && datum.lat != null && datum.lng != null) {
-        tripLabelElsRef.current.set(datum.id, { wrapper, stem, pill, lat: datum.lat, lng: datum.lng, w: 0, h: 0, lastStem: 9, lastBelow: false })
+        tripLabelElsRef.current.set(datum.id, {
+          wrapper,
+          stem,
+          pill,
+          cityEl: city,
+          datesEl: dates,
+          lat: datum.lat,
+          lng: datum.lng,
+          city: datum.city ?? '',
+          dates: datum.dates ?? '',
+          arrivalMs: datum.arrivalMs ?? 0,
+          departureMs: datum.departureMs ?? 0,
+          w: 0,
+          h: 0,
+          lastStem: 9,
+          lastBelow: false,
+          lastCityText: datum.city ?? '',
+          lastDatesText: datum.dates ?? '',
+          lastHidden: false,
+        })
         tripLabelGenRef.current++
       }
       return wrapper
