@@ -293,9 +293,9 @@ export default memo(function GlobeCanvas({
     if (controls) controls.enabled = !regionSelectActive
   }, [regionSelectActive])
 
-  const getScreenCoords = useCallback((lat: number, lng: number) => {
+  const getScreenCoords = useCallback((lat: number, lng: number, altitude = 0.015) => {
     if (!globeRef.current) return null
-    const coords = globeRef.current.getScreenCoords(lat, lng, 0.015)
+    const coords = globeRef.current.getScreenCoords(lat, lng, altitude)
     if (!coords || coords.x == null || coords.y == null) return null
     return { x: coords.x, y: coords.y }
   }, [])
@@ -541,13 +541,13 @@ export default memo(function GlobeCanvas({
         const isFuture = arrival > now
 
         let color: string
-        let size = 0.5
+        let size = 0.35
         if (t.id === selectedTripId) {
           color = TRAVEL_COLORS.selectedPoint
-          size = 0.6
+          size = 0.45
         } else if (isCurrent) {
           color = TRAVEL_COLORS.currentPoint
-          size = 0.6
+          size = 0.45
         } else if (isFuture) {
           color = TRAVEL_COLORS.futurePoint
         } else {
@@ -900,6 +900,103 @@ export default memo(function GlobeCanvas({
     return `<div style="background:${bg};color:${textColor};padding:4px 8px;border-radius:6px;font-size:11px;backdrop-filter:blur(12px);border:1px solid ${border};font-family:system-ui,sans-serif"><b>${count}</b> contact${count === 1 ? '' : 's'}</div>`
   }, [isDark])
 
+  const tripLabelElsRef = useRef(new Map<string, { wrapper: HTMLDivElement; stem: HTMLDivElement; pill: HTMLDivElement; lat: number; lng: number; w: number; h: number; lastStem: number; lastBelow: boolean }>())
+  const tripLabelGenRef = useRef(0)
+
+  const declutterTripLabels = useCallback(() => {
+    const globe = globeRef.current
+    if (!globe) return
+    const LABEL_GAP = 9
+    const RECT_PAD = 3
+    const MAX_LEVELS = 8
+    type LabelEntry = { stem: HTMLDivElement; pill: HTMLDivElement; w: number; h: number; lastStem: number; lastBelow: boolean }
+    const entries: Array<{ e: LabelEntry; x: number; y: number }> = []
+    for (const e of tripLabelElsRef.current.values()) {
+      if (!e.wrapper.isConnected) continue
+      if (e.wrapper.style.display === 'none' || e.wrapper.style.visibility === 'hidden') continue
+      const coords = getScreenCoords(e.lat, e.lng, 0.02)
+      if (!coords) continue
+      if (!e.w || !e.h) {
+        e.w = e.pill.offsetWidth
+        e.h = e.pill.offsetHeight
+      }
+      entries.push({ e, x: coords.x, y: coords.y })
+    }
+    entries.sort((a, b) => a.y - b.y || a.x - b.x)
+    const placed: Array<{ x1: number; y1: number; x2: number; y2: number }> = []
+    for (const { e, x, y } of entries) {
+      const w = e.w || 80
+      const h = e.h || 32
+      const rectFor = (stem: number, below: boolean) => {
+        const top = below ? y + stem : y - stem - h
+        return { x1: x - w / 2 - RECT_PAD, y1: top - RECT_PAD, x2: x + w / 2 + RECT_PAD, y2: top + h + RECT_PAD }
+      }
+      let stem = LABEL_GAP
+      let below = false
+      let rect = rectFor(stem, below)
+      search:
+      for (let level = 0; level < MAX_LEVELS; level++) {
+        for (const tryBelow of [false, true]) {
+          const tryStem = LABEL_GAP + level * (h + 4)
+          const tryRect = rectFor(tryStem, tryBelow)
+          const collides = placed.some((r) => tryRect.x1 < r.x2 && tryRect.x2 > r.x1 && tryRect.y1 < r.y2 && tryRect.y2 > r.y1)
+          if (!collides) {
+            stem = tryStem
+            below = tryBelow
+            rect = tryRect
+            break search
+          }
+        }
+      }
+      placed.push(rect)
+      if (stem === e.lastStem && below === e.lastBelow) continue
+      e.lastStem = stem
+      e.lastBelow = below
+      if (below) {
+        e.pill.style.transform = `translate(-50%,${stem}px)`
+        e.stem.style.transform = 'translate(-50%,0)'
+      } else {
+        e.pill.style.transform = `translate(-50%,calc(-100% - ${stem}px))`
+        e.stem.style.transform = `translate(-50%,-${stem}px)`
+      }
+      e.stem.style.height = `${stem}px`
+    }
+  }, [getScreenCoords])
+
+  useEffect(() => {
+    if (!focusMode) {
+      tripLabelElsRef.current.clear()
+      return
+    }
+    let raf = 0
+    let lastX = NaN, lastY = NaN, lastZ = NaN
+    let lastConnected = -1
+    let lastGen = -1
+    const tick = () => {
+      raf = requestAnimationFrame(tick)
+      const globe = globeRef.current
+      if (!globe) return
+      const cam = globe.camera?.()
+      let connected = 0
+      for (const e of tripLabelElsRef.current.values()) {
+        if (e.wrapper.isConnected) connected++
+      }
+      const gen = tripLabelGenRef.current
+      const x = cam?.position.x ?? 0
+      const y = cam?.position.y ?? 0
+      const z = cam?.position.z ?? 0
+      if (x === lastX && y === lastY && z === lastZ && connected === lastConnected && gen === lastGen) return
+      lastX = x
+      lastY = y
+      lastZ = z
+      lastConnected = connected
+      lastGen = gen
+      declutterTripLabels()
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [focusMode, declutterTripLabels])
+
   const tripLabelElements = useMemo(() => {
     if (!focusMode) return []
     return trips
@@ -910,6 +1007,7 @@ export default memo(function GlobeCanvas({
           : formatDateOnly(t.arrivalDate, { year: false })
         return {
           kind: 'trip' as const,
+          id: t.id,
           lat: t.lat!,
           lng: t.lng!,
           city: t.city,
@@ -919,15 +1017,22 @@ export default memo(function GlobeCanvas({
       })
   }, [focusMode, trips])
 
+  useEffect(() => {
+    const ids = new Set(tripLabelElements.map((l) => l.id))
+    for (const id of tripLabelElsRef.current.keys()) {
+      if (!ids.has(id)) tripLabelElsRef.current.delete(id)
+    }
+  }, [tripLabelElements])
+
   const htmlElements = useMemo(() => {
-    const els: Array<{ kind: 'user' | 'trip'; lat: number; lng: number; city?: string; dates?: string; tense?: 'past' | 'current' | 'future' }> = []
+    const els: Array<{ kind: 'user' | 'trip'; id?: string; lat: number; lng: number; city?: string; dates?: string; tense?: 'past' | 'current' | 'future' }> = []
     if (userLocation) els.push({ kind: 'user', lat: userLocation.lat, lng: userLocation.lng })
     els.push(...tripLabelElements)
     return els
   }, [userLocation, tripLabelElements])
 
   const getHtmlElement = useCallback((d: object) => {
-    const datum = d as { kind: 'user' | 'trip'; city?: string; dates?: string; tense?: 'past' | 'current' | 'future' }
+    const datum = d as { kind: 'user' | 'trip'; id?: string; lat?: number; lng?: number; city?: string; dates?: string; tense?: 'past' | 'current' | 'future' }
     if (datum.kind === 'trip') {
       const accent = datum.tense === 'current' ? TRAVEL_COLORS.currentPoint : datum.tense === 'future' ? TRAVEL_COLORS.futurePoint : TRAVEL_COLORS.pastPoint
       const bg = isDark ? 'rgba(15,12,10,0.88)' : 'rgba(255,255,255,0.92)'
@@ -949,6 +1054,10 @@ export default memo(function GlobeCanvas({
       dates.textContent = datum.dates ?? ''
       pill.appendChild(dates)
       wrapper.appendChild(pill)
+      if (datum.id != null && datum.lat != null && datum.lng != null) {
+        tripLabelElsRef.current.set(datum.id, { wrapper, stem, pill, lat: datum.lat, lng: datum.lng, w: 0, h: 0, lastStem: 9, lastBelow: false })
+        tripLabelGenRef.current++
+      }
       return wrapper
     }
     const wrapper = document.createElement('div')
