@@ -160,6 +160,20 @@ export default function WelcomeWizard({ onAddContact, onOpenImport, onComplete }
     }
   }, [step])
 
+  /**
+   * Closing the dialog is not the same as being done with setup. Escape and backdrop clicks
+   * are easy to hit by accident, and marking onboarding complete there would silently
+   * destroy it with no way back — only the explicit Skip and the final step do that.
+   */
+  const dismissForNow = useCallback(() => {
+    setOpen(false)
+    fetch('/api/me/onboarding', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ wizardStep: step, complete: false }),
+    }).catch(() => {})
+  }, [step])
+
   const handleSaveHomeBase = useCallback(async () => {
     if (!country.trim()) {
       toast.error('Pick a country to place your pin')
@@ -502,9 +516,9 @@ export default function WelcomeWizard({ onAddContact, onOpenImport, onComplete }
   const current = steps[step] ?? steps[0]
 
   return (
-    // Closable at every step: Escape, the backdrop and the close button all end setup
-    // rather than trapping people behind a form before they have seen the product.
-    <Dialog open={open} onOpenChange={(v) => { if (!v) finish('skipped') }}>
+    // Closable at every step so nobody is trapped behind a form before they have seen the
+    // product — but closing only puts it away until next time.
+    <Dialog open={open} onOpenChange={(v) => { if (!v) dismissForNow() }}>
       <DialogContent className="sm:max-w-md max-h-[90dvh] overflow-y-auto" style={{ zIndex: Z.modal }}>
         <DialogHeader>
           <DialogTitle className="k-serif italic text-[1.6rem] leading-tight font-normal text-center sm:text-left">

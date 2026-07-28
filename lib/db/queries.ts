@@ -1911,7 +1911,9 @@ export async function getOnboardingStatus(userId: string): Promise<OnboardingSta
       trip: tripCount.count > 0 || visitedCount.count > 0,
       interaction: interactionCount.count > 0,
       tag: agg.tagged > 0,
-      atlas: Boolean(user?.username) && user?.profileVisibility === 'public',
+      // Reserving the name is the step; publishing is a separate, opt-in decision and
+      // must not be required to finish onboarding.
+      atlas: Boolean(user?.username),
     },
     counts: {
       contacts: agg.contacts,

@@ -15,13 +15,14 @@ interface KeyboardShortcutsDialogProps {
 
 const shortcuts = [
   { key: '\u2318K / \u2318F', label: 'Search / Command menu' },
+  { key: '\u2318\u21e7L', label: 'Log a meeting' },
   { key: '\u2318N', label: 'New contact' },
   { key: '\u2318J / \u2318P', label: 'New trip' },
   { key: '\u2318I', label: 'Network insights' },
   { key: 'G', label: 'Toggle region select' },
   { key: 'Escape', label: 'Close panel' },
   { key: '[', label: 'Toggle left sidebar' },
-  { key: ']', label: 'Close right panel' },
+  { key: ']', label: 'Toggle right panel' },
   { key: '?', label: 'Show this dialog' },
 ]
 

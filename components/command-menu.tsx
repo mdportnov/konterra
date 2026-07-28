@@ -115,7 +115,7 @@ export default function CommandMenu({
     if (!open && onQuickLog) onQuickLog()
   }, [open, onQuickLog])
 
-  useHotkey('l', handleHotkeyQuickLog, { meta: true })
+  useHotkey('l', handleHotkeyQuickLog, { meta: true, shift: true })
   useHotkey('n', handleHotkeyAddContact, { meta: true })
   useHotkey('j', handleHotkeyAddTrip, { meta: true })
   useHotkey('p', handleHotkeyAddTrip, { meta: true })
@@ -174,6 +174,7 @@ export default function CommandMenu({
   // The client-side filter above only sees loaded contacts and only matches their fields.
   // This second pass asks Postgres, which reaches note text, interaction history and trips.
   const [deepHits, setDeepHits] = useState<SearchHit[]>([])
+  const [deepSearchThrottled, setDeepSearchThrottled] = useState(false)
 
   const query = search.trim()
   const searchable = open && query.length >= 2
@@ -184,7 +185,13 @@ export default function CommandMenu({
     const controller = new AbortController()
     const timer = setTimeout(() => {
       fetch(`/api/search?q=${encodeURIComponent(query)}&limit=8`, { signal: controller.signal })
-        .then((r) => (r.ok ? r.json() : null))
+        .then(async (r) => {
+          // Swallowing a 429 made deep search look like it simply found nothing, which is
+          // indistinguishable from a genuinely empty result.
+          setDeepSearchThrottled(r.status === 429)
+          if (!r.ok) return null
+          return r.json()
+        })
         .then((data: { hits?: SearchHit[] } | null) => {
           if (data?.hits) {
             setDeepHits(data.hits)
@@ -264,7 +271,21 @@ export default function CommandMenu({
             </CommandGroup>
           )}
 
-          {contextHits.length > 0 && (
+          {searchable && deepSearchThrottled && (
+            <>
+              <CommandSeparator />
+              <CommandGroup heading="In notes & history">
+                <CommandItem value={`deep-throttled-${search}`} disabled>
+                  <FileText className="text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground">
+                    Searching notes is catching its breath — results in a moment.
+                  </span>
+                </CommandItem>
+              </CommandGroup>
+            </>
+          )}
+
+          {contextHits.length > 0 && !deepSearchThrottled && (
             <>
               <CommandSeparator />
               <CommandGroup heading="In notes & history">
@@ -327,7 +348,7 @@ export default function CommandMenu({
                   <CommandItem onSelect={() => runAction(onQuickLog)}>
                     <Zap className="text-muted-foreground" />
                     <span>Just met someone</span>
-                    <CommandShortcut>⌘L</CommandShortcut>
+                    <CommandShortcut>⌘⇧L</CommandShortcut>
                   </CommandItem>
                 )}
                 <CommandItem onSelect={() => runAction(onAddContact)}>

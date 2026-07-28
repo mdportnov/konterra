@@ -50,15 +50,30 @@ export default function ContactLocationTimeline({
   const [city, setCity] = useState('')
   const [observedAt, setObservedAt] = useState(() => new Date().toISOString().slice(0, 10))
 
+  // History only ever exists alongside a current location, so a contact without one has
+  // nothing to fetch — otherwise every contact you open costs a round trip for an empty
+  // list.
+  const hasHistory = Boolean(currentCountry)
+
   useEffect(() => {
+    if (!hasHistory) {
+      setHistory([])
+      return
+    }
     const controller = new AbortController()
-    setHistory(null)
-    fetch(`/api/contacts/${contactId}/locations`, { signal: controller.signal })
-      .then((r) => (r.ok ? r.json() : []))
-      .then((data) => { if (Array.isArray(data)) setHistory(data) })
-      .catch(() => {})
+    const load = async () => {
+      setHistory(null)
+      try {
+        const res = await fetch(`/api/contacts/${contactId}/locations`, { signal: controller.signal })
+        const data = res.ok ? await res.json() : []
+        if (Array.isArray(data)) setHistory(data)
+      } catch {
+        if (!controller.signal.aborted) setHistory([])
+      }
+    }
+    load()
     return () => controller.abort()
-  }, [contactId])
+  }, [contactId, hasHistory])
 
   const handleAdd = useCallback(async () => {
     if (!country.trim()) {

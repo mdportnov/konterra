@@ -13,8 +13,8 @@ import type { ContactMatch, OverlapReport } from '@/lib/travel/overlaps'
 
 interface CrossingsCardProps {
   onContactClick?: (contactId: string) => void
-  /** Bump to force a refetch after trips or contacts change. */
-  refreshKey?: number
+  /** Change to force a refetch after trips or contacts change. */
+  refreshKey?: string | number
 }
 
 function formatRange(arrival: string | Date, departure: string | Date | null): string {

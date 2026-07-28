@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useMemo, useSyncExternalStore } from 'react'
 import Link from 'next/link'
+import { Z } from '@/lib/constants/ui'
 
 export type ConsentState = 'unknown' | 'granted' | 'denied'
 
@@ -86,8 +87,13 @@ function ConsentBanner({ onChoose }: { onChoose: (value: 'granted' | 'denied') =
     <div
       role="dialog"
       aria-label="Analytics consent"
-      className="fixed bottom-3 left-3 right-3 sm:left-auto sm:right-4 sm:bottom-4 sm:max-w-sm rounded-xl border border-border bg-card/95 backdrop-blur-xl p-4 shadow-lg"
-      style={{ zIndex: 90 }}
+      className="fixed left-3 right-3 sm:left-auto sm:right-4 sm:max-w-sm rounded-xl border border-border bg-card/95 backdrop-blur-xl p-4 shadow-lg"
+      style={{
+        zIndex: Z.consent,
+        // Clears the globe's bottom control cluster on small screens instead of sitting on
+        // top of the only navigation the user has.
+        bottom: 'calc(max(1.25rem, env(safe-area-inset-bottom, 0px)) + 62px)',
+      }}
     >
       <p className="text-xs leading-relaxed text-muted-foreground">
         We would like to measure which parts of Konterra get used, so we know what to improve.

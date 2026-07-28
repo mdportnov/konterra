@@ -66,6 +66,8 @@ interface ContactListSectionProps {
   onAddTrip?: () => void
   onQuickLog?: () => void
   onOpenSettings?: () => void
+  onSwitchToGlobe?: () => void
+  isMobile?: boolean
 }
 
 export default function ContactListSection({
@@ -88,6 +90,8 @@ export default function ContactListSection({
   onAddTrip,
   onQuickLog,
   onOpenSettings,
+  onSwitchToGlobe,
+  isMobile,
 }: ContactListSectionProps) {
   const [searchInput, setSearchInput] = useState('')
   const [search, setSearch] = useState('')
@@ -411,8 +415,15 @@ export default function ContactListSection({
   const [checklistDismissed, setChecklistDismissed] = useState(false)
 
   // The card fetches its own server-derived state; local data changes only tell it when to
-  // refetch, so a completed step ticks off without a reload.
-  const checklistRefreshKey = contacts.length + recentInteractions.length + connections.length
+  // refetch. Counting rows alone missed tagging an existing contact, which changes no
+  // length at all, so the tag step could never tick off.
+  const checklistRefreshKey = [
+    contacts.length,
+    recentInteractions.length,
+    connections.length,
+    contacts.reduce((n, c) => n + (c.tags?.length ?? 0), 0),
+    contacts.filter((c) => c.isSelf).length,
+  ].join(':')
 
   const showChecklist = !contactsLoading && !checklistDismissed
 
@@ -426,6 +437,8 @@ export default function ContactListSection({
           onAddTrip={onAddTrip}
           onQuickLog={onQuickLog}
           onOpenSettings={onOpenSettings}
+          onSwitchToGlobe={onSwitchToGlobe}
+          isMobile={isMobile}
           refreshKey={checklistRefreshKey}
           onAllDone={() => setChecklistDismissed(true)}
         />

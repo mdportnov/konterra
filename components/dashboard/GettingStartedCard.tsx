@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Check, UserPlus, MessageSquare, Tag, Home, Plane, Share2, X, Zap } from 'lucide-react'
+import { Check, UserPlus, MessageSquare, Tag, Home, Plane, Share2, X, Zap, Globe } from 'lucide-react'
 import { GLASS } from '@/lib/constants/ui'
 
 export interface OnboardingStatusResponse {
@@ -27,8 +27,11 @@ interface GettingStartedCardProps {
   onAddTrip?: () => void
   onQuickLog?: () => void
   onOpenSettings?: () => void
-  /** Bump to refetch after the user does something that could tick a step off. */
-  refreshKey?: number
+  onSwitchToGlobe?: () => void
+  isMobile?: boolean
+  /** Change to refetch after the user does something that could tick a step off. */
+  refreshKey?: string | number
+  /** Called once every step is done, so the host can retire the card. */
   onAllDone?: () => void
 }
 
@@ -47,6 +50,8 @@ export default function GettingStartedCard({
   onAddTrip,
   onQuickLog,
   onOpenSettings,
+  onSwitchToGlobe,
+  isMobile,
   refreshKey = 0,
   onAllDone,
 }: GettingStartedCardProps) {
@@ -121,13 +126,23 @@ export default function GettingStartedCard({
     },
     {
       key: 'atlas',
-      label: 'Claim your public atlas',
-      hint: 'A shareable page of your countries',
+      label: 'Claim your username',
+      hint: 'Reserves konterra.space/u/you — publishing stays optional',
       icon: Share2,
       actionLabel: 'Claim',
       onAction: onOpenProfile,
     },
   ], [onAddContact, onOpenProfile, onAddTrip, onQuickLog])
+
+  const completed = status ? steps.filter((s) => status.steps[s.key]).length : 0
+  const total = steps.length
+  const allDone = Boolean(status) && completed === total
+
+  // A checklist that keeps showing 100% is just noise; retire it once there is nothing
+  // left to do rather than waiting to be dismissed by hand.
+  useEffect(() => {
+    if (allDone) onAllDone?.()
+  }, [allDone, onAllDone])
 
   if (!status) {
     return (
@@ -139,8 +154,8 @@ export default function GettingStartedCard({
     )
   }
 
-  const completed = steps.filter((s) => status.steps[s.key]).length
-  const total = steps.length
+  if (allDone) return null
+
   const pct = Math.round((completed / total) * 100)
   const nextStep = steps.find((s) => !status.steps[s.key])
 
@@ -211,6 +226,18 @@ export default function GettingStartedCard({
           )
         })}
       </div>
+
+      {/* On a phone the globe lives behind a view switch, so a first-time user can miss
+          that it exists at all. */}
+      {isMobile && onSwitchToGlobe && (
+        <button
+          onClick={onSwitchToGlobe}
+          className="flex w-full items-center gap-2 rounded-lg bg-primary/5 border border-primary/10 px-3 py-2 text-left transition-colors active:scale-[0.98]"
+        >
+          <Globe className="h-3 w-3 text-primary shrink-0" />
+          <span className="text-[11px] text-foreground">See everyone on the globe</span>
+        </button>
+      )}
 
       {onOpenSettings && (
         <button

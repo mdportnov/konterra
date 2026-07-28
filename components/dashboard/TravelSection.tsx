@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { List, CalendarDays, Table2 } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import TravelJourney from './widgets/TravelJourney'
@@ -42,6 +42,13 @@ const VIEWS: { value: TravelView; icon: typeof List; label: string }[] = [
 export default function TravelSection({ trips, tripsLoading, onImportTrips, onTripClick, onAddTrip, onEditTrip, onDeleteTrip, compareMode, selectedCompareIds, onToggleCompareTrip, canOpenCompare, onOpenCompare, onToggleCompareMode, tripFocusRange, onTripFocusChange, focusedTripCount, onCountryClick, onContactClick }: TravelSectionProps) {
   const [view, setView] = useState<TravelView>('list')
 
+  // Counting trips missed edits: changing a trip's dates changes who you can catch, but
+  // not how many trips there are.
+  const tripsSignature = useMemo(
+    () => trips.map((t) => `${t.id}:${t.arrivalDate}:${t.departureDate ?? ''}`).join('|'),
+    [trips],
+  )
+
   const selectView = (next: TravelView) => {
     setView(next)
     if (next === 'days') track(ANALYTICS_EVENTS.daysTableViewed, { trips: trips.length })
@@ -50,9 +57,9 @@ export default function TravelSection({ trips, tripsLoading, onImportTrips, onTr
   return (
     <div className="p-4 md:p-5">
       {trips.length > 0 && !tripsLoading && (
-        <CrossingsCard onContactClick={onContactClick} refreshKey={trips.length} />
+        <CrossingsCard onContactClick={onContactClick} refreshKey={tripsSignature} />
       )}
-      {view !== 'days' && trips.length > 0 && !tripsLoading && onTripFocusChange && (
+      {trips.length > 0 && !tripsLoading && onTripFocusChange && (
         <TripPeriodFocus
           trips={trips}
           range={tripFocusRange ?? null}

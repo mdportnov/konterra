@@ -3,7 +3,7 @@
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { ChevronLeft, ChevronDown, Plus, Globe as GlobeIcon, Settings, Sparkles, LogOut, ExternalLink } from 'lucide-react'
+import { ChevronLeft, ChevronDown, Plus, Globe as GlobeIcon, Settings, Sparkles, LogOut, ExternalLink, Zap } from 'lucide-react'
 import { signOut } from 'next-auth/react'
 import Wordmark from '@/components/branding/Wordmark'
 
@@ -15,6 +15,7 @@ interface DashboardHeaderProps {
   onSettings?: () => void
   onInsights?: () => void
   onOpenProfile?: () => void
+  onQuickLog?: () => void
   dashboardTab: 'connections' | 'travel'
   onDashboardTabChange: (tab: 'connections' | 'travel') => void
 }
@@ -27,6 +28,7 @@ export default function DashboardHeader({
   onSettings,
   onInsights,
   onOpenProfile,
+  onQuickLog,
   dashboardTab,
   onDashboardTabChange,
 }: DashboardHeaderProps) {
@@ -58,6 +60,12 @@ export default function DashboardHeader({
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-52">
+                {onQuickLog && (
+                  <DropdownMenuItem onClick={onQuickLog}>
+                    <Zap className="h-4 w-4 mr-2" />
+                    Just met someone
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem onClick={onAddContact}>
                   <Plus className="h-4 w-4 mr-2" />
                   Add Contact

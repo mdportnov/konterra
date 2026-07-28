@@ -216,21 +216,21 @@ export function usePanelNavigation(
     if (isMobile) setMobileView('dashboard')
   }, [isMobile, setMobileView])
 
-  const handleOpenSettings = useCallback(() => {
-    setSettingsTab('settings')
+  const handleOpenSettingsTab = useCallback((tab: Tab) => {
+    setSettingsTab(tab)
     setSettingsSubview(null)
     setActivePanel('settings')
-    pushUrl('/app/settings')
+    pushUrl(stateToUrl('settings', 'list', null, tab))
     if (isMobile) setMobileView('globe')
   }, [isMobile, setMobileView])
 
+  const handleOpenSettings = useCallback(() => {
+    handleOpenSettingsTab('settings')
+  }, [handleOpenSettingsTab])
+
   const handleOpenProfile = useCallback(() => {
-    setSettingsTab('profile')
-    setSettingsSubview(null)
-    setActivePanel('settings')
-    pushUrl('/app/profile')
-    if (isMobile) setMobileView('globe')
-  }, [isMobile, setMobileView])
+    handleOpenSettingsTab('profile')
+  }, [handleOpenSettingsTab])
 
   const handleSettingsTabChange = useCallback((tab: Tab) => {
     setSettingsTab(tab)
@@ -349,6 +349,7 @@ export function usePanelNavigation(
     settingsTab,
     settingsSubview,
     handleOpenSettings,
+    handleOpenSettingsTab,
     handleOpenProfile,
     handleSettingsTabChange,
     handleOpenMcp,

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo, use } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef, use } from 'react'
 import dynamic from 'next/dynamic'
 import DashboardPanel from '@/components/dashboard/DashboardPanel'
 import GlobePanel from '@/components/globe/GlobePanel'
@@ -29,6 +29,7 @@ import GlobeViewToggle from '@/components/globe/GlobeViewToggle'
 import { normalizeToGlobeName } from '@/components/globe/data/country-centroids'
 import type { DisplayOptions, VisualizationMode } from '@/types/display'
 import type { Contact, Trip } from '@/lib/db/schema'
+import { isRightDockOpen, nextRightDockAction, type RightDockMemory } from '@/lib/dock'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { useGlobeData } from '@/hooks/use-globe-data'
 import { useContactFilters } from '@/hooks/use-contact-filters'
@@ -41,7 +42,7 @@ import { useDashboardRouting } from '@/hooks/use-dashboard-routing'
 import { useHotkey } from '@/hooks/use-hotkey'
 import { useSwipe } from '@/hooks/use-swipe'
 import { toast } from 'sonner'
-import { ChevronRight, Globe, Zap } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Globe } from 'lucide-react'
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
 import {
   AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction,
@@ -90,13 +91,43 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
   const filters = useContactFilters(data.contacts, data.userTags)
   const nav = usePanelNavigation(slug, data.contacts, data.connections, isMobile, setMobileView)
 
+  const rightDockOpen = isRightDockOpen(nav.activePanel, wishlistDetailOpen)
+
+  // Profile is the default landing tab when the dock is summoned from cold.
+  const lastRightDock = useRef<RightDockMemory>({ panel: 'settings', tab: 'profile' })
+
+  const toggleRightDock = useCallback(() => {
+    const action = nextRightDockAction({
+      activePanel: nav.activePanel,
+      wishlistOpen: wishlistDetailOpen,
+      memory: { ...lastRightDock.current, tab: nav.activePanel === 'settings' ? nav.settingsTab : lastRightDock.current.tab },
+    })
+
+    switch (action.type) {
+      case 'closeWishlist':
+        setWishlistDetailOpen(false)
+        return
+      case 'closeSettings':
+        lastRightDock.current = action.remember
+        nav.handleCloseSettings()
+        return
+      case 'closeInsights':
+        lastRightDock.current = action.remember
+        nav.handleCloseInsights()
+        return
+      case 'cancelEdit':
+        nav.handleCancelEdit()
+        return
+      case 'openInsights':
+        nav.handleOpenInsights()
+        return
+      case 'openSettings':
+        nav.handleOpenSettingsTab(action.tab)
+    }
+  }, [wishlistDetailOpen, nav])
+
   useHotkey('[', () => setSidebarOpen(prev => !prev))
-  useHotkey(']', () => {
-    if (wishlistDetailOpen) { setWishlistDetailOpen(false); return }
-    if (nav.activePanel === 'settings') { nav.handleCloseSettings(); return }
-    if (nav.activePanel === 'insights') { nav.handleCloseInsights(); return }
-    if (nav.activePanel === 'edit') { nav.handleCancelEdit(); return }
-  })
+  useHotkey(']', toggleRightDock)
 
   const { dashboardTab, setDashboardTab, handleLayerToggle } = useDashboardRouting({
     initialSlug: slug,
@@ -559,6 +590,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
         onAddContact={nav.handleAddContact}
         onQuickAddContact={handleQuickAddContact}
         onSearch={() => setCommandMenuOpen(true)}
+        onQuickLog={() => setQuickLogOpen(true)}
         onInsights={nav.handleOpenInsights}
         onSettings={nav.handleOpenSettings}
         onProfile={nav.handleOpenProfile}
@@ -803,16 +835,6 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
             onComplete={wizardReload}
           />
         )}
-        {/* Logging a meeting on the spot is the main mobile job, so it gets a thumb-reachable
-            button instead of living behind a menu. */}
-        <button
-          onClick={() => setQuickLogOpen(true)}
-          aria-label="Log a meeting"
-          className={`fixed bottom-20 right-4 h-12 w-12 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center active:scale-95 ${TRANSITION.color}`}
-          style={{ zIndex: Z.controls }}
-        >
-          <Zap className="h-5 w-5" />
-        </button>
         {commandMenu}
         {quickLogDialog}
         {shortcutsDialog}
@@ -856,6 +878,29 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
       <div className="relative flex-1 overflow-hidden globe-bg">
         {globeSection}
       </div>
+      {/* The left dock has an edge tab to bring it back; without the mirror image the right
+          dock could only be reopened from an icon in the globe controls, which is why it
+          felt like it only ever closed. Sits vertically centred to clear the top-right
+          control cluster. */}
+      {!rightDockOpen && (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={toggleRightDock}
+                aria-label="Open panel"
+                className={`fixed right-0 top-1/2 -translate-y-1/2 h-7 w-5 flex items-center justify-center cursor-pointer ${GLASS.control} border-r-0 rounded-l-sm hover:bg-accent ${TRANSITION.color} text-muted-foreground hover:text-foreground`}
+                style={{ zIndex: Z.sidebarToggle }}
+              >
+                <ChevronLeft className="h-3.5 w-3.5" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="left" className="text-xs">
+              Open panel <span className="opacity-60">]</span>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      )}
       {!data.loading && (
         <WelcomeWizard
           onAddContact={nav.handleAddContact}

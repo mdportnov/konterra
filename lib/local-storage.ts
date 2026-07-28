@@ -4,12 +4,14 @@ export function subscribeToStorage(callback: () => void) {
 }
 
 export const RECONNECT_DAYS_KEY = 'konterra-reconnect-days'
-export const CHECKLIST_DONE_KEY = 'konterra-checklist-done'
 export const PROFILE_NUDGE_KEY = 'konterra-profile-nudge-dismissed'
 
+/**
+ * Getting-started progress is derived on the server now, so only the profile nudge is
+ * still local. Kept as a single call site so wiping contacts still resets what it can.
+ */
 export function clearOnboardingKeys() {
   try {
-    localStorage.removeItem(CHECKLIST_DONE_KEY)
     localStorage.removeItem(PROFILE_NUDGE_KEY)
   } catch {}
 }

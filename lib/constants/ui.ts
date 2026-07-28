@@ -12,6 +12,9 @@ export const Z = {
   sidebarToggle: 25,
   detail: 30,
   overlay: 40,
+  // Above the panels so it cannot be missed, below modals and toasts so it never covers a
+  // dialog the user opened or a message about what just happened.
+  consent: 45,
   modal: 50,
   toast: 60,
 } as const

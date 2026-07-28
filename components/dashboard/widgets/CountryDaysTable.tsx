@@ -18,14 +18,21 @@ interface CountryDaysTableProps {
   onCountryClick?: (country: string) => void
 }
 
-const COLUMNS: { key: SortKey; label: string; hint: string; align: 'left' | 'right' }[] = [
+/**
+ * `hideBelowSm` drops a column on narrow screens. Seven columns in a 480px sidebar (or a
+ * 360px phone) forces horizontal scrolling inside the vertical one, which fights the
+ * user's thumb; the dropped figures stay available in the expanded row.
+ */
+const COLUMNS: { key: SortKey; label: string; hint: string; align: 'left' | 'right'; hideBelowSm?: boolean }[] = [
   { key: 'country', label: 'Country', hint: 'Country name', align: 'left' },
   { key: 'totalDays', label: 'Days', hint: 'Distinct days present, all time', align: 'right' },
   { key: 'daysThisYear', label: 'This yr', hint: 'Days present since 1 January', align: 'right' },
-  { key: 'daysLast12Months', label: '12 mo', hint: 'Days present in the last 365 days', align: 'right' },
-  { key: 'visits', label: 'Visits', hint: 'Separate arrivals (back-to-back trips count once)', align: 'right' },
-  { key: 'lastVisit', label: 'Last', hint: 'Most recent day present', align: 'right' },
+  { key: 'daysLast12Months', label: '12 mo', hint: 'Days present in the last 365 days', align: 'right', hideBelowSm: true },
+  { key: 'visits', label: 'Visits', hint: 'Separate arrivals (back-to-back trips count once)', align: 'right', hideBelowSm: true },
+  { key: 'lastVisit', label: 'Last', hint: 'Most recent day present', align: 'right', hideBelowSm: true },
 ]
+
+const HIDDEN_BELOW_SM = 'hidden sm:table-cell'
 
 function formatDate(date: Date | string | null): string {
   if (!date) return '—'
@@ -163,7 +170,7 @@ export default function CountryDaysTable({ trips, loading, onCountryClick }: Cou
                 {COLUMNS.map((col) => (
                   <th
                     key={col.key}
-                    className={`px-2 py-2 font-normal ${col.align === 'right' ? 'text-right' : 'text-left'}`}
+                    className={`px-2 py-2 font-normal ${col.align === 'right' ? 'text-right' : 'text-left'} ${col.hideBelowSm ? HIDDEN_BELOW_SM : ''}`}
                   >
                     <TooltipProvider>
                       <Tooltip>
@@ -225,20 +232,23 @@ export default function CountryDaysTable({ trips, loading, onCountryClick }: Cou
                       <td className="px-2 py-2 text-right tabular-nums text-muted-foreground">
                         {row.daysThisYear || '—'}
                       </td>
-                      <td className="px-2 py-2 text-right tabular-nums text-muted-foreground">
+                      <td className={`px-2 py-2 text-right tabular-nums text-muted-foreground ${HIDDEN_BELOW_SM}`}>
                         {row.daysLast12Months || '—'}
                       </td>
-                      <td className="px-2 py-2 text-right tabular-nums text-muted-foreground">{row.visits}</td>
-                      <td className="px-2 py-2 text-right text-muted-foreground whitespace-nowrap">
+                      <td className={`px-2 py-2 text-right tabular-nums text-muted-foreground ${HIDDEN_BELOW_SM}`}>{row.visits}</td>
+                      <td className={`px-2 py-2 text-right text-muted-foreground whitespace-nowrap ${HIDDEN_BELOW_SM}`}>
                         {formatDate(row.lastVisit)}
                       </td>
                     </tr>
                     {isExpanded && (
                       <tr className="border-b border-border/50 bg-muted/20">
                         <td />
-                        <td colSpan={6} className="px-2 py-3">
+                        <td colSpan={COLUMNS.length} className="px-2 py-3">
                           <div className="space-y-2.5">
                             <div className="flex flex-wrap gap-x-5 gap-y-1 text-[11px] text-muted-foreground">
+                              <span className="sm:hidden">Last 12 months <span className="text-foreground tabular-nums">{row.daysLast12Months}</span></span>
+                              <span className="sm:hidden">Visits <span className="text-foreground tabular-nums">{row.visits}</span></span>
+                              <span className="sm:hidden">Last visit <span className="text-foreground">{formatFullDate(row.lastVisit)}</span></span>
                               <span>First visit <span className="text-foreground">{formatFullDate(row.firstVisit)}</span></span>
                               <span>Longest stay <span className="text-foreground tabular-nums">{row.longestStayDays}d</span></span>
                               <span>Nights <span className="text-foreground tabular-nums">{row.totalNights}</span></span>

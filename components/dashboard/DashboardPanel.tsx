@@ -139,6 +139,7 @@ export default function DashboardPanel({
         onSettings={onOpenSettings}
         onInsights={onOpenInsights}
         onOpenProfile={onOpenProfile}
+        onQuickLog={onQuickLog}
         dashboardTab={dashboardTab}
         onDashboardTabChange={setDashboardTab}
       />
@@ -189,6 +190,8 @@ export default function DashboardPanel({
             onAddTrip={onAddTrip ? () => onAddTrip() : undefined}
             onQuickLog={onQuickLog}
             onOpenSettings={onOpenSettings}
+            onSwitchToGlobe={onSwitchToGlobe}
+            isMobile={isMobile}
           />
         )}
       </ScrollArea>
