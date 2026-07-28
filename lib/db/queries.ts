@@ -1,7 +1,7 @@
 import { db } from './index'
-import { users, contacts, interactions, contactConnections, contactCountryConnections, introductions, favors, visitedCountries, waitlist, tags, trips, countryWishlist, appSettings, socialPreviews, invites, auditLog, apiTokens } from './schema'
-import { and, arrayContains, desc, eq, gte, inArray, lte, or, sql } from 'drizzle-orm'
-import type { Trip, NewContact, NewContactConnection, NewContactCountryConnection, NewIntroduction, NewFavor, NewTrip, NewCountryWishlistEntry, NewSocialPreview, NewAuditLogEntry } from './schema'
+import { users, contacts, interactions, contactConnections, contactCountryConnections, introductions, favors, visitedCountries, waitlist, tags, trips, countryWishlist, appSettings, socialPreviews, invites, auditLog, apiTokens, passwordResetTokens, emailVerificationTokens, rateLimitBuckets, onboardingProgress, contactLocationHistory, geocodeCache } from './schema'
+import { and, arrayContains, asc, desc, eq, gte, inArray, isNull, lt, lte, ne, or, sql } from 'drizzle-orm'
+import type { Trip, NewContact, NewContactConnection, NewContactCountryConnection, NewIntroduction, NewFavor, NewTrip, NewCountryWishlistEntry, NewSocialPreview, NewAuditLogEntry, NewContactLocationHistoryEntry } from './schema'
 import { DEFAULT_MAX_INVITES, SETTING_KEY_MAX_INVITES } from '@/lib/constants/invites'
 
 export async function deleteAllContactsByUserId(userId: string) {
@@ -46,7 +46,7 @@ export async function getUserPasswordHash(id: string) {
 export async function getUserProfile(id: string) {
   return db.query.users.findFirst({
     where: eq(users.id, id),
-    columns: { id: true, email: true, name: true, image: true, role: true, username: true, bio: true, profileVisibility: true, profilePrivacyLevel: true, globeAutoRotate: true, onboardedAt: true, createdAt: true },
+    columns: { id: true, email: true, name: true, image: true, role: true, username: true, bio: true, profileVisibility: true, profilePrivacyLevel: true, publicProfileIndexable: true, publicProfileConsentAt: true, globeAutoRotate: true, onboardedAt: true, emailVerified: true, createdAt: true },
   })
 }
 
@@ -62,7 +62,7 @@ export async function markUserOnboarded(id: string) {
 export async function getUserByUsername(username: string) {
   return db.query.users.findFirst({
     where: sql`lower(${users.username}) = ${username.toLowerCase()}`,
-    columns: { id: true, name: true, image: true, username: true, bio: true, profileVisibility: true, profilePrivacyLevel: true, createdAt: true },
+    columns: { id: true, name: true, image: true, username: true, bio: true, profileVisibility: true, profilePrivacyLevel: true, publicProfileIndexable: true, createdAt: true },
   })
 }
 
@@ -110,6 +110,8 @@ export async function updateUserProfile(id: string, data: {
   profileVisibility?: 'private' | 'public'
   profilePrivacyLevel?: 'countries_only' | 'full_travel'
   globeAutoRotate?: boolean
+  publicProfileIndexable?: boolean
+  publicProfileConsentAt?: Date | null
 }) {
   const [updated] = await db.update(users).set(data).where(eq(users.id, id)).returning()
   return updated
@@ -229,9 +231,15 @@ export async function createInteraction(data: {
     })
     if (contact) {
       const current = contact.lastContactedAt?.getTime() || 0
-      const set: Record<string, unknown> = { nextFollowUp: null, updatedAt: new Date() }
+      const set: Record<string, unknown> = { updatedAt: new Date() }
       if (data.date.getTime() > current) {
         set.lastContactedAt = data.date
+      }
+      // Backfilling an old meeting must not wipe a follow-up that is still ahead of it.
+      // Only a contact event at or after the due date actually discharges the reminder.
+      const due = contact.nextFollowUp?.getTime()
+      if (due !== undefined && data.date.getTime() >= due) {
+        set.nextFollowUp = null
       }
       await tx
         .update(contacts)
@@ -404,9 +412,44 @@ export async function getAllConnections(userId: string, page = 1, limit = 50) {
   return { data, total: count, page, limit }
 }
 
+/**
+ * A relationship between two contacts is one edge regardless of which side it was entered
+ * from. The unique index only covers (source, target), so without this check the reverse
+ * pair inserts a second row and every degree/density figure counts the pair twice.
+ */
 export async function createConnection(data: NewContactConnection) {
-  const [conn] = await db.insert(contactConnections).values(data).returning()
-  return conn
+  const existing = await db.query.contactConnections.findFirst({
+    where: and(
+      eq(contactConnections.userId, data.userId),
+      or(
+        and(
+          eq(contactConnections.sourceContactId, data.sourceContactId),
+          eq(contactConnections.targetContactId, data.targetContactId),
+        ),
+        and(
+          eq(contactConnections.sourceContactId, data.targetContactId),
+          eq(contactConnections.targetContactId, data.sourceContactId),
+        ),
+      ),
+    ),
+  })
+  if (existing) return existing
+
+  const [conn] = await db
+    .insert(contactConnections)
+    .values(data)
+    .onConflictDoNothing({ target: [contactConnections.sourceContactId, contactConnections.targetContactId] })
+    .returning()
+  if (conn) return conn
+
+  // Lost a race with a concurrent insert of the same pair — return the winner.
+  const raced = await db.query.contactConnections.findFirst({
+    where: and(
+      eq(contactConnections.sourceContactId, data.sourceContactId),
+      eq(contactConnections.targetContactId, data.targetContactId),
+    ),
+  })
+  return raced!
 }
 
 export async function deleteConnectionForContact(id: string, contactId: string, userId: string) {
@@ -516,11 +559,24 @@ export async function getOrCreateSelfContact(userId: string, userName: string) {
 
 export async function createConnectionsBulk(data: NewContactConnection[]) {
   if (data.length === 0) return []
+
+  // Collapse reverse duplicates within the payload itself; the unique index alone only
+  // catches the same-direction pair.
+  const seenPairs = new Set<string>()
+  const deduped = data.filter((c) => {
+    if (c.sourceContactId === c.targetContactId) return false
+    const key = [c.sourceContactId, c.targetContactId].sort().join(':')
+    if (seenPairs.has(key)) return false
+    seenPairs.add(key)
+    return true
+  })
+  if (deduped.length === 0) return []
+
   const BATCH_SIZE = 50
   return db.transaction(async (tx) => {
     const results: (typeof contactConnections.$inferSelect)[] = []
-    for (let i = 0; i < data.length; i += BATCH_SIZE) {
-      const batch = data.slice(i, i + BATCH_SIZE)
+    for (let i = 0; i < deduped.length; i += BATCH_SIZE) {
+      const batch = deduped.slice(i, i + BATCH_SIZE)
       const rows = await tx
         .insert(contactConnections)
         .values(batch)
@@ -751,7 +807,44 @@ export async function mergeContacts(
       }
     }
 
+    // Social previews are keyed by (contactId, platform); move the ones the winner is
+    // missing and drop the rest, otherwise they die with the loser row and the merged
+    // contact silently loses its enriched profiles.
+    const winnerPreviews = await tx.query.socialPreviews.findMany({
+      where: eq(socialPreviews.contactId, winnerId),
+      columns: { platform: true },
+    })
+    const winnerPlatforms = new Set(winnerPreviews.map((p) => p.platform))
+    const loserPreviews = await tx.query.socialPreviews.findMany({
+      where: eq(socialPreviews.contactId, loserId),
+    })
+    for (const preview of loserPreviews) {
+      if (winnerPlatforms.has(preview.platform)) {
+        await tx.delete(socialPreviews).where(eq(socialPreviews.id, preview.id))
+      } else {
+        await tx.update(socialPreviews)
+          .set({ contactId: winnerId })
+          .where(eq(socialPreviews.id, preview.id))
+        winnerPlatforms.add(preview.platform)
+      }
+    }
+
     await tx.delete(contacts).where(eq(contacts.id, loserId))
+
+    // The loser's interactions moved to the winner above, so the winner's cached
+    // "last contacted" is now stale — recompute it from the merged set.
+    const [latest] = await tx
+      .select({ date: interactions.date })
+      .from(interactions)
+      .where(eq(interactions.contactId, winnerId))
+      .orderBy(desc(interactions.date))
+      .limit(1)
+    if (!fieldOverrides.lastContactedAt) {
+      await tx
+        .update(contacts)
+        .set({ lastContactedAt: latest?.date ?? null })
+        .where(eq(contacts.id, winnerId))
+    }
 
     const [updated] = await tx
       .select()
@@ -1523,4 +1616,621 @@ export async function getAuditLogs(page = 1, limit = 50) {
     limit,
     offset,
   })
+}
+
+// ---------------------------------------------------------------------------
+// Password reset & email verification
+// ---------------------------------------------------------------------------
+
+export async function createPasswordResetToken(userId: string, tokenHash: string, expiresAt: Date, ip: string | null) {
+  // Older outstanding links are invalidated so a leaked earlier email cannot be replayed
+  // after the user has requested a fresh one.
+  await db
+    .update(passwordResetTokens)
+    .set({ usedAt: new Date() })
+    .where(and(eq(passwordResetTokens.userId, userId), isNull(passwordResetTokens.usedAt)))
+
+  const [row] = await db
+    .insert(passwordResetTokens)
+    .values({ userId, tokenHash, expiresAt, requestedIp: ip })
+    .returning()
+  return row
+}
+
+export async function consumePasswordResetToken(tokenHash: string) {
+  return db.transaction(async (tx) => {
+    const [claimed] = await tx
+      .update(passwordResetTokens)
+      .set({ usedAt: new Date() })
+      .where(
+        and(
+          eq(passwordResetTokens.tokenHash, tokenHash),
+          isNull(passwordResetTokens.usedAt),
+          gte(passwordResetTokens.expiresAt, new Date()),
+        ),
+      )
+      .returning({ userId: passwordResetTokens.userId })
+    return claimed ?? null
+  })
+}
+
+export async function countRecentPasswordResets(userId: string, sinceMs: number) {
+  const since = new Date(Date.now() - sinceMs)
+  const [{ count }] = await db
+    .select({ count: sql<number>`cast(count(*) as int)` })
+    .from(passwordResetTokens)
+    .where(and(eq(passwordResetTokens.userId, userId), gte(passwordResetTokens.createdAt, since)))
+  return count
+}
+
+export async function createEmailVerificationToken(userId: string, email: string, tokenHash: string, expiresAt: Date) {
+  await db
+    .update(emailVerificationTokens)
+    .set({ usedAt: new Date() })
+    .where(and(eq(emailVerificationTokens.userId, userId), isNull(emailVerificationTokens.usedAt)))
+
+  const [row] = await db
+    .insert(emailVerificationTokens)
+    .values({ userId, email, tokenHash, expiresAt })
+    .returning()
+  return row
+}
+
+export async function consumeEmailVerificationToken(tokenHash: string) {
+  return db.transaction(async (tx) => {
+    const [claimed] = await tx
+      .update(emailVerificationTokens)
+      .set({ usedAt: new Date() })
+      .where(
+        and(
+          eq(emailVerificationTokens.tokenHash, tokenHash),
+          isNull(emailVerificationTokens.usedAt),
+          gte(emailVerificationTokens.expiresAt, new Date()),
+        ),
+      )
+      .returning({ userId: emailVerificationTokens.userId, email: emailVerificationTokens.email })
+    if (!claimed) return null
+
+    // Only confirm if the address still matches the one the link was issued for —
+    // otherwise changing the email after requesting would verify the wrong address.
+    const [updated] = await tx
+      .update(users)
+      .set({ emailVerified: new Date() })
+      .where(and(eq(users.id, claimed.userId), eq(users.email, claimed.email)))
+      .returning({ id: users.id, email: users.email })
+    return updated ?? null
+  })
+}
+
+export async function getUserAuthState(id: string) {
+  return db.query.users.findFirst({
+    where: eq(users.id, id),
+    columns: { id: true, email: true, name: true, emailVerified: true },
+  })
+}
+
+export async function setUserPassword(userId: string, passwordHash: string) {
+  const [row] = await db
+    .update(users)
+    .set({ password: passwordHash })
+    .where(eq(users.id, userId))
+    .returning({ id: users.id, email: users.email, name: users.name })
+  return row ?? null
+}
+
+export async function getOrCreateUnsubscribeToken(userId: string, generate: () => string) {
+  const existing = await db.query.users.findFirst({
+    where: eq(users.id, userId),
+    columns: { unsubscribeToken: true },
+  })
+  if (existing?.unsubscribeToken) return existing.unsubscribeToken
+
+  const token = generate()
+  const [row] = await db
+    .update(users)
+    .set({ unsubscribeToken: token })
+    .where(eq(users.id, userId))
+    .returning({ unsubscribeToken: users.unsubscribeToken })
+  return row?.unsubscribeToken ?? token
+}
+
+export async function unsubscribeByToken(token: string) {
+  const [row] = await db
+    .update(users)
+    .set({ digestFrequency: 'off' })
+    .where(eq(users.unsubscribeToken, token))
+    .returning({ id: users.id, email: users.email })
+  return row ?? null
+}
+
+export async function purgeExpiredAuthTokens() {
+  const now = new Date()
+  const [reset, verification, buckets] = await Promise.all([
+    db.delete(passwordResetTokens).where(lte(passwordResetTokens.expiresAt, now)),
+    db.delete(emailVerificationTokens).where(lte(emailVerificationTokens.expiresAt, now)),
+    db.delete(rateLimitBuckets).where(lte(rateLimitBuckets.resetAt, now)),
+  ])
+  return {
+    passwordResetTokens: reset.rowCount ?? 0,
+    emailVerificationTokens: verification.rowCount ?? 0,
+    rateLimitBuckets: buckets.rowCount ?? 0,
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Contact location history
+// ---------------------------------------------------------------------------
+
+export async function getLocationHistoryByUserId(userId: string, limit = 2000) {
+  return db.query.contactLocationHistory.findMany({
+    where: eq(contactLocationHistory.userId, userId),
+    orderBy: (h, { desc: d }) => [d(h.observedAt)],
+    limit,
+  })
+}
+
+export async function getLocationHistoryByContactId(contactId: string, userId: string) {
+  return db.query.contactLocationHistory.findMany({
+    where: and(eq(contactLocationHistory.contactId, contactId), eq(contactLocationHistory.userId, userId)),
+    orderBy: (h, { desc: d }) => [d(h.observedAt)],
+  })
+}
+
+export async function recordContactLocation(entry: NewContactLocationHistoryEntry) {
+  // Repeated saves of an unchanged location would bury the real moves, so only append
+  // when the place actually differs from the latest known one.
+  const [latest] = await db
+    .select({ city: contactLocationHistory.city, country: contactLocationHistory.country })
+    .from(contactLocationHistory)
+    .where(eq(contactLocationHistory.contactId, entry.contactId))
+    .orderBy(desc(contactLocationHistory.observedAt))
+    .limit(1)
+
+  if (latest && latest.city === entry.city && latest.country === entry.country) return null
+
+  const [row] = await db.insert(contactLocationHistory).values(entry).returning()
+  return row
+}
+
+export async function getInteractionDatesByUserId(userId: string) {
+  const rows = await db
+    .select({ contactId: interactions.contactId, date: interactions.date })
+    .from(interactions)
+    .innerJoin(contacts, eq(interactions.contactId, contacts.id))
+    .where(eq(contacts.userId, userId))
+
+  const map = new Map<string, Date[]>()
+  for (const row of rows) {
+    const list = map.get(row.contactId)
+    if (list) list.push(row.date)
+    else map.set(row.contactId, [row.date])
+  }
+  return map
+}
+
+// ---------------------------------------------------------------------------
+// Digest scheduling
+// ---------------------------------------------------------------------------
+
+export async function getUsersDueForDigest(limit = 200) {
+  // Weekly and monthly cadences share one query: a user is due when they have never
+  // received one, or when enough time has passed since the last send.
+  return db
+    .select({
+      id: users.id,
+      email: users.email,
+      name: users.name,
+      digestFrequency: users.digestFrequency,
+      unsubscribeToken: users.unsubscribeToken,
+    })
+    .from(users)
+    .where(
+      and(
+        ne(users.digestFrequency, 'off'),
+        or(
+          isNull(users.digestLastSentAt),
+          and(
+            eq(users.digestFrequency, 'weekly'),
+            lt(users.digestLastSentAt, sql`now() - interval '7 days'`),
+          ),
+          and(
+            eq(users.digestFrequency, 'monthly'),
+            lt(users.digestLastSentAt, sql`now() - interval '30 days'`),
+          ),
+        ),
+      ),
+    )
+    .orderBy(asc(users.digestLastSentAt))
+    .limit(limit)
+}
+
+export async function markDigestSent(userId: string) {
+  await db.update(users).set({ digestLastSentAt: new Date() }).where(eq(users.id, userId))
+}
+
+export async function updateDigestPreference(userId: string, frequency: 'off' | 'weekly' | 'monthly') {
+  const [row] = await db
+    .update(users)
+    .set({ digestFrequency: frequency })
+    .where(eq(users.id, userId))
+    .returning({ digestFrequency: users.digestFrequency })
+  return row ?? null
+}
+
+export async function getDigestPreference(userId: string) {
+  return db.query.users.findFirst({
+    where: eq(users.id, userId),
+    columns: { digestFrequency: true, digestLastSentAt: true },
+  })
+}
+
+// ---------------------------------------------------------------------------
+// Retention
+// ---------------------------------------------------------------------------
+
+/** How long audit entries are kept before they are erased. */
+export const AUDIT_LOG_RETENTION_DAYS = 400
+/** Unused geocode cache rows are dropped after this long. */
+export const GEOCODE_CACHE_RETENTION_DAYS = 365
+
+export async function purgeExpiredRetentionData() {
+  const auditCutoff = new Date(Date.now() - AUDIT_LOG_RETENTION_DAYS * 86_400_000)
+  const geocodeCutoff = new Date(Date.now() - GEOCODE_CACHE_RETENTION_DAYS * 86_400_000)
+
+  const [audit, geo, tokens] = await Promise.all([
+    db.delete(auditLog).where(lt(auditLog.createdAt, auditCutoff)),
+    db.delete(geocodeCache).where(lt(geocodeCache.createdAt, geocodeCutoff)),
+    purgeExpiredAuthTokens(),
+  ])
+
+  return {
+    auditLogRows: audit.rowCount ?? 0,
+    geocodeCacheRows: geo.rowCount ?? 0,
+    ...tokens,
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Full-text search
+// ---------------------------------------------------------------------------
+
+export interface SearchHit {
+  kind: 'contact' | 'interaction' | 'trip'
+  id: string
+  title: string
+  subtitle: string | null
+  snippet: string | null
+  contactId: string | null
+  date: Date | null
+  rank: number
+}
+
+/**
+ * Postgres full-text search over the places free text actually lives: contact fields and
+ * notes, interaction notes, and trip notes. The `simple` dictionary is deliberate — the
+ * data is multilingual, and English stemming would mangle non-English notes and names.
+ *
+ * The expressions here mirror the GIN indexes in migration 0017 exactly; changing one
+ * without the other silently drops back to a sequential scan.
+ */
+export async function searchEverything(userId: string, rawQuery: string, limit = 25) {
+  const query = rawQuery.trim()
+  if (query.length < 2) return [] as SearchHit[]
+
+  // websearch_to_tsquery accepts human input (quotes, OR, -) without throwing on syntax,
+  // unlike to_tsquery which errors on a stray operator.
+  const tsquery = sql`websearch_to_tsquery('simple', ${query})`
+  const prefix = `%${query.toLowerCase()}%`
+
+  // Mirrors contacts_search_idx exactly. Tags are excluded here for the same reason they
+  // are excluded from the index (array_to_string is STABLE, not IMMUTABLE) and matched
+  // separately through the array overlap operator instead.
+  const contactDoc = sql`to_tsvector('simple',
+    coalesce(${contacts.name}, '') || ' ' ||
+    coalesce(${contacts.company}, '') || ' ' ||
+    coalesce(${contacts.role}, '') || ' ' ||
+    coalesce(${contacts.city}, '') || ' ' ||
+    coalesce(${contacts.country}, '') || ' ' ||
+    coalesce(${contacts.notes}, '') || ' ' ||
+    coalesce(${contacts.metAt}, '')
+  )`
+  const tagMatch = sql`${contacts.tags} && array[${query.toLowerCase()}]::text[]`
+
+  const contactRows = await db
+    .select({
+      id: contacts.id,
+      name: contacts.name,
+      company: contacts.company,
+      role: contacts.role,
+      city: contacts.city,
+      country: contacts.country,
+      notes: contacts.notes,
+      updatedAt: contacts.updatedAt,
+      // A short literal query should still match a name prefix ("ann" -> "Anna"), which
+      // full-text alone will not do because it matches whole lexemes.
+      rank: sql<number>`greatest(
+        ts_rank(${contactDoc}, ${tsquery}),
+        case when lower(${contacts.name}) like ${prefix} then 0.8 else 0 end,
+        case when ${tagMatch} then 0.6 else 0 end
+      )`,
+    })
+    .from(contacts)
+    .where(
+      and(
+        eq(contacts.userId, userId),
+        or(sql`${contactDoc} @@ ${tsquery}`, sql`lower(${contacts.name}) like ${prefix}`, tagMatch),
+      ),
+    )
+    .orderBy(sql`4 desc`)
+    .limit(limit)
+
+  const interactionDoc = sql`to_tsvector('simple', coalesce(${interactions.notes}, '') || ' ' || coalesce(${interactions.location}, ''))`
+
+  const interactionRows = await db
+    .select({
+      id: interactions.id,
+      contactId: interactions.contactId,
+      contactName: contacts.name,
+      type: interactions.type,
+      notes: interactions.notes,
+      location: interactions.location,
+      date: interactions.date,
+      rank: sql<number>`ts_rank(${interactionDoc}, ${tsquery})`,
+    })
+    .from(interactions)
+    .innerJoin(contacts, eq(interactions.contactId, contacts.id))
+    .where(and(eq(contacts.userId, userId), sql`${interactionDoc} @@ ${tsquery}`))
+    .orderBy(desc(interactions.date))
+    .limit(limit)
+
+  const tripDoc = sql`to_tsvector('simple', coalesce(${trips.city}, '') || ' ' || coalesce(${trips.country}, '') || ' ' || coalesce(${trips.notes}, ''))`
+
+  const tripRows = await db
+    .select({
+      id: trips.id,
+      city: trips.city,
+      country: trips.country,
+      notes: trips.notes,
+      arrivalDate: trips.arrivalDate,
+      rank: sql<number>`ts_rank(${tripDoc}, ${tsquery})`,
+    })
+    .from(trips)
+    .where(and(eq(trips.userId, userId), sql`${tripDoc} @@ ${tsquery}`))
+    .orderBy(desc(trips.arrivalDate))
+    .limit(limit)
+
+  const hits: SearchHit[] = [
+    ...contactRows.map((r) => ({
+      kind: 'contact' as const,
+      id: r.id,
+      title: r.name,
+      subtitle: [r.role, r.company].filter(Boolean).join(' · ') || [r.city, r.country].filter(Boolean).join(', ') || null,
+      snippet: r.notes ? r.notes.slice(0, 140) : null,
+      contactId: r.id,
+      date: r.updatedAt,
+      // Contacts outrank the notes that mention them: searching a person's name should
+      // land on the person, not on a meeting note quoting them.
+      rank: Number(r.rank) + 1,
+    })),
+    ...interactionRows.map((r) => ({
+      kind: 'interaction' as const,
+      id: r.id,
+      title: r.contactName,
+      subtitle: [r.type, r.location].filter(Boolean).join(' · ') || null,
+      snippet: r.notes ? r.notes.slice(0, 140) : null,
+      contactId: r.contactId,
+      date: r.date,
+      rank: Number(r.rank) + 0.5,
+    })),
+    ...tripRows.map((r) => ({
+      kind: 'trip' as const,
+      id: r.id,
+      title: [r.city, r.country].filter(Boolean).join(', '),
+      subtitle: null,
+      snippet: r.notes ? r.notes.slice(0, 140) : null,
+      contactId: null,
+      date: r.arrivalDate,
+      rank: Number(r.rank),
+    })),
+  ]
+
+  return hits.sort((a, b) => b.rank - a.rank || (b.date?.getTime() ?? 0) - (a.date?.getTime() ?? 0)).slice(0, limit)
+}
+
+// ---------------------------------------------------------------------------
+// Onboarding progress
+// ---------------------------------------------------------------------------
+
+export interface OnboardingStatus {
+  onboardedAt: Date | null
+  dismissedAt: Date | null
+  wizardStep: number
+  steps: {
+    profile: boolean
+    contact: boolean
+    trip: boolean
+    interaction: boolean
+    tag: boolean
+    atlas: boolean
+  }
+  counts: { contacts: number; trips: number; visitedCountries: number }
+}
+
+/**
+ * Checklist state is derived from the data itself rather than stored flags. Stored flags
+ * drift (a user deletes their only contact and the step stays ticked) and, when kept in
+ * localStorage as before, reset on every new device.
+ */
+export async function getOnboardingStatus(userId: string): Promise<OnboardingStatus> {
+  const [user, progress, aggregates] = await Promise.all([
+    db.query.users.findFirst({
+      where: eq(users.id, userId),
+      columns: { onboardedAt: true, username: true, profileVisibility: true },
+    }),
+    db.query.onboardingProgress.findFirst({ where: eq(onboardingProgress.userId, userId) }),
+    db
+      .select({
+        contacts: sql<number>`cast(count(*) filter (where ${contacts.isSelf} is not true) as int)`,
+        selfContacts: sql<number>`cast(count(*) filter (where ${contacts.isSelf} is true) as int)`,
+        tagged: sql<number>`cast(count(*) filter (where ${contacts.tags} is not null and array_length(${contacts.tags}, 1) > 0) as int)`,
+      })
+      .from(contacts)
+      .where(eq(contacts.userId, userId)),
+  ])
+
+  const [tripCount] = await db
+    .select({ count: sql<number>`cast(count(*) as int)` })
+    .from(trips)
+    .where(eq(trips.userId, userId))
+
+  const [visitedCount] = await db
+    .select({ count: sql<number>`cast(count(*) as int)` })
+    .from(visitedCountries)
+    .where(eq(visitedCountries.userId, userId))
+
+  const [interactionCount] = await db
+    .select({ count: sql<number>`cast(count(*) as int)` })
+    .from(interactions)
+    .innerJoin(contacts, eq(interactions.contactId, contacts.id))
+    .where(eq(contacts.userId, userId))
+
+  const agg = aggregates[0] ?? { contacts: 0, selfContacts: 0, tagged: 0 }
+
+  return {
+    onboardedAt: user?.onboardedAt ?? null,
+    dismissedAt: progress?.dismissedAt ?? null,
+    wizardStep: progress?.wizardStep ?? 0,
+    steps: {
+      profile: agg.selfContacts > 0,
+      contact: agg.contacts > 0,
+      trip: tripCount.count > 0 || visitedCount.count > 0,
+      interaction: interactionCount.count > 0,
+      tag: agg.tagged > 0,
+      atlas: Boolean(user?.username) && user?.profileVisibility === 'public',
+    },
+    counts: {
+      contacts: agg.contacts,
+      trips: tripCount.count,
+      visitedCountries: visitedCount.count,
+    },
+  }
+}
+
+export async function saveOnboardingProgress(
+  userId: string,
+  data: { wizardStep?: number; dismissed?: boolean },
+) {
+  const set: Record<string, unknown> = { updatedAt: new Date() }
+  if (data.wizardStep !== undefined) set.wizardStep = data.wizardStep
+  if (data.dismissed !== undefined) set.dismissedAt = data.dismissed ? new Date() : null
+
+  const [row] = await db
+    .insert(onboardingProgress)
+    .values({
+      userId,
+      wizardStep: data.wizardStep ?? 0,
+      dismissedAt: data.dismissed ? new Date() : null,
+    })
+    .onConflictDoUpdate({ target: onboardingProgress.userId, set })
+    .returning()
+  return row
+}
+
+// ---------------------------------------------------------------------------
+// Server-side aggregates
+// ---------------------------------------------------------------------------
+
+export interface NetworkStats {
+  contacts: number
+  countries: number
+  cities: number
+  companies: number
+  connections: number
+  interactions: number
+  trips: number
+  visitedCountries: number
+  wishlistCountries: number
+  staleContacts: number
+  overdueFollowUps: number
+  topCountries: { country: string; count: number }[]
+}
+
+/**
+ * Counts computed in SQL rather than by shipping every row to the browser and reducing it
+ * there. These stay correct no matter how large the address book gets, and they are what
+ * the dashboard header actually needs.
+ */
+export async function getNetworkStats(userId: string, staleDays = 90): Promise<NetworkStats> {
+  const staleCutoff = new Date(Date.now() - staleDays * 86_400_000)
+
+  const [contactAgg] = await db
+    .select({
+      contacts: sql<number>`cast(count(*) filter (where ${contacts.isSelf} is not true) as int)`,
+      countries: sql<number>`cast(count(distinct ${contacts.country}) as int)`,
+      cities: sql<number>`cast(count(distinct ${contacts.city}) as int)`,
+      companies: sql<number>`cast(count(distinct ${contacts.company}) as int)`,
+      stale: sql<number>`cast(count(*) filter (
+        where ${contacts.isSelf} is not true
+        and (${contacts.lastContactedAt} is null or ${contacts.lastContactedAt} < ${staleCutoff})
+      ) as int)`,
+      overdue: sql<number>`cast(count(*) filter (
+        where ${contacts.nextFollowUp} is not null and ${contacts.nextFollowUp} < now()
+      ) as int)`,
+    })
+    .from(contacts)
+    .where(eq(contacts.userId, userId))
+
+  const [connectionAgg] = await db
+    .select({ count: sql<number>`cast(count(*) as int)` })
+    .from(contactConnections)
+    .where(eq(contactConnections.userId, userId))
+
+  const [interactionAgg] = await db
+    .select({ count: sql<number>`cast(count(*) as int)` })
+    .from(interactions)
+    .innerJoin(contacts, eq(interactions.contactId, contacts.id))
+    .where(eq(contacts.userId, userId))
+
+  const [tripAgg] = await db
+    .select({ count: sql<number>`cast(count(*) as int)` })
+    .from(trips)
+    .where(eq(trips.userId, userId))
+
+  const [visitedAgg] = await db
+    .select({ count: sql<number>`cast(count(*) as int)` })
+    .from(visitedCountries)
+    .where(eq(visitedCountries.userId, userId))
+
+  const [wishlistAgg] = await db
+    .select({ count: sql<number>`cast(count(*) as int)` })
+    .from(countryWishlist)
+    .where(eq(countryWishlist.userId, userId))
+
+  const topCountries = await db
+    .select({
+      country: contacts.country,
+      count: sql<number>`cast(count(*) as int)`,
+    })
+    .from(contacts)
+    .where(and(eq(contacts.userId, userId), sql`${contacts.country} is not null`))
+    .groupBy(contacts.country)
+    .orderBy(sql`2 desc`)
+    .limit(10)
+
+  return {
+    contacts: contactAgg.contacts,
+    countries: contactAgg.countries,
+    cities: contactAgg.cities,
+    companies: contactAgg.companies,
+    connections: connectionAgg.count,
+    interactions: interactionAgg.count,
+    trips: tripAgg.count,
+    visitedCountries: visitedAgg.count,
+    wishlistCountries: wishlistAgg.count,
+    staleContacts: contactAgg.stale,
+    overdueFollowUps: contactAgg.overdue,
+    topCountries: topCountries
+      .filter((r): r is { country: string; count: number } => r.country !== null)
+      .map((r) => ({ country: r.country, count: r.count })),
+  }
 }

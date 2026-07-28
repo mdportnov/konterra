@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { unauthorized, badRequest, notFound, success, serverError } from '@/lib/api-utils'
-import { getUserById, getUserProfile, updateUserProfile, getUserByUsername, getReferrer } from '@/lib/db/queries'
+import { getUserById, getUserProfile, updateUserProfile, getUserByUsername, getReferrer, writeAuditLog } from '@/lib/db/queries'
+import { getClientIp } from '@/lib/rate-limit'
 import { safeParseBody } from '@/lib/validation'
 
 const USERNAME_RE = /^[a-z0-9][a-z0-9_-]{1,28}[a-z0-9]$/
@@ -23,6 +24,8 @@ export async function GET() {
       username: user?.username ?? null,
       profileVisibility: user?.profileVisibility ?? 'private',
       profilePrivacyLevel: user?.profilePrivacyLevel ?? 'countries_only',
+      publicProfileIndexable: user?.publicProfileIndexable ?? false,
+      publicProfileConsentAt: user?.publicProfileConsentAt ?? null,
       bio: user?.bio ?? null,
       globeAutoRotate: user?.globeAutoRotate ?? true,
       onboardedAt: user?.onboardedAt ?? null,
@@ -50,7 +53,10 @@ export async function PATCH(req: Request) {
       profileVisibility?: 'private' | 'public'
       profilePrivacyLevel?: 'countries_only' | 'full_travel'
       globeAutoRotate?: boolean
+      publicProfileIndexable?: boolean
+      publicProfileConsentAt?: Date | null
     } = {}
+    let visibilityChangedTo: 'private' | 'public' | null = null
 
     if (typeof body.name === 'string') {
       data.name = body.name.trim()
@@ -95,8 +101,28 @@ export async function PATCH(req: Request) {
         if (!effectiveUsername) {
           return badRequest('Set a username before enabling public profile')
         }
+        // Publishing is an affirmative act; record when it was given so there is evidence
+        // of consent, and log it as a security-relevant change.
+        data.publicProfileConsentAt = new Date()
+      } else {
+        // Going private also withdraws indexing — leaving it on would keep the page in
+        // search results after the user thought they had unpublished it.
+        data.publicProfileIndexable = false
+        data.publicProfileConsentAt = null
       }
       data.profileVisibility = body.profileVisibility
+      visibilityChangedTo = body.profileVisibility
+    }
+
+    if (typeof body.publicProfileIndexable === 'boolean') {
+      if (body.publicProfileIndexable) {
+        const user = await getUserById(session.user.id)
+        const effectiveVisibility = data.profileVisibility ?? user?.profileVisibility
+        if (effectiveVisibility !== 'public') {
+          return badRequest('Make your atlas public before allowing search engines to index it')
+        }
+      }
+      data.publicProfileIndexable = body.publicProfileIndexable
     }
 
     if (body.profilePrivacyLevel === 'countries_only' || body.profilePrivacyLevel === 'full_travel') {
@@ -124,6 +150,16 @@ export async function PATCH(req: Request) {
     const updated = await updateUserProfile(session.user.id, data)
     if (!updated) return notFound('User')
 
+    if (visibilityChangedTo) {
+      writeAuditLog({
+        userId: session.user.id,
+        action: visibilityChangedTo === 'public' ? 'public_profile_enable' : 'public_profile_disable',
+        targetId: updated.username ?? undefined,
+        targetType: 'profile',
+        ip: getClientIp(req),
+      })
+    }
+
     return success({
       name: updated.name,
       image: updated.image,
@@ -131,6 +167,8 @@ export async function PATCH(req: Request) {
       bio: updated.bio,
       profileVisibility: updated.profileVisibility,
       profilePrivacyLevel: updated.profilePrivacyLevel,
+      publicProfileIndexable: updated.publicProfileIndexable,
+      publicProfileConsentAt: updated.publicProfileConsentAt,
       globeAutoRotate: (updated as { globeAutoRotate?: boolean }).globeAutoRotate ?? true,
     })
   } catch (err) {

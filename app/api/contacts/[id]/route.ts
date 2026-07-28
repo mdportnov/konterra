@@ -1,5 +1,6 @@
+import { after } from 'next/server'
 import { auth } from '@/auth'
-import { getContactById, updateContact, deleteContact, upsertSocialPreview } from '@/lib/db/queries'
+import { getContactById, updateContact, deleteContact, upsertSocialPreview, recordContactLocation } from '@/lib/db/queries'
 import { geocode } from '@/lib/geocoding'
 import { validateContact, safeParseBody } from '@/lib/validation'
 import { toStringOrNull, toDateOrNull, unauthorized, badRequest, notFound, success } from '@/lib/api-utils'
@@ -90,9 +91,49 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (lat !== undefined) updates.lat = lat ?? null
   if (lng !== undefined) updates.lng = lng ?? null
 
+  // "Where they are now" is separate from the home base: it is what the crossing-paths
+  // engine trusts, and it decays, so every write is stamped and appended to the history.
+  const currentLocationChanged = body.currentCity !== undefined || body.currentCountry !== undefined
+  if (currentLocationChanged) {
+    const currentCity = toStringOrNull(body.currentCity)
+    const currentCountry = toStringOrNull(body.currentCountry)
+    updates.currentCity = currentCity
+    updates.currentCountry = currentCountry
+    updates.currentLocationUpdatedAt = currentCountry ? new Date() : null
+
+    let currentLat = typeof body.currentLat === 'number' ? body.currentLat : null
+    let currentLng = typeof body.currentLng === 'number' ? body.currentLng : null
+    if (currentCountry && currentLat === null) {
+      try {
+        const result = await geocode([currentCity, currentCountry].filter(Boolean).join(', '))
+        if (result) {
+          currentLat = result.lat
+          currentLng = result.lng
+        }
+      } catch (e) {
+        console.error('Geocoding failed:', e)
+      }
+    }
+    updates.currentLat = currentLat
+    updates.currentLng = currentLng
+  }
+
   const contact = await updateContact(id, session.user.id, updates)
 
   if (!contact) return notFound('Contact')
+
+  if (currentLocationChanged && contact.currentCountry) {
+    recordContactLocation({
+      userId: session.user.id,
+      contactId: contact.id,
+      city: contact.currentCity,
+      country: contact.currentCountry,
+      lat: contact.currentLat,
+      lng: contact.currentLng,
+      source: 'manual',
+      observedAt: new Date(),
+    }).catch((e) => console.error('Location history write failed:', e))
+  }
 
   const socialFields: (keyof typeof body & string)[] = ['linkedin', 'twitter', 'instagram', 'github', 'website', 'telegram']
   const changedPlatforms = socialFields.filter((f) => body[f] !== undefined) as SocialPlatform[]
@@ -104,7 +145,12 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 }
 
 function triggerEnrichment(contact: Contact, platforms: SocialPlatform[]) {
-  scrapeAllProfiles(contact, platforms).then((results) => {
+  // Keep the scrape alive past the response — serverless would otherwise freeze it.
+  after(() => runEnrichment(contact, platforms))
+}
+
+function runEnrichment(contact: Contact, platforms: SocialPlatform[]) {
+  return scrapeAllProfiles(contact, platforms).then((results) => {
     for (const r of results) {
       upsertSocialPreview({
         contactId: contact.id,

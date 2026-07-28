@@ -4,6 +4,7 @@ import { Providers } from '@/components/providers'
 import { Toaster } from '@/components/ui/sonner'
 import { Analytics } from '@vercel/analytics/next'
 import { GoogleAnalytics } from '@/components/google-analytics'
+import { AnalyticsConsentProvider } from '@/components/analytics-consent'
 import './globals.css'
 
 const geistSans = Geist({
@@ -94,10 +95,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} ${instrumentSerif.variable} antialiased`}>
         <Providers>
-          {children}
-          <Toaster />
-          <Analytics />
-          <GoogleAnalytics />
+          <AnalyticsConsentProvider>
+            {children}
+            <Toaster />
+            <Analytics />
+            <GoogleAnalytics />
+          </AnalyticsConsentProvider>
         </Providers>
       </body>
     </html>

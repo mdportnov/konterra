@@ -182,7 +182,33 @@ env.DATABASE_URL   // string (required)
 env.AUTH_SECRET     // string (required)
 env.OPENCAGE_API_KEY // string | undefined (optional)
 ```
+
+| Variable | Required | Without it |
+|---|---|---|
+| `DATABASE_URL` | yes | app will not boot |
+| `AUTH_SECRET` | yes | app will not boot |
+| `RESEND_API_KEY` | no | password reset, email verification and digests are logged to the console instead of sent |
+| `EMAIL_FROM` | no | falls back to `Konterra <hello@konterra.space>` |
+| `APP_URL` | no | links in email fall back to the Vercel URL, then localhost |
+| `CRON_SECRET` | no | `/api/cron/*` reject every request, so digests and retention never run |
+| `OPENCAGE_API_KEY` | no | geocoding falls back to Nominatim (rate limited to 1 req/s) |
+| `OPENROUTER_API_KEY` | no | AI insights and introduction drafts return a clear error |
+
 Exception: CLI scripts (`drizzle.config.ts`, `lib/db/migrate.ts`, `scripts/seed.ts`) use `dotenv` + `process.env` directly since they run outside Next.js.
+
+## Scheduled Jobs
+Configured in `vercel.json`, authorised with `CRON_SECRET` as a bearer token. Both paths are
+excluded from the session redirect in `middleware.ts` because they carry no session cookie.
+
+| Path | Schedule | Purpose |
+|---|---|---|
+| `/api/cron/digest` | Mondays 08:00 UTC | Sends the per-user digest; skips users with nothing worth reporting |
+| `/api/cron/retention` | Daily 03:00 UTC | Enforces the retention periods published in `/privacy` |
+
+## Tests
+`npm test` runs vitest over `tests/`. Domain logic that produces numbers — travel days,
+overlaps, metrics, insights, digest, import parsers, validation — is covered there. Add a
+test alongside any change to those modules; their failures are silent by nature.
 
 ## Git Hooks
 - **pre-commit**: `lint-staged` runs ESLint with `--fix` on staged `*.{ts,tsx}` files

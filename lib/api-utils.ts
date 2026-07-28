@@ -56,8 +56,12 @@ export function tooManyRequests(resetAt: number) {
   )
 }
 
+/** Upper bound on rows per request. Larger pages mean far fewer round trips for big
+ *  libraries, while still bounding the response size. */
+export const MAX_PAGE_SIZE = 500
+
 export function parsePagination(searchParams: URLSearchParams, defaults = { page: 1, limit: 50 }) {
   const page = Math.max(1, parseInt(searchParams.get('page') || String(defaults.page), 10) || defaults.page)
-  const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || String(defaults.limit), 10) || defaults.limit))
+  const limit = Math.min(MAX_PAGE_SIZE, Math.max(1, parseInt(searchParams.get('limit') || String(defaults.limit), 10) || defaults.limit))
   return { page, limit }
 }

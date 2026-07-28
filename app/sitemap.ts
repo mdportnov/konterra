@@ -56,8 +56,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       .select({ username: users.username })
       .from(users)
       .where(
+        // Public is not the same as indexable: publishing a link for friends must not put
+        // the page in Google unless the user asked for that separately.
         and(
           eq(users.profileVisibility, 'public'),
+          eq(users.publicProfileIndexable, true),
           isNotNull(users.username)
         )
       )

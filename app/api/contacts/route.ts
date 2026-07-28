@@ -1,5 +1,7 @@
+import { after } from 'next/server'
 import { auth } from '@/auth'
-import { getContactsByUserId, createContact, deleteAllContactsByUserId, getOrCreateSelfContact, createConnection, upsertSocialPreview } from '@/lib/db/queries'
+import { getContactsByUserId, createContact, deleteAllContactsByUserId, getOrCreateSelfContact, createConnection, upsertSocialPreview, writeAuditLog } from '@/lib/db/queries'
+import { getClientIp } from '@/lib/rate-limit'
 import { db } from '@/lib/db'
 import { contacts as contactsTable } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
@@ -19,12 +21,31 @@ export async function GET(req: Request) {
   return success(result)
 }
 
-export async function DELETE() {
+/**
+ * Wipes the whole address book. Requires an explicit confirmation token in the body so a
+ * stray or forged request cannot destroy everything with a bare DELETE.
+ */
+export async function DELETE(req: Request) {
   const session = await auth()
   if (!session?.user?.id) return unauthorized()
 
-  await deleteAllContactsByUserId(session.user.id)
-  return success({ deleted: true })
+  const body = await safeParseBody(req)
+  if (body?.confirm !== 'DELETE_ALL_CONTACTS') {
+    return badRequest('Confirmation required to delete all contacts')
+  }
+
+  const result = await deleteAllContactsByUserId(session.user.id)
+  const deleted = result.rowCount ?? 0
+
+  writeAuditLog({
+    userId: session.user.id,
+    action: 'bulk_delete',
+    targetType: 'contact',
+    ip: getClientIp(req),
+    detail: `Deleted all contacts (${deleted})`,
+  })
+
+  return success({ deleted: true, count: deleted })
 }
 
 export async function POST(req: Request) {
@@ -135,7 +156,13 @@ export async function POST(req: Request) {
 function triggerEnrichment(contact: Awaited<ReturnType<typeof createContact>>) {
   const hasSocial = contact.github || contact.website || contact.linkedin || contact.twitter || contact.instagram || contact.telegram
   if (!hasSocial) return
-  scrapeAllProfiles(contact).then((results) => {
+  // Serverless freezes the function once the response is returned, so a bare
+  // fire-and-forget promise would often never finish. `after` keeps it alive.
+  after(() => runEnrichment(contact))
+}
+
+function runEnrichment(contact: Awaited<ReturnType<typeof createContact>>) {
+  return scrapeAllProfiles(contact).then((results) => {
     for (const r of results) {
       upsertSocialPreview({
         contactId: contact.id,

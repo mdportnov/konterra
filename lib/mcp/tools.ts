@@ -22,7 +22,11 @@ import {
   addWishlistCountry,
   removeWishlistCountryByName,
   getAllFavorsByUserId,
+  getLocationHistoryByUserId,
+  getInteractionDatesByUserId,
 } from '@/lib/db/queries'
+import { computeTravelDays } from '@/lib/travel/days'
+import { computeOverlaps } from '@/lib/travel/overlaps'
 import {
   validateContact,
   INTERACTION_TYPES,
@@ -366,6 +370,49 @@ export const MCP_TOOLS: McpToolDef[] = [
         totalTrips: trips.length,
         upcomingTrips: upcoming,
       })
+    },
+  },
+  {
+    name: 'travel_days',
+    title: 'Days per country',
+    description:
+      'Time spent per country computed from the trip log: total days, days this year, days in the last 12 months, visits, first and last visit, per-year breakdown, and the current country. Days count arrival and departure day inclusively. Citizenship is unknown to Konterra, so these are plain counts and not visa or tax advice.',
+    scope: 'travel:read',
+    inputSchema: z.object({}),
+    handler: async (userId) => {
+      const trips = await getTripsByUserId(userId)
+      const summary = computeTravelDays(trips)
+      return ok({
+        ...summary,
+        note: 'Counts include both the arrival and the departure day. Not visa or tax advice.',
+      })
+    },
+  },
+  {
+    name: 'travel_overlaps',
+    title: 'Who I will cross paths with',
+    description:
+      'Contacts reachable during current and upcoming trips, contacts in the same place right now, and past crossings where no meeting was logged.',
+    scope: 'travel:read',
+    inputSchema: z.object({
+      horizonDays: z.number().int().min(1).max(730).optional().describe('How far ahead to look, default 365'),
+    }),
+    handler: async (userId, rawArgs) => {
+      const { horizonDays } = rawArgs as { horizonDays?: number }
+      const [trips, contacts, locationHistory, interactionDatesByContact] = await Promise.all([
+        getTripsByUserId(userId),
+        getAllContactsByUserId(userId),
+        getLocationHistoryByUserId(userId),
+        getInteractionDatesByUserId(userId),
+      ])
+      const report = computeOverlaps({
+        trips,
+        contacts,
+        locationHistory,
+        interactionDatesByContact,
+        horizonDays: horizonDays ?? 365,
+      })
+      return ok(report)
     },
   },
   {

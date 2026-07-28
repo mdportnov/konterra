@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { MCP_TOOLS, MCP_TOOL_MAP } from '@/lib/mcp/tools'
 import { hashApiToken } from '@/lib/mcp/token'
 import { getApiTokenByHash, touchApiTokenLastUsed } from '@/lib/db/queries'
-import { rateLimit, getClientIp } from '@/lib/rate-limit'
+import { rateLimitShared, getClientIp } from '@/lib/rate-limit'
 
 export const runtime = 'nodejs'
 
@@ -139,7 +139,7 @@ function jsonRpc(body: unknown, status = 200) {
 export async function POST(req: Request) {
   try {
     const ip = getClientIp(req)
-    const rl = rateLimit(`mcp:${ip}`, { windowMs: 60 * 1000, max: 240 })
+    const rl = await rateLimitShared(`mcp:${ip}`, { windowMs: 60 * 1000, max: 240 })
     if (!rl.ok) {
       const retryAfter = Math.max(1, Math.ceil((rl.resetAt - Date.now()) / 1000))
       return NextResponse.json(

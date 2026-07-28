@@ -12,6 +12,7 @@ import WishlistDetailPanel from '@/components/globe/WishlistDetailPanel'
 import ImportDialog from '@/components/import/ImportDialog'
 import TripImportDialog from '@/components/import/TripImportDialog'
 import CommandMenu from '@/components/command-menu'
+import QuickLogDialog from '@/components/dashboard/QuickLogDialog'
 import KeyboardShortcutsDialog from '@/components/KeyboardShortcutsDialog'
 import WelcomeWizard from '@/components/onboarding/WelcomeWizard'
 import DuplicatesDialog from '@/components/dedup/DuplicatesDialog'
@@ -40,7 +41,7 @@ import { useDashboardRouting } from '@/hooks/use-dashboard-routing'
 import { useHotkey } from '@/hooks/use-hotkey'
 import { useSwipe } from '@/hooks/use-swipe'
 import { toast } from 'sonner'
-import { ChevronRight, Globe } from 'lucide-react'
+import { ChevronRight, Globe, Zap } from 'lucide-react'
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
 import {
   AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction,
@@ -79,6 +80,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
   const [wishlistDetailCountry, setWishlistDetailCountry] = useState<string | null>(null)
   const [wishlistDetailOpen, setWishlistDetailOpen] = useState(false)
   const [commandMenuOpen, setCommandMenuOpen] = useState(false)
+  const [quickLogOpen, setQuickLogOpen] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const [regionSelectActive, setRegionSelectActive] = useState(false)
 
@@ -136,6 +138,16 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
     setFlyTarget: nav.setFlyTarget,
     onTripSelected: (tripId: string) => tripSelection.handleTripPointClick(tripId),
   })
+
+  // Opened from a list row rather than the globe surface, so there is no pointer position
+  // to anchor to — place the popup at the centre of the viewport.
+  const handleCountryFromDashboard = useCallback((country: string) => {
+    if (isMobile) setMobileView('globe')
+    popups.handleCountryClick(country, {
+      x: window.innerWidth / 2,
+      y: window.innerHeight / 2,
+    })
+  }, [isMobile, popups.handleCountryClick])
 
   const handleVisualizationToggle = useCallback((mode: VisualizationMode) => {
     setDisplayOptions((prev) => {
@@ -392,6 +404,8 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
     focusedTripCount: tripFocus.focusedTrips.length,
     dashboardTab,
     onDashboardTabChange: setDashboardTab,
+    onCountryClick: handleCountryFromDashboard,
+    onQuickLog: () => setQuickLogOpen(true),
   } as const
 
   const globeSection = (
@@ -693,8 +707,19 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
         setDashboardTab('travel')
         tripSelection.handleTripPointClick(trip.id)
       }}
+      onQuickLog={() => setQuickLogOpen(true)}
       externalOpen={commandMenuOpen}
       onExternalOpenChange={setCommandMenuOpen}
+    />
+  )
+
+  const quickLogDialog = (
+    <QuickLogDialog
+      open={quickLogOpen}
+      contacts={data.contacts}
+      trips={data.trips}
+      onClose={() => setQuickLogOpen(false)}
+      onLogged={() => { data.reloadContacts() }}
     />
   )
 
@@ -778,7 +803,18 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
             onComplete={wizardReload}
           />
         )}
+        {/* Logging a meeting on the spot is the main mobile job, so it gets a thumb-reachable
+            button instead of living behind a menu. */}
+        <button
+          onClick={() => setQuickLogOpen(true)}
+          aria-label="Log a meeting"
+          className={`fixed bottom-20 right-4 h-12 w-12 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center active:scale-95 ${TRANSITION.color}`}
+          style={{ zIndex: Z.controls }}
+        >
+          <Zap className="h-5 w-5" />
+        </button>
         {commandMenu}
+        {quickLogDialog}
         {shortcutsDialog}
         {deleteTripDialog}
       </div>
@@ -828,6 +864,7 @@ export default function GlobePage({ params }: { params: Promise<{ slug?: string[
         />
       )}
       {commandMenu}
+        {quickLogDialog}
       {shortcutsDialog}
       {deleteTripDialog}
     </div>

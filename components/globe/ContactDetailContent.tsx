@@ -40,6 +40,7 @@ import InteractionContextMenu from '@/components/context-menus/interaction-menu'
 import FavorContextMenu from '@/components/context-menus/favor-menu'
 import ConnectionContextMenu from '@/components/context-menus/connection-menu'
 import CountryTieContextMenu from '@/components/context-menus/country-tie-menu'
+import ContactLocationTimeline from '@/components/globe/ContactLocationTimeline'
 import { getInitials } from '@/lib/format'
 
 function buildPerplexityUrl(city: string | null, country: string | null): string {
@@ -1022,6 +1023,14 @@ export default function ContactDetailContent({
             </div>
           </button>
         )}
+
+        <ContactLocationTimeline
+          contactId={contact.id}
+          currentCity={contact.currentCity}
+          currentCountry={contact.currentCountry}
+          currentLocationUpdatedAt={contact.currentLocationUpdatedAt}
+          onUpdated={() => onRefreshContact?.(contact.id)}
+        />
 
         {contact.secondaryLocations && contact.secondaryLocations.length > 0 && (
           <div className="space-y-2">

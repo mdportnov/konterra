@@ -8,6 +8,7 @@ import { Globe, MapPin, Calendar } from 'lucide-react'
 import { normalizeToGlobeName } from '@/components/globe/data/country-centroids'
 import { countryFlag } from '@/lib/country-flags'
 import { getInitials } from '@/lib/format'
+import ShareAtlasButton from '@/components/public/ShareAtlasButton'
 import type { Trip } from '@/lib/db/schema'
 import type { DisplayOptions } from '@/types/display'
 
@@ -120,13 +121,22 @@ export default function PublicProfilePage({ user, privacyLevel, countries, trips
             </div>
           )}
 
-          <Link
-            href="/login"
-            className="block w-full text-center rounded-full text-xs font-medium py-2.5 transition-opacity hover:opacity-90"
-            style={{ background: 'var(--terra)', color: 'var(--terra-ink)' }}
-          >
-            Join Konterra to track your travels
-          </Link>
+          <div className="space-y-2">
+            {user.username && (
+              <ShareAtlasButton
+                username={user.username}
+                name={user.name}
+                countriesCount={countries.length}
+              />
+            )}
+            <Link
+              href="/login"
+              className="block w-full text-center rounded-full text-xs font-medium py-2.5 transition-opacity hover:opacity-90"
+              style={{ background: 'var(--terra)', color: 'var(--terra-ink)' }}
+            >
+              Join Konterra to track your travels
+            </Link>
+          </div>
         </div>
       </div>
     </div>

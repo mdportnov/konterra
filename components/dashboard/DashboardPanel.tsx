@@ -56,6 +56,8 @@ interface DashboardPanelProps {
   focusedTripCount?: number
   dashboardTab?: 'connections' | 'travel'
   onDashboardTabChange?: (tab: 'connections' | 'travel') => void
+  onCountryClick?: (country: string) => void
+  onQuickLog?: () => void
 }
 
 export default function DashboardPanel({
@@ -103,6 +105,8 @@ export default function DashboardPanel({
   focusedTripCount,
   dashboardTab: dashboardTabProp,
   onDashboardTabChange,
+  onCountryClick,
+  onQuickLog,
 }: DashboardPanelProps) {
   const [dashboardTabInternal, setDashboardTabInternal] = useState<'connections' | 'travel'>('connections')
   const dashboardTab = dashboardTabProp ?? dashboardTabInternal
@@ -158,6 +162,11 @@ export default function DashboardPanel({
             tripFocusRange={tripFocusRange}
             onTripFocusChange={onTripFocusChange}
             focusedTripCount={focusedTripCount}
+            onCountryClick={onCountryClick}
+            onContactClick={(contactId) => {
+              const contact = (allContacts ?? contacts).find((c) => c.id === contactId)
+              if (contact) onContactClick(contact)
+            }}
           />
         ) : (
           <ContactListSection
@@ -175,10 +184,11 @@ export default function DashboardPanel({
             onBulkDelete={onBulkDelete}
             onReloadContacts={onReloadContacts}
             onRefreshContact={onRefreshContact}
-            onSwitchToGlobe={onSwitchToGlobe}
             onEditContact={onEditContact}
             onDeleteContact={onDeleteContact}
-            isMobile={isMobile}
+            onAddTrip={onAddTrip ? () => onAddTrip() : undefined}
+            onQuickLog={onQuickLog}
+            onOpenSettings={onOpenSettings}
           />
         )}
       </ScrollArea>

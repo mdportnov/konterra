@@ -15,18 +15,19 @@ function getLatestMigration(): { name: string; sql: string } | null {
   return { name, sql }
 }
 
-function getTablesFromPriorMigrations(latestFile: string): Set<string> {
-  const tables = new Set<string>()
-  const files = fs.readdirSync(DRIZZLE_DIR)
+function readPriorMigrations(latestFile: string): string[] {
+  return fs.readdirSync(DRIZZLE_DIR)
     .filter(f => /^0\d+_.*\.sql$/.test(f) && f < latestFile)
     .sort()
+    .map(file => fs.readFileSync(path.join(DRIZZLE_DIR, file), 'utf-8'))
+}
 
-  for (const file of files) {
-    const sql = fs.readFileSync(path.join(DRIZZLE_DIR, file), 'utf-8')
-    const matches = sql.matchAll(/CREATE TABLE (?:IF NOT EXISTS )?"([^"]+)"/g)
-    for (const m of matches) tables.add(m[1])
+function collect(sqls: string[], re: RegExp): Set<string> {
+  const found = new Set<string>()
+  for (const sql of sqls) {
+    for (const m of sql.matchAll(re)) found.add(m[1])
   }
-  return tables
+  return found
 }
 
 function checkMigration() {
@@ -46,9 +47,20 @@ function checkMigration() {
   const warnings: string[] = []
   const errors: string[] = []
 
-  const createTypeMatches = latest.sql.match(/CREATE TYPE /g)
-  if (createTypeMatches && createTypeMatches.length > 0) {
-    errors.push(`Found ${createTypeMatches.length} CREATE TYPE statement(s) — likely a full schema recreation`)
+  const priorSqls = readPriorMigrations(latest.name)
+  const TYPE_RE = /CREATE TYPE "(?:public"\.")?([^"]+)"/g
+
+  // Re-creating a type that an earlier migration already created is the real drift
+  // signal. A genuinely new enum is a normal incremental change, so don't cry wolf.
+  const priorTypes = collect(priorSqls, TYPE_RE)
+  const createdTypes = [...latest.sql.matchAll(TYPE_RE)].map(m => m[1])
+  const duplicateTypes = createdTypes.filter(t => priorTypes.has(t))
+  if (duplicateTypes.length > 0) {
+    errors.push(`CREATE TYPE for already-existing type(s): ${[...new Set(duplicateTypes)].join(', ')}`)
+  }
+  const newTypes = createdTypes.filter(t => !priorTypes.has(t))
+  if (newTypes.length > 4) {
+    errors.push(`${newTypes.length} new enum types in one migration — likely a full schema recreation`)
   }
 
   const dropTableMatches = latest.sql.match(/DROP TABLE /g)
@@ -61,16 +73,19 @@ function checkMigration() {
     warnings.push(`Found ${dropTypeMatches.length} DROP TYPE statement(s)`)
   }
 
-  const priorTables = getTablesFromPriorMigrations(latest.name)
-  const createTableMatches = [...latest.sql.matchAll(/CREATE TABLE (?:IF NOT EXISTS )?"([^"]+)"/g)]
+  const TABLE_RE = /CREATE TABLE (?:IF NOT EXISTS )?"([^"]+)"/g
+  const priorTables = collect(priorSqls, TABLE_RE)
+  const createTableMatches = [...latest.sql.matchAll(TABLE_RE)]
   const duplicateTables = createTableMatches.filter(m => priorTables.has(m[1]))
   if (duplicateTables.length > 0) {
     const names = duplicateTables.map(m => m[1]).join(', ')
     errors.push(`CREATE TABLE for already-existing table(s): ${names}`)
   }
 
+  // The drift failure mode recreates *every* table, so compare against the whole
+  // schema rather than a small fixed count that legitimate feature work exceeds.
   const newTables = createTableMatches.filter(m => !priorTables.has(m[1]))
-  if (newTables.length > 3) {
+  if (newTables.length > 8 || (priorTables.size > 0 && newTables.length >= priorTables.size)) {
     errors.push(`${newTables.length} new tables in one migration — likely a full schema recreation`)
   }
 

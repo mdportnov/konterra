@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { signOut } from 'next-auth/react'
 import {
   CommandDialog,
@@ -28,11 +28,15 @@ import {
   LogOut,
   Globe,
   Users,
+  FileText,
+  Zap,
 } from 'lucide-react'
+import { ANALYTICS_EVENTS, track } from '@/lib/analytics'
 import { useHotkey } from '@/hooks/use-hotkey'
 import { useTheme } from '@/components/providers'
 import { countryFlag } from '@/lib/country-flags'
 import type { Contact, Trip } from '@/lib/db/schema'
+import type { SearchHit } from '@/lib/db/queries'
 import type { DashboardTab } from '@/hooks/use-dashboard-routing'
 
 interface CommandMenuProps {
@@ -51,6 +55,7 @@ interface CommandMenuProps {
   onOpenExport: () => void
   onOpenDuplicates: () => void
   onTripClick?: (trip: Trip) => void
+  onQuickLog?: () => void
   externalOpen?: boolean
   onExternalOpenChange?: (open: boolean) => void
 }
@@ -71,6 +76,7 @@ export default function CommandMenu({
   onOpenExport,
   onOpenDuplicates,
   onTripClick,
+  onQuickLog,
   externalOpen,
   onExternalOpenChange,
 }: CommandMenuProps) {
@@ -105,6 +111,11 @@ export default function CommandMenu({
     if (!open) onOpenInsights()
   }, [open, onOpenInsights])
 
+  const handleHotkeyQuickLog = useCallback(() => {
+    if (!open && onQuickLog) onQuickLog()
+  }, [open, onQuickLog])
+
+  useHotkey('l', handleHotkeyQuickLog, { meta: true })
   useHotkey('n', handleHotkeyAddContact, { meta: true })
   useHotkey('j', handleHotkeyAddTrip, { meta: true })
   useHotkey('p', handleHotkeyAddTrip, { meta: true })
@@ -160,6 +171,65 @@ export default function CommandMenu({
 
   const showContacts = search.length > 0
 
+  // The client-side filter above only sees loaded contacts and only matches their fields.
+  // This second pass asks Postgres, which reaches note text, interaction history and trips.
+  const [deepHits, setDeepHits] = useState<SearchHit[]>([])
+
+  const query = search.trim()
+  const searchable = open && query.length >= 2
+
+  useEffect(() => {
+    if (!searchable) return
+
+    const controller = new AbortController()
+    const timer = setTimeout(() => {
+      fetch(`/api/search?q=${encodeURIComponent(query)}&limit=8`, { signal: controller.signal })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data: { hits?: SearchHit[] } | null) => {
+          if (data?.hits) {
+            setDeepHits(data.hits)
+            track(ANALYTICS_EVENTS.searchUsed, { hits: data.hits.length })
+          }
+        })
+        .catch(() => {})
+    }, 220)
+
+    return () => {
+      clearTimeout(timer)
+      controller.abort()
+    }
+  }, [query, searchable])
+
+  const localContactIds = useMemo(() => new Set(contacts.map((c) => c.id)), [contacts])
+
+  // Contacts already listed above and hits with no note text add nothing here. Filtering
+  // on `searchable` during render also clears stale hits without an effect writing state.
+  const contextHits = useMemo(
+    () =>
+      searchable
+        ? deepHits.filter((h) => (h.kind === 'contact' ? !localContactIds.has(h.id) : Boolean(h.snippet)))
+        : [],
+    [deepHits, localContactIds, searchable],
+  )
+
+  const handleDeepHitSelect = useCallback((hit: SearchHit) => {
+    if (hit.contactId) {
+      const contact = contacts.find((c) => c.id === hit.contactId)
+      if (contact) {
+        runAction(() => onContactClick(contact))
+        return
+      }
+    }
+    if (hit.kind === 'trip') {
+      const trip = trips.find((t) => t.id === hit.id)
+      if (trip) {
+        runAction(() => handleTripSelect(trip))
+        return
+      }
+    }
+    runAction(() => onDashboardTabChange(hit.kind === 'trip' ? 'travel' : 'connections'))
+  }, [contacts, trips, runAction, onContactClick, handleTripSelect, onDashboardTabChange])
+
   return (
     <>
       <CommandDialog open={open} onOpenChange={setOpen}>
@@ -194,6 +264,39 @@ export default function CommandMenu({
             </CommandGroup>
           )}
 
+          {contextHits.length > 0 && (
+            <>
+              <CommandSeparator />
+              <CommandGroup heading="In notes & history">
+                {contextHits.map((hit) => (
+                  <CommandItem
+                    // cmdk filters by `value`; embedding the raw query keeps server-side
+                    // hits visible even when their text does not match the local filter.
+                    key={`${hit.kind}-${hit.id}`}
+                    value={`deep-${hit.kind}-${hit.id}-${search}`}
+                    onSelect={() => handleDeepHitSelect(hit)}
+                  >
+                    {hit.kind === 'trip' ? (
+                      <Plane className="text-muted-foreground" />
+                    ) : hit.kind === 'contact' ? (
+                      <User className="text-muted-foreground" />
+                    ) : (
+                      <FileText className="text-muted-foreground" />
+                    )}
+                    <div className="flex flex-col min-w-0">
+                      <span className="truncate">{hit.title}</span>
+                      {(hit.snippet || hit.subtitle) && (
+                        <span className="text-xs text-muted-foreground truncate">
+                          {hit.snippet ?? hit.subtitle}
+                        </span>
+                      )}
+                    </div>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </>
+          )}
+
           {showContacts && trips.length > 0 && (
             <>
               <CommandSeparator />
@@ -220,6 +323,13 @@ export default function CommandMenu({
           {!showContacts && (
             <>
               <CommandGroup heading="Quick Actions">
+                {onQuickLog && (
+                  <CommandItem onSelect={() => runAction(onQuickLog)}>
+                    <Zap className="text-muted-foreground" />
+                    <span>Just met someone</span>
+                    <CommandShortcut>⌘L</CommandShortcut>
+                  </CommandItem>
+                )}
                 <CommandItem onSelect={() => runAction(onAddContact)}>
                   <UserPlus className="text-muted-foreground" />
                   <span>Add Contact</span>

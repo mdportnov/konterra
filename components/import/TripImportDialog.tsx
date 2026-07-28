@@ -55,6 +55,8 @@ export default function TripImportDialog({ open, onOpenChange, onImportComplete 
     try {
       const res = await fetch('/api/trips', {
         method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirm: 'DELETE_ALL_TRIPS' }),
       })
       if (!res.ok) throw new Error('Failed to clear existing trips')
 

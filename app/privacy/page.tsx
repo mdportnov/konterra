@@ -13,77 +13,113 @@ export const metadata: Metadata = {
 
 const SECTIONS = [
   {
-    title: 'What We Collect',
+    title: 'Who Is Responsible',
     content: [
-      'Identity information: name, email address, hashed password, profile image URL, username.',
-      'Contacts: names, emails, phone numbers, cities, countries, coordinates, companies, job titles, tags, notes, birthdays, communication preferences.',
-      'Interactions: meeting type, date, location, notes linked to contacts.',
-      'Relationships: connections between contacts, introductions, favors, and reciprocity tracking.',
-      'Travel: visited countries, trip history (cities, dates, notes), country wishlist.',
-      'We do not collect browsing behavior, analytics, advertising identifiers, or any data beyond what you explicitly enter.',
+      'Konterra (konterra.space) is the data controller for the personal data described below. Written requests reach us at privacy@konterra.space and are answered within 30 days.',
+      'This policy covers the Konterra web application, its public atlas pages at /u/, and the Konterra MCP API.',
     ],
   },
   {
-    title: 'Why We Collect It',
+    title: 'What We Collect',
     content: [
-      'All data exists solely to power your personal network management. Konterra does not serve ads, sell data, share data with third parties for marketing, or monetize your information in any way.',
-      'Your data is used exclusively to render your dashboard, globe visualization, and network insights — visible only to you.',
+      'Account data: name, email address, a bcrypt hash of your password, optional profile image URL, optional username and bio, sign-in timestamps, and the invite you arrived through if any.',
+      'Contact records you create: names, emails, phone numbers, social handles, cities, countries, coordinates, companies, job titles, tags, free-text notes, birthdays, and the relationship attributes you choose to fill in.',
+      'Activity you log: interactions (type, date, location, notes), connections between contacts, introductions, favors, and the location history you record for a contact.',
+      'Travel data: visited countries, trips (city, country, arrival and departure dates, notes, coordinates), and your country wishlist.',
+      'Technical data: a security audit log of sign-ins, password changes, exports, deletions and similar events, recorded with a truncated IP address; rate-limit counters; and cached geocoding lookups.',
+      'Usage analytics: Google Analytics 4 records page views and product events (for example, completing onboarding or opening the days-per-country table). These events carry no contact data and no note content.',
+    ],
+  },
+  {
+    title: 'Lawful Basis',
+    content: [
+      'Performance of a contract (GDPR art. 6(1)(b)): running your account, storing the records you enter, and delivering the product features you asked for.',
+      'Legitimate interests (art. 6(1)(f)): keeping the service secure (audit log, rate limiting), preventing abuse, and sending the product digest you can switch off at any time. We have weighed these against your rights and limited each to what the purpose needs.',
+      'Consent (art. 6(1)(a)): publishing your atlas at a public URL, allowing search engines to index it, and analytics cookies. Each is off unless you turn it on, and each can be withdrawn without affecting anything else.',
+    ],
+  },
+  {
+    title: 'Data About Other People',
+    content: [
+      'Konterra is a personal CRM, so most of what you store is personal data about third parties who are not our users. You remain responsible for having a lawful reason to record it and for keeping it accurate and proportionate.',
+      'We process that data only on your behalf: to display it back to you, to geocode a place name into coordinates, and to compute your own insights. We never contact the people in your address book, never use their data to build profiles of our own, and never share it with anyone.',
+      'Contacts are never shown on your public atlas at any privacy setting. The public page exposes countries, and — only if you opt into "full travel history" — your own trips.',
+      'If someone in your records asks us to erase their data, we will route the request to you as the controller of that record and help you action it.',
     ],
   },
   {
     title: 'Where Your Data Is Stored',
     content: [
-      'Database: Neon PostgreSQL hosted in EU (Frankfurt, aws-eu-central-1). Data is encrypted at rest (AES-256) and encrypted in transit (TLS/SSL).',
-      'Application hosting: Vercel (edge network with global PoPs). No persistent user data is stored on Vercel — it serves as compute only.',
-      'Backups are managed by Neon within the same EU region and subject to the same encryption standards.',
+      'Database: Neon PostgreSQL in the EU (Frankfurt, aws-eu-central-1), encrypted at rest and in transit. Backups stay in the same region.',
+      'Application hosting: Vercel serverless compute on a global edge network. Vercel processes requests but stores no user records.',
+      'Transfers outside the EEA to US-based processors (Vercel, Google Analytics, Resend, OpenRouter) rely on the EU Standard Contractual Clauses and, where applicable, the EU–US Data Privacy Framework.',
     ],
   },
   {
     title: 'Who Has Access',
     content: [
-      'Only you, the authenticated user, can access your data through the application.',
-      'Admin access exists for operational support only (e.g., debugging, account recovery). Admins cannot view passwords — they are irreversibly hashed with bcrypt.',
-      'No third party has access to your personal data. Konterra has no data-sharing agreements with any external entity.',
+      'You, through your authenticated session or an API token you issued yourself. API tokens are scoped, hashed at rest, and revocable.',
+      'Administrators, for operational support only. Passwords are never readable — they are bcrypt hashes. Administrative actions on accounts are written to the audit log.',
+      'Processors listed below, each limited to the specific data their function requires.',
+      'Nobody else. We do not sell data, we do not share it for advertising, and we run no advertising.',
     ],
   },
   {
     title: 'Security Measures',
     content: [
-      'HTTPS enforced on all connections with HSTS preload.',
-      'Passwords hashed with bcrypt (cost factor 10) — never stored in plain text.',
-      'JWT-based sessions with no server-side session storage.',
-      'Cascade-delete architecture: deleting your account removes all associated data immediately.',
-      'Security headers: X-Frame-Options (SAMEORIGIN), X-Content-Type-Options (nosniff), Strict-Transport-Security, Referrer-Policy (strict-origin-when-cross-origin), Permissions-Policy (camera, microphone, geolocation disabled).',
-      'No cookies beyond the authentication session token.',
-    ],
-  },
-  {
-    title: 'Your Data Rights',
-    content: [
-      'Export: you can export all your data at any time in JSON, CSV, or vCard format from the Settings panel.',
-      'Deletion: you can permanently delete your entire account and all associated data from the Settings panel. Deletion is immediate and irrecoverable.',
-      'Portability: exported data is in standard formats that can be imported into other tools.',
+      'HTTPS everywhere with HSTS preload, and a Content-Security-Policy restricting where the page may load code and connect.',
+      'Passwords hashed with bcrypt at cost factor 12. Password reset and email confirmation links are single-use, expiring, and stored only as SHA-256 hashes.',
+      'Sign-in attempts are rate limited per email and per IP across all servers, and repeated failures are throttled persistently.',
+      'Account deletion and full data wipes require re-entering your password. Cross-site request protection is enforced on every state-changing request.',
+      'Deleting your account cascades through every table that references it, so no orphaned records survive.',
     ],
   },
   {
     title: 'Data Retention',
     content: [
-      'Your data is retained for as long as your account is active.',
-      'Upon account deletion, all data (contacts, interactions, connections, favors, introductions, trips, tags, visited countries, wishlist) is permanently removed from the database. There is no soft-delete or recovery period.',
+      'Account and content data: kept while your account exists, and erased when you delete it. There is no soft-delete and no recovery window.',
+      'Security audit log: 400 days, then automatically deleted. It is kept beyond account deletion only as evidence that the deletion happened.',
+      'Password reset and email confirmation tokens: deleted as soon as they expire, at most 24 hours after issue.',
+      'Rate-limit counters: deleted once their window closes.',
+      'Cached geocoding results (place name to coordinates, containing no personal identifiers): 365 days.',
+      'A scheduled job enforces this schedule nightly — these are the periods the system actually applies, not aspirations.',
     ],
   },
   {
-    title: 'Third-Party Services',
+    title: 'Your Rights',
     content: [
-      'Neon (neon.tech): database hosting. Subject to Neon\'s privacy policy. Only stores data you enter into Konterra.',
-      'Vercel (vercel.com): application hosting and serverless compute. No persistent user data stored.',
-      'OpenCage (opencagedata.com): geocoding service. Only city and country names are sent for coordinate lookup — no personal data, names, emails, or identifiers are transmitted.',
+      'Access and portability: export everything from Settings in JSON, CSV or vCard at any time. No request or waiting period.',
+      'Rectification: edit or correct any record directly in the app.',
+      'Erasure: delete your account from Settings. It is immediate and irreversible.',
+      'Restriction and objection: switch off the digest, unpublish your atlas, remove it from search engines, or decline analytics — each independently, in Settings.',
+      'Withdrawing consent does not affect processing that already happened lawfully before you withdrew it.',
+      'You may lodge a complaint with your local data protection supervisory authority. We would rather you write to us first at privacy@konterra.space.',
     ],
   },
   {
-    title: 'Contact',
+    title: 'Processors We Use',
     content: [
-      'For data requests, questions, or concerns about your privacy, contact us at: privacy@konterra.app',
+      'Neon (neon.tech) — database hosting in the EU. Holds all account and content data.',
+      'Vercel (vercel.com) — application hosting and compute. Processes requests; stores no records.',
+      'Resend (resend.com) — transactional and digest email. Receives your email address, your name, and the digest content itself.',
+      'OpenCage (opencagedata.com) and OpenStreetMap Nominatim — geocoding. Receive only a place name such as "Lisbon, Portugal". No names, emails or identifiers are sent.',
+      'OpenRouter (openrouter.ai) — the AI features you invoke explicitly, such as drafting an introduction or generating contact insights. Receives only the contact details relevant to that request, and only when you press the button.',
+      'Google Analytics (google.com) — usage measurement. Receives page paths and product events, never contact data or note content.',
+    ],
+  },
+  {
+    title: 'Cookies',
+    content: [
+      'A session cookie keeps you signed in. It is strictly necessary and cannot be switched off while you use an account.',
+      'Google Analytics cookies measure usage. They are not required for the product to work.',
+      'We set no advertising cookies and no cross-site trackers.',
+    ],
+  },
+  {
+    title: 'Changes and Contact',
+    content: [
+      'Material changes to this policy are announced in the app before they take effect. The date at the top of this page is the last revision.',
+      'Privacy questions, data requests and complaints: privacy@konterra.space.',
     ],
   },
 ] as const
@@ -110,13 +146,14 @@ export default function PrivacyPolicyPage() {
             <div className="flex items-center gap-5 mb-10">
               <span className="k-meta k-meta-terra">Legal</span>
               <span className="h-px flex-1" style={{ background: 'var(--hairline)' }} />
-              <span className="k-meta">2025-02-23</span>
+              <span className="k-meta">2026-07-28</span>
             </div>
             <h1 className="text-4xl sm:text-6xl tracking-[-0.03em] font-medium mb-4">
               Privacy <span className="k-serif italic tracking-normal" style={{ color: 'var(--terra)' }}>Policy</span>
             </h1>
             <p className="text-sm leading-relaxed max-w-xl mb-16 sm:mb-20" style={{ color: 'var(--bone-45)' }}>
-              What we collect, why we collect it, and the rights you keep. No ads, no data selling, no third-party sharing.
+              What we collect, on what legal basis, how long we keep it, and the rights you keep. No ads, no data
+              selling, no third-party sharing.
             </p>
 
             <div className="border-t" style={{ borderColor: 'var(--hairline)' }}>

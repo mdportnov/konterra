@@ -1,158 +1,189 @@
 'use client'
 
-import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Check, UserPlus, MessageSquare, Link2, Tag, Home, Globe, X } from 'lucide-react'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Check, UserPlus, MessageSquare, Tag, Home, Plane, Share2, X, Zap } from 'lucide-react'
 import { GLASS } from '@/lib/constants/ui'
-import { subscribeToStorage, CHECKLIST_DONE_KEY } from '@/lib/local-storage'
-import type { Contact, ContactConnection } from '@/lib/db/schema'
 
-const GLOBE_HINT_DISMISSED_KEY = 'konterra-globe-hint-dismissed'
-
-function getGlobeHintDismissed() {
-  return localStorage.getItem(GLOBE_HINT_DISMISSED_KEY) === '1'
-}
-
-function getGlobeHintDismissedServer() {
-  return true
-}
-
-export function isChecklistPermanentlyDone(): boolean {
-  try { return localStorage.getItem(CHECKLIST_DONE_KEY) === '1' } catch { return false }
-}
-
-export function computeAllStepsDone(
-  contacts: Contact[],
-  connections: ContactConnection[],
-  recentInteractions: { contactName: string }[],
-): boolean {
-  const hasProfile = contacts.some((c) => c.isSelf)
-  const hasContact = contacts.filter((c) => !c.isSelf).length > 0
-  const hasInteraction = recentInteractions.length > 0
-  const hasConnection = connections.length > 0
-  const hasTag = contacts.some((c) => c.tags && c.tags.length > 0)
-  return hasProfile && hasContact && hasInteraction && hasConnection && hasTag
+export interface OnboardingStatusResponse {
+  onboardedAt: string | null
+  dismissedAt: string | null
+  steps: {
+    profile: boolean
+    contact: boolean
+    trip: boolean
+    interaction: boolean
+    tag: boolean
+    atlas: boolean
+  }
+  counts: { contacts: number; trips: number; visitedCountries: number }
 }
 
 interface GettingStartedCardProps {
-  contacts: Contact[]
-  connections: ContactConnection[]
-  recentInteractions: { contactName: string }[]
   onAddContact: () => void
   onOpenProfile: () => void
-  onSwitchToGlobe?: () => void
-  isMobile?: boolean
+  onAddTrip?: () => void
+  onQuickLog?: () => void
+  onOpenSettings?: () => void
+  /** Bump to refetch after the user does something that could tick a step off. */
+  refreshKey?: number
+  onAllDone?: () => void
 }
 
-interface Step {
-  key: string
+interface StepDef {
+  key: keyof OnboardingStatusResponse['steps']
   label: string
-  done: boolean
+  hint: string
   icon: typeof Check
-  action?: { label: string; onClick: () => void }
+  actionLabel: string
+  onAction?: () => void
 }
 
 export default function GettingStartedCard({
-  contacts,
-  connections,
-  recentInteractions,
   onAddContact,
   onOpenProfile,
-  onSwitchToGlobe,
-  isMobile,
+  onAddTrip,
+  onQuickLog,
+  onOpenSettings,
+  refreshKey = 0,
+  onAllDone,
 }: GettingStartedCardProps) {
-  const globeHintDismissedFromStorage = useSyncExternalStore(subscribeToStorage, getGlobeHintDismissed, getGlobeHintDismissedServer)
-  const [globeHintLocallyDismissed, setGlobeHintLocallyDismissed] = useState(false)
-  const globeHintDismissed = globeHintDismissedFromStorage || globeHintLocallyDismissed
-
-  const steps = useMemo<Step[]>(() => {
-    const hasProfile = contacts.some((c) => c.isSelf)
-    const nonSelfContacts = contacts.filter((c) => !c.isSelf)
-    const hasContact = nonSelfContacts.length > 0
-    const hasInteraction = recentInteractions.length > 0
-    const hasConnection = connections.length > 0
-    const hasTag = contacts.some((c) => c.tags && c.tags.length > 0)
-
-    return [
-      {
-        key: 'profile',
-        label: 'Set up your profile',
-        done: hasProfile,
-        icon: Home,
-        action: hasProfile ? undefined : { label: 'Set up', onClick: onOpenProfile },
-      },
-      {
-        key: 'contact',
-        label: 'Add your first contact',
-        done: hasContact,
-        icon: UserPlus,
-        action: hasContact ? undefined : { label: 'Add', onClick: onAddContact },
-      },
-      {
-        key: 'interaction',
-        label: 'Log your first interaction',
-        done: hasInteraction,
-        icon: MessageSquare,
-      },
-      {
-        key: 'connection',
-        label: 'Create a connection between contacts',
-        done: hasConnection,
-        icon: Link2,
-      },
-      {
-        key: 'tag',
-        label: 'Add a tag to a contact',
-        done: hasTag,
-        icon: Tag,
-      },
-    ]
-  }, [contacts, connections, recentInteractions, onAddContact, onOpenProfile])
-
-  const completed = steps.filter((s) => s.done).length
-  const total = steps.length
-  const allDone = completed === total
-  const pct = Math.round((completed / total) * 100)
+  const [status, setStatus] = useState<OnboardingStatusResponse | null>(null)
+  const [dismissing, setDismissing] = useState(false)
 
   useEffect(() => {
-    if (allDone) {
-      try { localStorage.setItem(CHECKLIST_DONE_KEY, '1') } catch {}
-    }
-  }, [allDone])
+    const controller = new AbortController()
+    fetch('/api/me/onboarding', { signal: controller.signal, cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: OnboardingStatusResponse | null) => { if (data) setStatus(data) })
+      .catch(() => {})
+    return () => controller.abort()
+  }, [refreshKey])
 
-  const showGlobeHint = isMobile && onSwitchToGlobe && !globeHintDismissed
+  const handleDismiss = useCallback(async () => {
+    setDismissing(true)
+    // Dismissal lives on the server, so it follows the user to every device instead of
+    // reappearing on each new browser the way localStorage did.
+    try {
+      await fetch('/api/me/onboarding', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ complete: true }),
+      })
+    } catch {
+      // Non-fatal: the card simply comes back next load.
+    }
+    onAllDone?.()
+  }, [onAllDone])
+
+  const steps = useMemo<StepDef[]>(() => [
+    {
+      key: 'profile',
+      label: 'Put yourself on the map',
+      hint: 'Sets the centre of your globe',
+      icon: Home,
+      actionLabel: 'Set up',
+      onAction: onOpenProfile,
+    },
+    {
+      key: 'contact',
+      label: 'Add your first person',
+      hint: 'Import a file or add one by hand',
+      icon: UserPlus,
+      actionLabel: 'Add',
+      onAction: onAddContact,
+    },
+    {
+      key: 'trip',
+      label: 'Log where you have been',
+      hint: 'Unlocks days per country and crossing paths',
+      icon: Plane,
+      actionLabel: 'Add trip',
+      onAction: onAddTrip,
+    },
+    {
+      key: 'interaction',
+      label: 'Log a meeting',
+      hint: 'Keeps reconnect reminders honest',
+      icon: MessageSquare,
+      actionLabel: 'Log it',
+      onAction: onQuickLog,
+    },
+    {
+      key: 'tag',
+      label: 'Tag someone',
+      hint: 'Tags drive filters and segments',
+      icon: Tag,
+      actionLabel: 'Open',
+      onAction: onAddContact,
+    },
+    {
+      key: 'atlas',
+      label: 'Claim your public atlas',
+      hint: 'A shareable page of your countries',
+      icon: Share2,
+      actionLabel: 'Claim',
+      onAction: onOpenProfile,
+    },
+  ], [onAddContact, onOpenProfile, onAddTrip, onQuickLog])
+
+  if (!status) {
+    return (
+      <div className={`${GLASS.control} rounded-xl p-4 space-y-2`}>
+        <Skeleton className="h-3 w-24" />
+        <Skeleton className="h-1.5 w-full" />
+        <Skeleton className="h-16 w-full" />
+      </div>
+    )
+  }
+
+  const completed = steps.filter((s) => status.steps[s.key]).length
+  const total = steps.length
+  const pct = Math.round((completed / total) * 100)
+  const nextStep = steps.find((s) => !status.steps[s.key])
 
   return (
     <div className={`${GLASS.control} rounded-xl p-4 space-y-3`}>
       <div className="flex items-center justify-between">
         <span className="meta-label text-[10px]">Getting Started</span>
-        <Badge className="bg-primary/15 text-primary border-primary/25 text-[10px] px-1.5 py-0 h-4">
-          {completed}/{total}
-        </Badge>
+        <div className="flex items-center gap-1.5">
+          <Badge className="bg-primary/15 text-primary border-primary/25 text-[10px] px-1.5 py-0 h-4">
+            {completed}/{total}
+          </Badge>
+          <button
+            onClick={handleDismiss}
+            disabled={dismissing}
+            aria-label="Hide getting started"
+            className="text-muted-foreground/50 hover:text-foreground transition-colors p-0.5"
+          >
+            <X className="h-3 w-3" />
+          </button>
+        </div>
       </div>
 
       <div className="space-y-1">
         <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-          <div
-            className="h-full rounded-full bg-primary transition-[width] duration-500"
-            style={{ width: `${pct}%` }}
-          />
+          <div className="h-full rounded-full bg-primary transition-[width] duration-500" style={{ width: `${pct}%` }} />
         </div>
-        <p className="text-[10px] text-muted-foreground">{pct}% complete</p>
+        {nextStep ? (
+          <p className="text-[10px] text-muted-foreground">Next: {nextStep.hint.toLowerCase()}</p>
+        ) : (
+          <p className="text-[10px] text-muted-foreground">All set — nice work.</p>
+        )}
       </div>
 
       <div className="space-y-1">
         {steps.map((step) => {
+          const done = status.steps[step.key]
           const Icon = step.icon
           return (
             <div
               key={step.key}
-              className={`flex items-center gap-2.5 rounded-lg px-2.5 py-2 transition-colors ${
-                step.done ? 'opacity-60' : 'bg-muted/30'
-              }`}
+              className={`flex items-center gap-2.5 rounded-lg px-2.5 py-2 transition-colors ${done ? 'opacity-60' : 'bg-muted/30'}`}
             >
-              {step.done ? (
+              {done ? (
                 <div className="h-5 w-5 rounded-full bg-green-500/15 flex items-center justify-center shrink-0">
                   <Check className="h-3 w-3 text-green-500" />
                 </div>
@@ -161,17 +192,19 @@ export default function GettingStartedCard({
                   <Icon className="h-3 w-3 text-muted-foreground" />
                 </div>
               )}
-              <span className={`text-[11px] flex-1 ${step.done ? 'text-muted-foreground line-through' : 'text-foreground'}`}>
+              <span className={`text-[11px] flex-1 min-w-0 ${done ? 'text-muted-foreground line-through truncate' : 'text-foreground'}`}>
                 {step.label}
               </span>
-              {!step.done && step.action && (
+              {/* Every open step gets a way to act on it — a checklist item you cannot
+                  action from where you read it is just a nag. */}
+              {!done && step.onAction && (
                 <Button
                   size="sm"
                   variant="ghost"
-                  onClick={step.action.onClick}
-                  className="h-6 px-2 text-[10px] text-primary hover:text-primary hover:bg-primary/10"
+                  onClick={step.onAction}
+                  className="h-6 px-2 text-[10px] text-primary hover:text-primary hover:bg-primary/10 shrink-0"
                 >
-                  {step.action.label}
+                  {step.actionLabel}
                 </Button>
               )}
             </div>
@@ -179,31 +212,14 @@ export default function GettingStartedCard({
         })}
       </div>
 
-      {showGlobeHint && (
-        <div className="relative flex items-center gap-2.5 rounded-lg bg-primary/5 border border-primary/10 px-3 py-2.5">
-          <button
-            onClick={() => {
-              if (onSwitchToGlobe) onSwitchToGlobe()
-              localStorage.setItem(GLOBE_HINT_DISMISSED_KEY, '1')
-              setGlobeHintLocallyDismissed(true)
-            }}
-            className="flex flex-1 items-center gap-2.5 transition-colors active:scale-[0.98]"
-          >
-            <div className="h-5 w-5 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-              <Globe className="h-3 w-3 text-primary" />
-            </div>
-            <span className="text-[11px] text-foreground">Explore the globe view</span>
-          </button>
-          <button
-            onClick={() => {
-              localStorage.setItem(GLOBE_HINT_DISMISSED_KEY, '1')
-              setGlobeHintLocallyDismissed(true)
-            }}
-            className="shrink-0 text-muted-foreground hover:text-foreground transition-colors p-0.5"
-          >
-            <X className="h-3 w-3" />
-          </button>
-        </div>
+      {onOpenSettings && (
+        <button
+          onClick={onOpenSettings}
+          className="flex w-full items-center gap-2 rounded-lg bg-primary/5 border border-primary/10 px-3 py-2 text-left transition-colors hover:bg-primary/10"
+        >
+          <Zap className="h-3 w-3 text-primary shrink-0" />
+          <span className="text-[11px] text-foreground">Connect Claude or ChatGPT over MCP</span>
+        </button>
       )}
     </div>
   )

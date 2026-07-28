@@ -1,5 +1,6 @@
 import { auth } from '@/auth'
-import { getTripsByUserId, createTrip, createTripsBulk, deleteAllTrips } from '@/lib/db/queries'
+import { getTripsByUserId, createTrip, createTripsBulk, deleteAllTrips, writeAuditLog } from '@/lib/db/queries'
+import { getClientIp } from '@/lib/rate-limit'
 import { unauthorized, badRequest, success } from '@/lib/api-utils'
 import { safeParseBody, validateMaxLength, MAX_SHORT_TEXT_LENGTH, MAX_NOTES_LENGTH } from '@/lib/validation'
 import type { NewTrip } from '@/lib/db/schema'
@@ -91,9 +92,24 @@ export async function POST(req: Request) {
   return success(trip, 201)
 }
 
-export async function DELETE() {
+export async function DELETE(req: Request) {
   const session = await auth()
   if (!session?.user?.id) return unauthorized()
+
+  const body = await safeParseBody(req)
+  if (body?.confirm !== 'DELETE_ALL_TRIPS') {
+    return badRequest('Confirmation required to delete all trips')
+  }
+
   await deleteAllTrips(session.user.id)
+
+  writeAuditLog({
+    userId: session.user.id,
+    action: 'bulk_delete',
+    targetType: 'trip',
+    ip: getClientIp(req),
+    detail: 'Deleted all trips',
+  })
+
   return success({ deleted: true })
 }

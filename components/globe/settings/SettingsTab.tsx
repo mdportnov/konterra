@@ -17,6 +17,7 @@ import { PASSWORD_MIN_LENGTH, PASSWORD_MAX_LENGTH } from '@/lib/validation'
 import type { ArcMode } from '@/types/display'
 import type { SettingsTabProps } from './types'
 import { saveDefaultTab } from '@/hooks/use-dashboard-routing'
+import EmailPreferencesCard from './EmailPreferencesCard'
 
 const ARC_MODES: { value: ArcMode; label: string }[] = [
   { value: 'animated', label: 'Animated' },
@@ -57,6 +58,8 @@ export function SettingsTab({
   const [deleting, setDeleting] = useState(false)
   const [accountDeleteConfirm, setAccountDeleteConfirm] = useState(false)
   const [accountDeleting, setAccountDeleting] = useState(false)
+  const [accountDeletePassword, setAccountDeletePassword] = useState('')
+  const [accountDeleteError, setAccountDeleteError] = useState('')
 
   const [editingPassword, setEditingPassword] = useState(false)
   const [currentPassword, setCurrentPassword] = useState('')
@@ -99,14 +102,26 @@ export function SettingsTab({
   }
 
   const handleDeleteAccount = async () => {
+    if (!accountDeletePassword) {
+      setAccountDeleteError('Enter your password to confirm')
+      return
+    }
+    setAccountDeleteError('')
     setAccountDeleting(true)
     try {
-      const res = await fetch('/api/me', { method: 'DELETE' })
-      if (!res.ok) throw new Error('Failed to delete account')
+      const res = await fetch('/api/me', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: accountDeletePassword }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        setAccountDeleteError(data.error || 'Failed to delete account')
+        return
+      }
       await signOut({ callbackUrl: '/' })
     } catch {
-      toast.error('Failed to delete account')
-      setAccountDeleteConfirm(false)
+      setAccountDeleteError('Failed to delete account')
     } finally {
       setAccountDeleting(false)
     }
@@ -115,7 +130,11 @@ export function SettingsTab({
   const handleDeleteAll = async () => {
     setDeleting(true)
     try {
-      const res = await fetch('/api/contacts', { method: 'DELETE' })
+      const res = await fetch('/api/contacts', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirm: 'DELETE_ALL_CONTACTS' }),
+      })
       if (!res.ok) throw new Error('Failed to delete contacts')
       toast.success('All contacts removed')
       setDeleteConfirm(false)
@@ -319,6 +338,8 @@ export function SettingsTab({
           </div>
         </div>
 
+        <EmailPreferencesCard />
+
         <div className={CARD}>
           <div className="space-y-3">
             <span className={SECTION_LABEL}>Data</span>
@@ -410,13 +431,27 @@ export function SettingsTab({
                 <p className="text-sm text-destructive font-medium">
                   This will permanently delete your account and all data. This action cannot be undone.
                 </p>
+                <p className="text-[11px] text-muted-foreground">
+                  Export your data first if you want to keep a copy. Enter your password to confirm.
+                </p>
+                <Input
+                  type="password"
+                  value={accountDeletePassword}
+                  onChange={(e) => { setAccountDeletePassword(e.target.value); setAccountDeleteError('') }}
+                  placeholder="Current password"
+                  autoComplete="current-password"
+                  className="h-9"
+                />
+                {accountDeleteError && (
+                  <p className="text-[11px] text-destructive">{accountDeleteError}</p>
+                )}
                 <div className="flex gap-2">
                   <Button
                     variant="destructive"
                     size="sm"
                     className="flex-1"
                     onClick={handleDeleteAccount}
-                    disabled={accountDeleting}
+                    disabled={accountDeleting || !accountDeletePassword}
                   >
                     {accountDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserX className="mr-2 h-4 w-4" />}
                     Confirm Delete Account
@@ -424,7 +459,11 @@ export function SettingsTab({
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setAccountDeleteConfirm(false)}
+                    onClick={() => {
+                      setAccountDeleteConfirm(false)
+                      setAccountDeletePassword('')
+                      setAccountDeleteError('')
+                    }}
                     disabled={accountDeleting}
                   >
                     Cancel

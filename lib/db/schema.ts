@@ -37,6 +37,8 @@ export const profilePrivacyLevelEnum = pgEnum('profile_privacy_level', ['countri
 
 export const genderEnum = pgEnum('gender', ['male', 'female'])
 
+export const digestFrequencyEnum = pgEnum('digest_frequency', ['off', 'weekly', 'monthly'])
+
 export const communicationStyleEnum = pgEnum('communication_style', [
   'direct', 'diplomatic', 'analytical', 'expressive',
 ])
@@ -74,6 +76,11 @@ export const users = pgTable('users', {
   invitedBy: text('invited_by').references((): import('drizzle-orm/pg-core').AnyPgColumn => users.id, { onDelete: 'set null' }),
   lastActiveAt: timestamp('last_active_at'),
   onboardedAt: timestamp('onboarded_at'),
+  publicProfileConsentAt: timestamp('public_profile_consent_at'),
+  publicProfileIndexable: boolean('public_profile_indexable').notNull().default(false),
+  digestFrequency: digestFrequencyEnum('digest_frequency').notNull().default('weekly'),
+  digestLastSentAt: timestamp('digest_last_sent_at'),
+  unsubscribeToken: text('unsubscribe_token').unique(),
   createdAt: timestamp('created_at').defaultNow(),
 }, (t) => [
   index('users_invited_by_idx').on(t.invitedBy),
@@ -210,6 +217,8 @@ export const introductions = pgTable('introductions', {
   date: timestamp('date'),
   outcome: text('outcome'),
   notes: text('notes'),
+  draftText: text('draft_text'),
+  draftGeneratedAt: timestamp('draft_generated_at'),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 }, (t) => [
@@ -402,6 +411,12 @@ export const auditActionEnum = pgEnum('audit_action', [
   'waitlist_approve', 'waitlist_reject',
   'export_data',
   'token_create', 'token_revoke',
+  'account_delete',
+  'password_reset_request', 'password_reset_complete',
+  'email_verification_request', 'email_verification_complete',
+  'bulk_delete',
+  'public_profile_enable', 'public_profile_disable',
+  'digest_send',
 ])
 
 export const auditLog = pgTable('audit_log', {
@@ -438,3 +453,82 @@ export const apiTokens = pgTable('api_tokens', {
 
 export type ApiToken = typeof apiTokens.$inferSelect
 export type NewApiToken = typeof apiTokens.$inferInsert
+
+export const passwordResetTokens = pgTable('password_reset_tokens', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: text('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  tokenHash: text('token_hash').notNull().unique(),
+  expiresAt: timestamp('expires_at').notNull(),
+  usedAt: timestamp('used_at'),
+  requestedIp: text('requested_ip'),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (t) => [
+  index('password_reset_tokens_user_id_idx').on(t.userId),
+  index('password_reset_tokens_expires_at_idx').on(t.expiresAt),
+])
+
+export type PasswordResetToken = typeof passwordResetTokens.$inferSelect
+
+export const emailVerificationTokens = pgTable('email_verification_tokens', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: text('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  email: text('email').notNull(),
+  tokenHash: text('token_hash').notNull().unique(),
+  expiresAt: timestamp('expires_at').notNull(),
+  usedAt: timestamp('used_at'),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (t) => [
+  index('email_verification_tokens_user_id_idx').on(t.userId),
+  index('email_verification_tokens_expires_at_idx').on(t.expiresAt),
+])
+
+export type EmailVerificationToken = typeof emailVerificationTokens.$inferSelect
+
+export const rateLimitBuckets = pgTable('rate_limit_buckets', {
+  key: text('key').primaryKey(),
+  count: integer('count').notNull().default(0),
+  resetAt: timestamp('reset_at').notNull(),
+}, (t) => [
+  index('rate_limit_buckets_reset_at_idx').on(t.resetAt),
+])
+
+export const geocodeCache = pgTable('geocode_cache', {
+  query: text('query').primaryKey(),
+  lat: doublePrecision('lat'),
+  lng: doublePrecision('lng'),
+  formatted: text('formatted'),
+  hits: integer('hits').notNull().default(1),
+  createdAt: timestamp('created_at').defaultNow(),
+})
+
+export type GeocodeCacheEntry = typeof geocodeCache.$inferSelect
+
+export const onboardingProgress = pgTable('onboarding_progress', {
+  userId: text('user_id').primaryKey().references(() => users.id, { onDelete: 'cascade' }),
+  completedSteps: text('completed_steps').array().notNull().default([]),
+  dismissedAt: timestamp('dismissed_at'),
+  wizardStep: integer('wizard_step').notNull().default(0),
+  updatedAt: timestamp('updated_at').defaultNow(),
+})
+
+export type OnboardingProgress = typeof onboardingProgress.$inferSelect
+
+export const contactLocationHistory = pgTable('contact_location_history', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: text('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  contactId: text('contact_id').references(() => contacts.id, { onDelete: 'cascade' }).notNull(),
+  city: text('city'),
+  country: text('country'),
+  lat: doublePrecision('lat'),
+  lng: doublePrecision('lng'),
+  source: text('source').notNull().default('manual'),
+  observedAt: timestamp('observed_at', { mode: 'date' }).notNull(),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (t) => [
+  index('contact_location_history_contact_id_idx').on(t.contactId),
+  index('contact_location_history_user_id_idx').on(t.userId),
+  index('contact_location_history_observed_at_idx').on(t.observedAt),
+])
+
+export type ContactLocationHistoryEntry = typeof contactLocationHistory.$inferSelect
+export type NewContactLocationHistoryEntry = typeof contactLocationHistory.$inferInsert

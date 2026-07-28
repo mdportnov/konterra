@@ -15,7 +15,9 @@ export default auth((req) => {
   const isLoggedIn = !!req.auth
   const { pathname } = req.nextUrl
 
-  if (pathname.startsWith('/api/mcp')) {
+  // MCP authenticates with a bearer API token and cron with CRON_SECRET; neither carries a
+  // session cookie, so a redirect to /login here would break both.
+  if (pathname.startsWith('/api/mcp') || pathname.startsWith('/api/cron/')) {
     return NextResponse.next()
   }
 
@@ -36,6 +38,14 @@ export default auth((req) => {
       if (originHost !== expectedHost) {
         return NextResponse.json({ error: 'Invalid origin' }, { status: 403 })
       }
+    } else {
+      // No Origin header: either a non-browser client, or a browser request that stripped
+      // it. Fetch metadata is the second signal — when the browser tells us the request
+      // came from another site, refuse regardless of what Origin says.
+      const fetchSite = req.headers.get('sec-fetch-site')
+      if (fetchSite && fetchSite !== 'same-origin' && fetchSite !== 'none') {
+        return NextResponse.json({ error: 'Cross-site request rejected' }, { status: 403 })
+      }
     }
   }
   const isLandingPage = pathname === '/'
@@ -46,9 +56,13 @@ export default auth((req) => {
   const isPublicProfile = pathname.startsWith('/u/')
   const isPublicApi = pathname.startsWith('/api/public/')
   const isPrivacyPage = pathname === '/privacy'
+  const isTermsPage = pathname === '/terms'
   const isOfflinePage = pathname === '/offline'
+  // Account-recovery pages must stay reachable to signed-out users; they carry their own
+  // single-use tokens instead of a session.
+  const isRecoveryPage = pathname === '/reset-password' || pathname === '/verify-email' || pathname === '/unsubscribe'
 
-  if (isApiAuth || isApiWaitlist || isLandingPage || isLocaleLanding || isPublicProfile || isPublicApi || isPrivacyPage || isOfflinePage) {
+  if (isApiAuth || isApiWaitlist || isLandingPage || isLocaleLanding || isPublicProfile || isPublicApi || isPrivacyPage || isTermsPage || isOfflinePage || isRecoveryPage) {
     return NextResponse.next()
   }
 

@@ -5,8 +5,19 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: '*',
-        allow: ['/', '/u/', '/privacy'],
-        disallow: ['/app/', '/admin/', '/api/', '/login'],
+        // /u/ stays crawlable so individually opted-in atlases can be indexed; profiles
+        // that did not opt in emit `noindex` in their own metadata, which is a per-page
+        // control robots.txt cannot express.
+        allow: ['/', '/u/', '/privacy', '/terms'],
+        disallow: [
+          '/app/',
+          '/admin/',
+          '/api/',
+          '/login',
+          '/reset-password',
+          '/verify-email',
+          '/unsubscribe',
+        ],
       },
     ],
     sitemap: 'https://konterra.space/sitemap.xml',

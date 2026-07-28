@@ -36,6 +36,7 @@ import type {
 } from '@/lib/connection-insights'
 import type { Contact, ContactConnection, Interaction, Favor } from '@/lib/db/schema'
 import { getInitials } from '@/lib/format'
+import IntroductionDraftDialog from '@/components/insights/IntroductionDraftDialog'
 
 interface ConnectionInsightsPanelProps {
   contacts: Contact[]
@@ -305,7 +306,14 @@ export default function ConnectionInsightsPanel({
     } catch { toast.error('Failed to log interaction') }
   }, [quickLogContact, quickLogForm])
 
+  const [introDraft, setIntroDraft] = useState<{
+    contactA: Contact
+    contactB: Contact
+    introductionId: string | null
+  } | null>(null)
+
   const handleIntroduce = useCallback(async (suggestion: IntroductionSuggestion) => {
+    let introductionId: string | null = null
     try {
       const res = await fetch('/api/introductions', {
         method: 'POST',
@@ -317,12 +325,23 @@ export default function ConnectionInsightsPanel({
           status: 'planned',
         }),
       })
-      if (res.ok) toast.success('Introduction planned')
-      else {
+      if (res.ok) {
+        const intro = await res.json().catch(() => null)
+        introductionId = intro?.id ?? null
+      } else if (res.status !== 409) {
+        // 409 means it was already planned, which is fine — go straight to drafting.
         const body = await res.json().catch(() => ({}))
         toast.error(body.error || 'Failed to create introduction')
       }
-    } catch { toast.error('Failed to create introduction') }
+    } catch {
+      toast.error('Failed to create introduction')
+    }
+
+    setIntroDraft({
+      contactA: suggestion.contactA,
+      contactB: suggestion.contactB,
+      introductionId,
+    })
   }, [])
 
   const [now] = useState(() => Date.now())
@@ -652,6 +671,14 @@ export default function ConnectionInsightsPanel({
 
         <div className="h-4" />
       </div>
+
+      <IntroductionDraftDialog
+        open={introDraft !== null}
+        contactA={introDraft?.contactA ?? null}
+        contactB={introDraft?.contactB ?? null}
+        introductionId={introDraft?.introductionId ?? null}
+        onClose={() => setIntroDraft(null)}
+      />
     </ScrollArea>
   )
 }

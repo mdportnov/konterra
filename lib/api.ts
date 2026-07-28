@@ -1,3 +1,4 @@
+import { toast } from 'sonner'
 import type { Contact, ContactConnection, ContactCountryConnection, CountryWishlistEntry, Interaction, Favor, Tag, Trip, SocialPreview } from '@/lib/db/schema'
 
 interface PaginatedResponse<T> {
@@ -18,17 +19,40 @@ async function apiFetch<T>(url: string, signal?: AbortSignal): Promise<T> {
   return res.json()
 }
 
+const PAGE_SIZE = 500
+/** Hard ceiling before we stop and say so, rather than silently returning a subset. */
+const MAX_PAGES = 40
+/** Pages requested at once, so a large library does not open hundreds of sockets. */
+const PAGE_CONCURRENCY = 4
+
 async function fetchAllPages<T>(baseUrl: string, signal?: AbortSignal): Promise<T[]> {
-  const first = await apiFetch<PaginatedResponse<T>>(`${baseUrl}?page=1&limit=100`, signal)
+  const first = await apiFetch<PaginatedResponse<T>>(`${baseUrl}?page=1&limit=${PAGE_SIZE}`, signal)
   if (first.total <= first.data.length) return first.data
 
-  const totalPages = Math.min(Math.ceil(first.total / 100), 20)
-  const remaining = await Promise.all(
-    Array.from({ length: totalPages - 1 }, (_, i) =>
-      apiFetch<PaginatedResponse<T>>(`${baseUrl}?page=${i + 2}&limit=100`, signal)
+  const totalPages = Math.ceil(first.total / PAGE_SIZE)
+  const pagesToFetch = Math.min(totalPages, MAX_PAGES)
+
+  const results: T[] = [...first.data]
+  for (let start = 2; start <= pagesToFetch; start += PAGE_CONCURRENCY) {
+    const batch = Array.from(
+      { length: Math.min(PAGE_CONCURRENCY, pagesToFetch - start + 1) },
+      (_, i) => apiFetch<PaginatedResponse<T>>(`${baseUrl}?page=${start + i}&limit=${PAGE_SIZE}`, signal),
     )
-  )
-  return [first, ...remaining].flatMap((r) => r.data)
+    const pages = await Promise.all(batch)
+    for (const page of pages) results.push(...page.data)
+  }
+
+  // Truncation used to happen silently at 2000 rows, so the globe, the metrics and the
+  // duplicate finder all quietly disagreed with the database. Now it is loud.
+  if (totalPages > pagesToFetch) {
+    const message = `Loaded ${results.length} of ${first.total} records from ${baseUrl} — the rest were not fetched.`
+    console.warn(`[api] ${message}`)
+    toast.warning('Showing part of your data', {
+      description: `${results.length} of ${first.total} loaded. Some views may be incomplete.`,
+    })
+  }
+
+  return results
 }
 
 export async function fetchContacts(signal?: AbortSignal): Promise<Contact[]> {

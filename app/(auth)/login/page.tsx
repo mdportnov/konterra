@@ -8,8 +8,9 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
 import AtlasBackground from '@/components/branding/AtlasBackground'
 import Wordmark from '@/components/branding/Wordmark'
+import { ANALYTICS_EVENTS, track } from '@/lib/analytics'
 
-type Mode = 'signin' | 'register'
+type Mode = 'signin' | 'register' | 'forgot'
 type SignInStep = 'email' | 'password'
 
 interface InviteInfo {
@@ -38,6 +39,7 @@ function LoginContent() {
   const [signInStep, setSignInStep] = useState<SignInStep>('email')
   const [passwordVisible, setPasswordVisible] = useState(false)
   const [inviteInfo, setInviteInfo] = useState<InviteInfo | null>(null)
+  const [resetRequested, setResetRequested] = useState(false)
   const animRef = useRef<HTMLDivElement>(null)
   const formNavRef = useFormNavigation<HTMLDivElement>({
     onSubmit: () => {
@@ -88,6 +90,7 @@ function LoginContent() {
         setPasswordVisible(false)
         setPassword('')
       }
+      if (next === 'forgot') setResetRequested(false)
       setVisible(true)
       setAnimating(false)
     }, 200)
@@ -125,10 +128,32 @@ function LoginContent() {
     setLoading(true)
     const result = await signIn('credentials', { email, password, redirect: false })
     if (result?.ok) {
+      track(ANALYTICS_EVENTS.loginCompleted)
       router.push('/app')
       router.refresh()
     } else {
       toast.error('Invalid email or password.')
+    }
+    setLoading(false)
+  }
+
+  const handleForgot = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    try {
+      const res = await fetch('/api/public/password-reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.toLowerCase().trim() }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        toast.error(data.error || 'Could not send the reset link')
+      } else {
+        setResetRequested(true)
+      }
+    } catch {
+      toast.error('Could not send the reset link. Try again.')
     }
     setLoading(false)
   }
@@ -144,6 +169,7 @@ function LoginContent() {
       return
     }
     setLoading(true)
+    track(ANALYTICS_EVENTS.registerStarted, { invited: Boolean(inviteCode) })
     try {
       const normalizedEmail = email.toLowerCase().trim()
       const trimmedName = name.trim()
@@ -158,6 +184,7 @@ function LoginContent() {
         setLoading(false)
         return
       }
+      track(ANALYTICS_EVENTS.registerCompleted, { invited: Boolean(inviteCode) })
       const result = await signIn('credentials', { email: normalizedEmail, password, redirect: false })
       if (result?.ok) {
         router.push('/app')
@@ -204,7 +231,7 @@ function LoginContent() {
             type="button"
             onClick={() => switchMode('signin')}
             className={`flex-1 pb-3 font-mono text-xs uppercase tracking-[0.14em] transition-colors border-b -mb-px ${
-              mode === 'signin'
+              mode !== 'register'
                 ? 'text-[var(--bone)] border-[var(--terra)]'
                 : 'text-[var(--bone-45)] border-transparent hover:text-[var(--bone-70)]'
             }`}
@@ -286,7 +313,56 @@ function LoginContent() {
                       ? 'Signing in...'
                       : 'Sign In'}
                 </button>
+                <button
+                  type="button"
+                  onClick={() => switchMode('forgot')}
+                  className="block w-full text-center font-mono text-[11px] transition-colors hover:text-[var(--bone-70)]"
+                  style={{ color: 'var(--bone-45)' }}
+                >
+                  Forgot your password?
+                </button>
               </form>
+            )}
+
+            {mode === 'forgot' && (
+              resetRequested ? (
+                <div className="space-y-4 text-center">
+                  <p className="text-sm" style={{ color: 'var(--bone-70)' }}>
+                    If an account exists for <span style={{ color: 'var(--bone)' }}>{email.toLowerCase().trim()}</span>,
+                    a reset link is on its way. It expires in 30 minutes.
+                  </p>
+                  <button type="button" onClick={() => switchMode('signin')} className="k-btn w-full">
+                    Back to sign in
+                  </button>
+                </div>
+              ) : (
+                <form onSubmit={handleForgot} className="space-y-4">
+                  <p className="text-sm" style={{ color: 'var(--bone-70)' }}>
+                    Enter your email and we&apos;ll send you a link to choose a new password.
+                  </p>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Email address"
+                    required
+                    autoComplete="email"
+                    inputMode="email"
+                    className="k-input"
+                  />
+                  <button type="submit" disabled={loading} className="k-btn w-full">
+                    {loading ? 'Sending...' : 'Send reset link'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => switchMode('signin')}
+                    className="block w-full text-center font-mono text-[11px] transition-colors hover:text-[var(--bone-70)]"
+                    style={{ color: 'var(--bone-45)' }}
+                  >
+                    Back to sign in
+                  </button>
+                </form>
+              )
             )}
 
             {mode === 'register' && (

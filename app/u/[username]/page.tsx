@@ -36,10 +36,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       siteName: 'Konterra',
     },
     twitter: {
-      card: 'summary',
+      card: 'summary_large_image',
       title,
       description,
     },
+    // Indexing is opt-in per user; the sitemap honours the same flag.
+    robots: user.publicProfileIndexable
+      ? undefined
+      : { index: false, follow: true },
   }
 }
 

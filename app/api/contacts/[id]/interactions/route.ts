@@ -1,5 +1,5 @@
 import { auth } from '@/auth'
-import { unauthorized, badRequest, notFound, success } from '@/lib/api-utils'
+import { unauthorized, badRequest, notFound, success, serverError } from '@/lib/api-utils'
 import { getInteractionsByContactId, createInteraction, updateInteraction, deleteInteraction, getContactById } from '@/lib/db/queries'
 import { validateInteraction, validateMaxLength, safeParseBody, MAX_SHORT_TEXT_LENGTH, MAX_NOTES_LENGTH } from '@/lib/validation'
 
@@ -41,15 +41,23 @@ export async function POST(
     || validateMaxLength(notes, MAX_NOTES_LENGTH, 'notes')
   if (validationError) return badRequest(validationError)
 
-  const interaction = await createInteraction({
-    contactId: id,
-    type: type as string,
-    date: new Date(date as string),
-    location: (location as string) || null,
-    notes: (notes as string) || null,
-  })
+  const parsedDate = new Date(date as string)
+  if (isNaN(parsedDate.getTime())) return badRequest('Invalid date')
 
-  return success(interaction, 201)
+  try {
+    const interaction = await createInteraction({
+      contactId: id,
+      type: type as string,
+      date: parsedDate,
+      location: (location as string) || null,
+      notes: (notes as string) || null,
+    })
+
+    return success(interaction, 201)
+  } catch (err) {
+    console.error('[POST /api/contacts/[id]/interactions]', err)
+    return serverError('Failed to log interaction')
+  }
 }
 
 export async function PATCH(
@@ -67,13 +75,21 @@ export async function PATCH(
   if (!body) return badRequest('Invalid JSON body')
 
   const { interactionId, type, date, location, notes } = body as Record<string, unknown>
-  if (!interactionId) return badRequest('interactionId required')
+  if (!interactionId || typeof interactionId !== 'string') return badRequest('interactionId required')
 
   const updates: Record<string, unknown> = {}
   if (type !== undefined) updates.type = type
-  if (date !== undefined) updates.date = new Date(date as string)
   if (location !== undefined) updates.location = (location as string) || null
   if (notes !== undefined) updates.notes = (notes as string) || null
+
+  // Parse before validating: `new Date(null)` silently yields 1970 and `new Date('x')`
+  // yields an Invalid Date that only blows up once it reaches the driver.
+  if (date !== undefined) {
+    if (typeof date !== 'string' && !(date instanceof Date)) return badRequest('Invalid date')
+    const parsed = new Date(date as string)
+    if (isNaN(parsed.getTime())) return badRequest('Invalid date')
+    updates.date = parsed
+  }
 
   const lengthError = validateMaxLength(location, MAX_SHORT_TEXT_LENGTH, 'location')
     || validateMaxLength(notes, MAX_NOTES_LENGTH, 'notes')
@@ -82,14 +98,21 @@ export async function PATCH(
   if (updates.type !== undefined || updates.date !== undefined) {
     const validationError = validateInteraction({
       type: updates.type ?? undefined,
-      date: date ?? undefined,
+      date: updates.date ?? undefined,
     })
     if (validationError) return badRequest(validationError)
   }
 
-  const interaction = await updateInteraction(interactionId as string, id, updates)
-  if (!interaction) return notFound('Interaction')
-  return success(interaction)
+  if (Object.keys(updates).length === 0) return badRequest('No fields to update')
+
+  try {
+    const interaction = await updateInteraction(interactionId, id, updates)
+    if (!interaction) return notFound('Interaction')
+    return success(interaction)
+  } catch (err) {
+    console.error('[PATCH /api/contacts/[id]/interactions]', err)
+    return serverError('Failed to update interaction')
+  }
 }
 
 export async function DELETE(

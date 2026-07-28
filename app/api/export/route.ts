@@ -12,7 +12,9 @@ import {
   getVisitedCountries,
   getTripsByUserId,
   getWishlistCountries,
+  writeAuditLog,
 } from '@/lib/db/queries'
+import { getClientIp } from '@/lib/rate-limit'
 import { serializeKonterra } from '@/lib/export/serialize-konterra'
 import { serializeCSV } from '@/lib/export/serialize-csv'
 import { serializeVCards } from '@/lib/export/serialize-vcard'
@@ -31,6 +33,16 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url)
     const format = (searchParams.get('format') || 'konterra') as ExportFormat
     if (!VALID_FORMATS.includes(format)) return badRequest('Invalid format')
+
+    // GDPR art. 15 access requests leave a trace, both for the user's own record and so a
+    // mass export from a compromised session is visible after the fact.
+    writeAuditLog({
+      userId,
+      action: 'export_data',
+      targetType: 'export',
+      ip: getClientIp(req),
+      detail: `format=${format}`,
+    })
 
     const now = new Date().toISOString().split('T')[0]
 

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { useSession } from 'next-auth/react'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog'
@@ -12,13 +13,14 @@ import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import {
-  Globe, UserPlus, Upload, LayoutDashboard, Settings, ArrowRight, ArrowLeft, Loader2, Check, ChevronsUpDown, Search, X, ArrowLeftRight, MapPin, Share2,
+  Globe, UserPlus, Upload, ArrowRight, ArrowLeft, Loader2, Check, ChevronsUpDown,
+  Search, X, MapPin, Share2, Plug, CalendarRange, Radar,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { GLASS, Z, TRANSITION } from '@/lib/constants/ui'
 import { CountrySelect } from '@/components/globe/contact-edit/CountrySelect'
 import { countryFlag } from '@/lib/country-flags'
-import { useIsMobile } from '@/hooks/use-mobile'
+import { ANALYTICS_EVENTS, track } from '@/lib/analytics'
 
 const RAW_TIMEZONES = Intl.supportedValuesOf('timeZone')
 
@@ -26,8 +28,7 @@ function getUtcOffset(tz: string): string {
   try {
     const fmt = new Intl.DateTimeFormat('en-US', { timeZone: tz, timeZoneName: 'shortOffset' })
     const parts = fmt.formatToParts(new Date())
-    const offsetPart = parts.find(p => p.type === 'timeZoneName')
-    return offsetPart?.value || ''
+    return parts.find(p => p.type === 'timeZoneName')?.value || ''
   } catch {
     return ''
   }
@@ -48,11 +49,7 @@ function StepDots({ current, total }: { current: number; total: number }) {
         <div
           key={i}
           className={`rounded-full transition-all duration-300 ${
-            i === current
-              ? 'w-6 h-2 bg-primary'
-              : i < current
-                ? 'w-2 h-2 bg-primary/40'
-                : 'w-2 h-2 bg-muted-foreground/20'
+            i === current ? 'w-6 h-2 bg-primary' : i < current ? 'w-2 h-2 bg-primary/40' : 'w-2 h-2 bg-muted-foreground/20'
           }`}
         />
       ))}
@@ -60,20 +57,11 @@ function StepDots({ current, total }: { current: number; total: number }) {
   )
 }
 
-interface UIOverviewItemProps {
-  icon: React.ReactNode
-  title: string
-  description: string
-  highlight?: boolean
-}
-
-function UIOverviewItem({ icon, title, description, highlight }: UIOverviewItemProps) {
+function FeatureRow({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }) {
   return (
     <div className="flex items-start gap-3">
-      <div className={`h-9 w-9 rounded-md flex items-center justify-center shrink-0 ${highlight ? 'bg-primary/10' : 'bg-muted'}`}>
-        {icon}
-      </div>
-      <div>
+      <div className="h-8 w-8 rounded-md bg-muted flex items-center justify-center shrink-0">{icon}</div>
+      <div className="min-w-0">
         <p className="text-sm font-medium text-foreground">{title}</p>
         <p className="text-xs text-muted-foreground">{description}</p>
       </div>
@@ -87,17 +75,17 @@ interface WelcomeWizardProps {
   onComplete: () => Promise<unknown>
 }
 
+const TOTAL_STEPS = 4
+
 export default function WelcomeWizard({ onAddContact, onOpenImport, onComplete }: WelcomeWizardProps) {
+  const { data: session } = useSession()
   const [open, setOpen] = useState(false)
   const [step, setStep] = useState(0)
+
   const [country, setCountry] = useState('')
   const [city, setCity] = useState('')
   const [timezone, setTimezone] = useState(() => {
-    try {
-      return Intl.DateTimeFormat().resolvedOptions().timeZone
-    } catch {
-      return ''
-    }
+    try { return Intl.DateTimeFormat().resolvedOptions().timeZone } catch { return '' }
   })
   const [saving, setSaving] = useState(false)
   const [tzOpen, setTzOpen] = useState(false)
@@ -105,10 +93,9 @@ export default function WelcomeWizard({ onAddContact, onOpenImport, onComplete }
   const [visited, setVisited] = useState<string[]>([])
   const [savingVisited, setSavingVisited] = useState(false)
   const [username, setUsername] = useState('')
-  const [makePublic, setMakePublic] = useState(true)
+  const [makePublic, setMakePublic] = useState(false)
   const [savingClaim, setSavingClaim] = useState(false)
   const tzInputRef = useRef<HTMLInputElement>(null)
-  const isMobile = useIsMobile()
 
   const timezones = useMemo(() => {
     const list = RAW_TIMEZONES.map(tz => {
@@ -134,22 +121,48 @@ export default function WelcomeWizard({ onAddContact, onOpenImport, onComplete }
   }, [timezone, timezones])
 
   useEffect(() => {
-    fetch('/api/profile')
+    fetch('/api/me/onboarding')
       .then((r) => r.ok ? r.json() : null)
       .then((data) => {
-        if (data && !data.onboardedAt) setOpen(true)
+        if (data && !data.onboardedAt) {
+          setStep(typeof data.wizardStep === 'number' ? Math.min(data.wizardStep, TOTAL_STEPS - 1) : 0)
+          setOpen(true)
+          track(ANALYTICS_EVENTS.onboardingShown)
+        }
       })
       .catch(() => {})
   }, [])
 
-  const finish = useCallback(() => {
-    setOpen(false)
-    fetch('/api/me/onboarding', { method: 'POST' }).catch(() => {})
+  const goToStep = useCallback((next: number) => {
+    setStep(next)
+    track(ANALYTICS_EVENTS.onboardingStep, { step: next })
+    // Persist progress so closing the tab mid-setup does not restart the whole flow.
+    fetch('/api/me/onboarding', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ wizardStep: next, complete: false }),
+    }).catch(() => {})
   }, [])
+
+  const finish = useCallback(async (reason: 'completed' | 'skipped') => {
+    setOpen(false)
+    track(reason === 'completed' ? ANALYTICS_EVENTS.onboardingCompleted : ANALYTICS_EVENTS.onboardingSkipped, { step })
+    try {
+      const res = await fetch('/api/me/onboarding', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ complete: true }),
+      })
+      // A failed write would resurrect the wizard on the next visit, which reads as a bug.
+      if (!res.ok) throw new Error()
+    } catch {
+      toast.error('Could not save your setup progress — you may see this again next time.')
+    }
+  }, [step])
 
   const handleSaveHomeBase = useCallback(async () => {
     if (!country.trim()) {
-      toast.error('Country is required')
+      toast.error('Pick a country to place your pin')
       return
     }
     setSaving(true)
@@ -158,7 +171,8 @@ export default function WelcomeWizard({ onAddContact, onOpenImport, onComplete }
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: 'Me',
+          // Use the real name rather than a hardcoded "Me" — this pin is labelled on the globe.
+          name: session?.user?.name?.trim() || 'Me',
           country: country.trim(),
           city: city.trim() || null,
           timezone: timezone || null,
@@ -169,22 +183,20 @@ export default function WelcomeWizard({ onAddContact, onOpenImport, onComplete }
         const data = await res.json().catch(() => ({ error: 'Failed' }))
         throw new Error(data.error || 'Failed to save home base')
       }
-      toast.success('Home base saved')
       await onComplete()
-      if (country.trim() && !visited.includes(country.trim())) {
-        setVisited((v) => [...v, country.trim()])
-      }
-      setStep(2)
+      if (!visited.includes(country.trim())) setVisited((v) => [...v, country.trim()])
+      toast.success('You are on the map')
+      goToStep(2)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to save home base')
     } finally {
       setSaving(false)
     }
-  }, [country, city, timezone, visited, onComplete])
+  }, [country, city, timezone, visited, onComplete, goToStep, session])
 
   const handleSaveVisited = useCallback(async () => {
     if (visited.length === 0) {
-      setStep(3)
+      goToStep(3)
       return
     }
     setSavingVisited(true)
@@ -195,20 +207,20 @@ export default function WelcomeWizard({ onAddContact, onOpenImport, onComplete }
         body: JSON.stringify({ countries: visited }),
       })
       if (!res.ok) throw new Error('Failed to save countries')
-      toast.success(`${visited.length} ${visited.length === 1 ? 'country' : 'countries'} on your atlas`)
       await onComplete()
-      setStep(3)
+      toast.success(`${visited.length} ${visited.length === 1 ? 'country' : 'countries'} lit up`)
+      goToStep(3)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to save countries')
     } finally {
       setSavingVisited(false)
     }
-  }, [visited, onComplete])
+  }, [visited, onComplete, goToStep])
 
   const handleClaim = useCallback(async () => {
     const u = username.trim().toLowerCase()
     if (!u) {
-      setStep(4)
+      finish('completed')
       return
     }
     setSavingClaim(true)
@@ -224,44 +236,50 @@ export default function WelcomeWizard({ onAddContact, onOpenImport, onComplete }
         const data = await res.json().catch(() => ({ error: 'Failed' }))
         throw new Error(data.error || 'Failed to claim username')
       }
-      toast.success(makePublic ? 'Your atlas is live' : 'Username claimed')
-      setStep(4)
+      if (makePublic) track(ANALYTICS_EVENTS.atlasPublished, { source: 'onboarding' })
+      toast.success(makePublic ? 'Your atlas is live' : 'Username reserved')
+      finish('completed')
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to claim username')
     } finally {
       setSavingClaim(false)
     }
-  }, [username, makePublic])
-
-  const handleCreateManually = useCallback(() => {
-    finish()
-    onAddContact()
-  }, [finish, onAddContact])
-
-  const handleImport = useCallback(() => {
-    finish()
-    onOpenImport()
-  }, [finish, onOpenImport])
+  }, [username, makePublic, finish])
 
   if (!open) return null
 
   const steps = [
     {
       title: 'Welcome to Konterra',
-      description: 'Your world — people, places, journeys — mapped on one globe. Four quick steps and your atlas takes shape.',
+      description: 'Your people and your places on one globe. Two minutes of setup, or skip and explore.',
       content: (
-        <div className="flex flex-col items-center gap-4 py-6">
-          <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
-            <Globe className="h-8 w-8 text-primary" />
-          </div>
-          <p className="text-sm text-muted-foreground text-center max-w-sm px-2">
-            Map your contacts across the world, log your travels, and share a living atlas of where you&apos;ve been.
-          </p>
+        <div className="space-y-3 py-3">
+          <FeatureRow
+            icon={<Globe className="h-4 w-4 text-muted-foreground" />}
+            title="Everyone on a globe"
+            description="Contacts and trips plotted where they actually are"
+          />
+          <FeatureRow
+            icon={<CalendarRange className="h-4 w-4 text-muted-foreground" />}
+            title="Days per country"
+            description="How long you have spent everywhere, counted for you"
+          />
+          <FeatureRow
+            icon={<Radar className="h-4 w-4 text-muted-foreground" />}
+            title="Crossing paths"
+            description="Who you can actually catch on your next trip"
+          />
+          <FeatureRow
+            icon={<Plug className="h-4 w-4 text-muted-foreground" />}
+            title="Works with your AI assistant"
+            description="Connect Claude or ChatGPT over MCP from Settings"
+          />
         </div>
       ),
       footer: (
-        <DialogFooter>
-          <Button onClick={() => setStep(1)} className="w-full sm:w-auto">
+        <DialogFooter className="flex-row justify-between sm:justify-between">
+          <Button variant="ghost" onClick={() => finish('skipped')}>Skip setup</Button>
+          <Button onClick={() => goToStep(1)}>
             Get started
             <ArrowRight className="h-4 w-4" />
           </Button>
@@ -269,22 +287,18 @@ export default function WelcomeWizard({ onAddContact, onOpenImport, onComplete }
       ),
     },
     {
-      title: 'Set your home base',
-      description: 'Where are you located? This creates your pin on the globe.',
+      title: 'Where are you based?',
+      description: 'This drops your pin and sets the centre of your globe.',
       content: (
         <div className="space-y-4 py-2">
-          <CountrySelect
-            value={country}
-            onChange={setCountry}
-            label="Country *"
-          />
+          <CountrySelect value={country} onChange={setCountry} label="Country *" />
           <div className="space-y-2">
             <Label htmlFor="wizard-city" className="text-sm">City</Label>
             <Input
               id="wizard-city"
               value={city}
               onChange={(e) => setCity(e.target.value)}
-              placeholder="e.g. Berlin"
+              placeholder="e.g. Lisbon"
               className="h-10 sm:h-9"
             />
           </div>
@@ -349,32 +363,33 @@ export default function WelcomeWizard({ onAddContact, onOpenImport, onComplete }
       ),
       footer: (
         <DialogFooter className="flex-row justify-between sm:justify-between">
-          <Button variant="ghost" onClick={() => setStep(0)}>
+          <Button variant="ghost" onClick={() => goToStep(0)}>
             <ArrowLeft className="h-4 w-4" />
             Back
           </Button>
-          <Button onClick={handleSaveHomeBase} disabled={saving}>
-            {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-            Save and continue
-            {!saving && <ArrowRight className="h-4 w-4" />}
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="ghost" onClick={() => goToStep(2)}>Skip</Button>
+            <Button onClick={handleSaveHomeBase} disabled={saving}>
+              {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+              Continue
+              {!saving && <ArrowRight className="h-4 w-4" />}
+            </Button>
+          </div>
         </DialogFooter>
       ),
     },
     {
-      title: 'Where have you been?',
-      description: 'Mark the countries you\'ve visited — they light up on your globe instantly.',
+      title: 'Fill in your atlas',
+      description: 'Mark countries you have been to, or bring in what you already have.',
       content: (
         <div className="space-y-3 py-2">
           <CountrySelect
             value=""
-            onChange={(c) => {
-              if (c && !visited.includes(c)) setVisited((v) => [...v, c])
-            }}
-            label="Add a country"
+            onChange={(c) => { if (c && !visited.includes(c)) setVisited((v) => [...v, c]) }}
+            label="Countries you have visited"
           />
           {visited.length > 0 ? (
-            <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto thin-scrollbar">
+            <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto thin-scrollbar">
               {visited.map((c) => (
                 <span
                   key={c}
@@ -395,20 +410,41 @@ export default function WelcomeWizard({ onAddContact, onOpenImport, onComplete }
           ) : (
             <p className="text-xs text-muted-foreground flex items-center gap-1.5">
               <MapPin className="h-3.5 w-3.5" />
-              Nothing yet — pick a few from the list above.
+              Pick a few — they light up on the globe right away.
             </p>
           )}
+
+          <Separator />
+
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={() => { finish('completed'); onOpenImport() }}
+              className={`${GLASS.control} rounded-lg p-3 text-left ${TRANSITION.color} hover:bg-accent active:scale-[0.98] transition-transform`}
+            >
+              <Upload className="h-4 w-4 text-primary mb-1.5" />
+              <p className="text-xs font-medium text-foreground">Import a file</p>
+              <p className="text-[10px] text-muted-foreground">CSV, vCard or JSON</p>
+            </button>
+            <button
+              onClick={() => { finish('completed'); onAddContact() }}
+              className={`${GLASS.control} rounded-lg p-3 text-left ${TRANSITION.color} hover:bg-accent active:scale-[0.98] transition-transform`}
+            >
+              <UserPlus className="h-4 w-4 text-primary mb-1.5" />
+              <p className="text-xs font-medium text-foreground">Add someone</p>
+              <p className="text-[10px] text-muted-foreground">One contact by hand</p>
+            </button>
+          </div>
         </div>
       ),
       footer: (
         <DialogFooter className="flex-row justify-between sm:justify-between">
-          <Button variant="ghost" onClick={() => setStep(1)}>
+          <Button variant="ghost" onClick={() => goToStep(1)}>
             <ArrowLeft className="h-4 w-4" />
             Back
           </Button>
           <Button onClick={handleSaveVisited} disabled={savingVisited}>
             {savingVisited && <Loader2 className="h-4 w-4 animate-spin" />}
-            {visited.length > 0 ? 'Save and continue' : 'Skip for now'}
+            {visited.length > 0 ? 'Save and continue' : 'Skip'}
             {!savingVisited && <ArrowRight className="h-4 w-4" />}
           </Button>
         </DialogFooter>
@@ -416,7 +452,7 @@ export default function WelcomeWizard({ onAddContact, onOpenImport, onComplete }
     },
     {
       title: 'Claim your atlas',
-      description: 'Pick a username to get a shareable public page of your travels. You control what\'s visible — contacts stay private, always.',
+      description: 'Reserve a link you can share. Publishing is optional and reversible — contacts are never shown.',
       content: (
         <div className="space-y-4 py-2">
           <div className="space-y-2">
@@ -439,135 +475,45 @@ export default function WelcomeWizard({ onAddContact, onOpenImport, onComplete }
             <div className="flex items-center gap-2.5">
               <Share2 className="h-4 w-4 text-primary shrink-0" />
               <div>
-                <p className="text-sm text-foreground">Make my atlas public</p>
-                <p className="text-[11px] text-muted-foreground">Countries and trip count only — never your contacts</p>
+                <p className="text-sm text-foreground">Publish it now</p>
+                <p className="text-[11px] text-muted-foreground">Off by default. Countries only — never your contacts.</p>
               </div>
             </div>
-            <Switch checked={makePublic} onCheckedChange={setMakePublic} />
+            <Switch checked={makePublic} onCheckedChange={setMakePublic} disabled={!username.trim()} />
           </div>
         </div>
       ),
       footer: (
         <DialogFooter className="flex-row justify-between sm:justify-between">
-          <Button variant="ghost" onClick={() => setStep(2)}>
+          <Button variant="ghost" onClick={() => goToStep(2)}>
             <ArrowLeft className="h-4 w-4" />
             Back
           </Button>
           <Button onClick={handleClaim} disabled={savingClaim}>
             {savingClaim && <Loader2 className="h-4 w-4 animate-spin" />}
-            {username.trim() ? 'Claim and continue' : 'Skip for now'}
-            {!savingClaim && <ArrowRight className="h-4 w-4" />}
-          </Button>
-        </DialogFooter>
-      ),
-    },
-    {
-      title: 'Add your first contact',
-      description: 'Start building your network. You can always add more later.',
-      content: (
-        <div className="flex flex-col gap-3 py-4">
-          <button
-            onClick={handleCreateManually}
-            className={`${GLASS.control} rounded-lg p-4 text-left ${TRANSITION.color} hover:bg-accent active:scale-[0.98] transition-transform`}
-          >
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                <UserPlus className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-foreground">Create manually</p>
-                <p className="text-xs text-muted-foreground">Add a contact with name, location, and details</p>
-              </div>
-            </div>
-          </button>
-          <button
-            onClick={handleImport}
-            className={`${GLASS.control} rounded-lg p-4 text-left ${TRANSITION.color} hover:bg-accent active:scale-[0.98] transition-transform`}
-          >
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                <Upload className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-foreground">Import contacts</p>
-                <p className="text-xs text-muted-foreground">Upload a CSV or JSON file with your contacts</p>
-              </div>
-            </div>
-          </button>
-        </div>
-      ),
-      footer: (
-        <DialogFooter className="flex-row justify-between sm:justify-between">
-          <Button variant="ghost" onClick={() => setStep(3)}>
-            <ArrowLeft className="h-4 w-4" />
-            Back
-          </Button>
-          <Button variant="outline" onClick={() => setStep(5)}>
-            Skip for now
-            <ArrowRight className="h-4 w-4" />
-          </Button>
-        </DialogFooter>
-      ),
-    },
-    {
-      title: isMobile ? 'How to navigate' : 'Quick UI overview',
-      description: isMobile ? 'Konterra has two views you switch between.' : 'Here is how Konterra is organized.',
-      content: (
-        <div className="space-y-3 py-2">
-          <UIOverviewItem
-            icon={<LayoutDashboard className="h-4 w-4 text-muted-foreground" />}
-            title={isMobile ? 'Dashboard' : 'Dashboard (left)'}
-            description={isMobile ? 'Your contacts list, search, and travel log' : 'Browse, search, and manage your contacts list'}
-          />
-          <Separator />
-          <UIOverviewItem
-            icon={<Globe className="h-4 w-4 text-muted-foreground" />}
-            title={isMobile ? 'Globe' : 'Globe (right)'}
-            description={isMobile ? 'Your network on a 3D globe with pins and arcs' : 'See your network plotted on a 3D globe, click pins to view details'}
-          />
-          <Separator />
-          {isMobile ? (
-            <UIOverviewItem
-              icon={<ArrowLeftRight className="h-4 w-4 text-primary" />}
-              title="Switch views"
-              description="Use the Globe button in the header or the Dashboard icon in the bottom bar"
-              highlight
-            />
-          ) : (
-            <UIOverviewItem
-              icon={<Settings className="h-4 w-4 text-muted-foreground" />}
-              title="Settings (gear icon)"
-              description="Display options, visited countries, import/export, and more"
-            />
-          )}
-        </div>
-      ),
-      footer: (
-        <DialogFooter>
-          <Button onClick={finish} className="w-full sm:w-auto">
-            <Check className="h-4 w-4" />
-            {isMobile ? 'Start exploring' : 'Done'}
+            {username.trim() ? 'Claim and finish' : 'Finish'}
+            {!savingClaim && <Check className="h-4 w-4" />}
           </Button>
         </DialogFooter>
       ),
     },
   ]
 
-  const current = steps[step]
+  const current = steps[step] ?? steps[0]
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v && step >= 2) finish() }}>
-      <DialogContent
-        showCloseButton={false}
-        className="sm:max-w-md max-h-[90dvh] overflow-y-auto"
-        style={{ zIndex: Z.modal }}
-      >
+    // Closable at every step: Escape, the backdrop and the close button all end setup
+    // rather than trapping people behind a form before they have seen the product.
+    <Dialog open={open} onOpenChange={(v) => { if (!v) finish('skipped') }}>
+      <DialogContent className="sm:max-w-md max-h-[90dvh] overflow-y-auto" style={{ zIndex: Z.modal }}>
         <DialogHeader>
-          <DialogTitle className="k-serif italic text-[1.6rem] leading-tight font-normal text-center sm:text-left">{current.title}</DialogTitle>
+          <DialogTitle className="k-serif italic text-[1.6rem] leading-tight font-normal text-center sm:text-left">
+            {current.title}
+          </DialogTitle>
           <DialogDescription className="text-center sm:text-left">{current.description}</DialogDescription>
         </DialogHeader>
         {current.content}
-        <StepDots current={step} total={steps.length} />
+        <StepDots current={step} total={TOTAL_STEPS} />
         {current.footer}
       </DialogContent>
     </Dialog>

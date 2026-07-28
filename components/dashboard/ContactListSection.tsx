@@ -17,7 +17,7 @@ import { Label } from '@/components/ui/label'
 import { useSavedViews } from '@/hooks/use-saved-views'
 import { countryFlag } from '@/lib/country-flags'
 import { formatContactTime } from '@/lib/country-timezones'
-import GettingStartedCard, { computeAllStepsDone, isChecklistPermanentlyDone } from './GettingStartedCard'
+import GettingStartedCard from './GettingStartedCard'
 import StatsRow from './widgets/StatsRow'
 import TopCountriesChart from './widgets/TopCountriesChart'
 import MeetingOrigins from './widgets/MeetingOrigins'
@@ -61,10 +61,11 @@ interface ContactListSectionProps {
   onBulkDelete?: (ids: string[]) => void
   onReloadContacts?: () => void
   onRefreshContact?: (contactId: string) => void
-  onSwitchToGlobe?: () => void
   onEditContact?: (contact: Contact) => void
   onDeleteContact?: (contactId: string) => void
-  isMobile?: boolean
+  onAddTrip?: () => void
+  onQuickLog?: () => void
+  onOpenSettings?: () => void
 }
 
 export default function ContactListSection({
@@ -82,10 +83,11 @@ export default function ContactListSection({
   onBulkDelete,
   onReloadContacts,
   onRefreshContact,
-  onSwitchToGlobe,
   onEditContact,
   onDeleteContact,
-  isMobile,
+  onAddTrip,
+  onQuickLog,
+  onOpenSettings,
 }: ContactListSectionProps) {
   const [searchInput, setSearchInput] = useState('')
   const [search, setSearch] = useState('')
@@ -406,31 +408,26 @@ export default function ContactListSection({
   const selfContact = contacts.find((c) => c.isSelf)
   const nonSelfContacts = contacts.filter((c) => !c.isSelf)
 
-  const [checklistDismissed, setChecklistDismissed] = useState(() => {
-    try { return isChecklistPermanentlyDone() } catch { return false }
-  })
-  const allStepsDone = computeAllStepsDone(contacts, connections, recentInteractions)
+  const [checklistDismissed, setChecklistDismissed] = useState(false)
 
-  useEffect(() => {
-    if (allStepsDone && !checklistDismissed) {
-      setChecklistDismissed(true)
-    }
-  }, [allStepsDone, checklistDismissed])
+  // The card fetches its own server-derived state; local data changes only tell it when to
+  // refetch, so a completed step ticks off without a reload.
+  const checklistRefreshKey = contacts.length + recentInteractions.length + connections.length
 
-  const showChecklist = !contactsLoading && !checklistDismissed && !allStepsDone
+  const showChecklist = !contactsLoading && !checklistDismissed
 
   return (
     <div className="p-4 md:p-5 space-y-5 md:space-y-6">
       {selfContact && <SelfProfileCard contact={selfContact} onOpenProfile={onOpenProfile || (() => {})} />}
       {showChecklist && (
         <GettingStartedCard
-          contacts={contacts}
-          connections={connections}
-          recentInteractions={recentInteractions}
           onAddContact={onAddContact}
           onOpenProfile={onOpenProfile || (() => {})}
-          onSwitchToGlobe={onSwitchToGlobe}
-          isMobile={isMobile}
+          onAddTrip={onAddTrip}
+          onQuickLog={onQuickLog}
+          onOpenSettings={onOpenSettings}
+          refreshKey={checklistRefreshKey}
+          onAllDone={() => setChecklistDismissed(true)}
         />
       )}
       <StatsRow contacts={contacts} loading={contactsLoading} visitedCount={visitedCount} wishlistCount={wishlistCount} />
@@ -762,7 +759,33 @@ export default function ContactListSection({
           />
         )}
         {!contactsLoading && filteredContacts.length === 0 && (
-          <p className="text-xs text-muted-foreground/60 text-center py-6">No contacts found</p>
+          nonSelfContacts.length === 0 ? (
+            // Never met anyone yet vs. filtered everything out are different problems and
+            // deserve different answers.
+            <div className="flex flex-col items-center text-center py-8 px-4">
+              <div className="h-11 w-11 rounded-full bg-muted/40 flex items-center justify-center mb-3">
+                <Home className="h-5 w-5 text-muted-foreground/60" />
+              </div>
+              <p className="text-sm text-foreground mb-1">Nobody here yet</p>
+              <p className="text-xs text-muted-foreground max-w-[260px] mb-4">
+                Bring in the contacts you already have, or add the last person you met.
+              </p>
+              <div className="flex gap-2">
+                <Button size="sm" onClick={onAddContact}>Add someone</Button>
+                {onQuickLog && (
+                  <Button size="sm" variant="outline" onClick={onQuickLog}>Just met someone</Button>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center text-center py-8 px-4">
+              <p className="text-sm text-foreground mb-1">No matches</p>
+              <p className="text-xs text-muted-foreground mb-3">
+                Nothing here fits the current filters.
+              </p>
+              <Button size="sm" variant="outline" onClick={clearFilters}>Clear filters</Button>
+            </div>
+          )
         )}
       </div>
       <Dialog open={saveViewDialogOpen} onOpenChange={setSaveViewDialogOpen}>

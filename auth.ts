@@ -2,10 +2,28 @@ import NextAuth from 'next-auth'
 import Credentials from 'next-auth/providers/credentials'
 import { compare } from 'bcryptjs'
 import { getUserByEmail, getUserById, updateLastActive, writeAuditLog, countRecentLoginFailures } from '@/lib/db/queries'
-import { rateLimit, getClientIp } from '@/lib/rate-limit'
+import { rateLimitShared, getClientIp } from '@/lib/rate-limit'
 import authConfig from './auth.config'
 
 const DUMMY_BCRYPT_HASH = '$2a$12$CwTycUXWue0Thq9StjUM0uJ8oP/2gk8mV.8pB4rUx1qQYk3WqFgEW'
+
+const LAST_ACTIVE_THROTTLE_MS = 5 * 60 * 1000
+const lastActiveSeen = new Map<string, number>()
+
+// The UPDATE is already a no-op inside its own 5-minute window, but it still costs a round
+// trip on every session refresh. Skipping it in-process removes that for warm instances.
+function touchLastActive(userId: string) {
+  const now = Date.now()
+  const seen = lastActiveSeen.get(userId)
+  if (seen && now - seen < LAST_ACTIVE_THROTTLE_MS) return
+  lastActiveSeen.set(userId, now)
+  if (lastActiveSeen.size > 5_000) {
+    for (const [id, at] of lastActiveSeen) {
+      if (now - at > LAST_ACTIVE_THROTTLE_MS) lastActiveSeen.delete(id)
+    }
+  }
+  updateLastActive(userId).catch(() => {})
+}
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   ...authConfig,
@@ -22,10 +40,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const password = credentials.password as string
 
         const ip = request instanceof Request ? getClientIp(request) : 'unknown'
-        const ipRl = rateLimit(`login:ip:${ip}`, { windowMs: 15 * 60 * 1000, max: 10 })
-        const emailRl = rateLimit(`login:email:${email}`, { windowMs: 15 * 60 * 1000, max: 5 })
+        const [ipRl, emailRl] = await Promise.all([
+          rateLimitShared(`login:ip:${ip}`, { windowMs: 15 * 60 * 1000, max: 10 }),
+          rateLimitShared(`login:email:${email}`, { windowMs: 15 * 60 * 1000, max: 5 }),
+        ])
         if (!ipRl.ok || !emailRl.ok) {
-          writeAuditLog({ action: 'login_failure', targetId: email, targetType: 'email', ip, detail: 'Rate limited (memory)' })
+          writeAuditLog({ action: 'login_failure', targetId: email, targetType: 'email', ip, detail: 'Rate limited' })
           return null
         }
 
@@ -61,7 +81,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       } else if (token.id) {
         const dbUser = await getUserById(token.id as string)
         if (dbUser) token.role = dbUser.role
-        updateLastActive(token.id as string).catch(() => {})
+        touchLastActive(token.id as string)
       }
       return token
     },

@@ -25,6 +25,7 @@ interface SessionUser {
   bio?: string | null
   profileVisibility?: string | null
   profilePrivacyLevel?: string | null
+  publicProfileIndexable?: boolean | null
   globeAutoRotate?: boolean | null
   createdAt?: string | null
   referrer?: { name: string | null; image: string | null } | null
@@ -696,7 +697,9 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
                   <div className="space-y-0.5">
                     <p className="text-sm font-medium text-foreground">Public Profile</p>
                     <p className="text-xs text-muted-foreground">
-                      {!hasUsername ? 'Set a username first' : 'Allow anyone to view your profile'}
+                      {!hasUsername
+                        ? 'Set a username first'
+                        : 'Anyone with the link can see your countries. Contacts are never shown.'}
                     </p>
                   </div>
                   <TooltipProvider>
@@ -731,6 +734,37 @@ export function ProfileTab({ open, contactCount, connectionCount, visitedCountry
                           <SelectItem value="full_travel">Full travel history</SelectItem>
                         </SelectContent>
                       </Select>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <p className="text-sm font-medium text-foreground">Show up in search engines</p>
+                        <p className="text-xs text-muted-foreground">
+                          Off by default. A shared link works either way — this only decides whether
+                          Google may index the page.
+                        </p>
+                      </div>
+                      <Switch
+                        checked={user.publicProfileIndexable === true}
+                        onCheckedChange={async (checked) => {
+                          try {
+                            const res = await fetch('/api/profile', {
+                              method: 'PATCH',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ publicProfileIndexable: checked }),
+                            })
+                            const data = await res.json()
+                            if (!res.ok) {
+                              toast.error(data.error || 'Failed to update')
+                              return
+                            }
+                            setUser((prev) => prev ? { ...prev, publicProfileIndexable: data.publicProfileIndexable } : prev)
+                            toast.success(checked ? 'Search engines may index your atlas' : 'Removed from search engines')
+                          } catch {
+                            toast.error('Failed to update indexing preference')
+                          }
+                        }}
+                      />
                     </div>
 
                     <div className="flex items-center justify-between">
