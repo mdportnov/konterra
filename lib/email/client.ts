@@ -11,10 +11,13 @@ export interface OutgoingEmail {
   headers?: Record<string, string>
 }
 
+const PRODUCTION_URL = 'https://konterra.space'
+
 export function appUrl(): string {
   if (env.APP_URL) return env.APP_URL.replace(/\/$/, '')
   if (process.env.VERCEL_PROJECT_PRODUCTION_URL) return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
   if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`
+  if (process.env.NODE_ENV === 'production') return PRODUCTION_URL
   return 'http://localhost:3000'
 }
 

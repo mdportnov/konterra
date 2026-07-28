@@ -37,8 +37,6 @@ export const profilePrivacyLevelEnum = pgEnum('profile_privacy_level', ['countri
 
 export const genderEnum = pgEnum('gender', ['male', 'female'])
 
-export const digestFrequencyEnum = pgEnum('digest_frequency', ['off', 'weekly', 'monthly'])
-
 export const communicationStyleEnum = pgEnum('communication_style', [
   'direct', 'diplomatic', 'analytical', 'expressive',
 ])
@@ -78,9 +76,6 @@ export const users = pgTable('users', {
   onboardedAt: timestamp('onboarded_at'),
   publicProfileConsentAt: timestamp('public_profile_consent_at'),
   publicProfileIndexable: boolean('public_profile_indexable').notNull().default(false),
-  digestFrequency: digestFrequencyEnum('digest_frequency').notNull().default('weekly'),
-  digestLastSentAt: timestamp('digest_last_sent_at'),
-  unsubscribeToken: text('unsubscribe_token').unique(),
   createdAt: timestamp('created_at').defaultNow(),
 }, (t) => [
   index('users_invited_by_idx').on(t.invitedBy),
@@ -416,7 +411,6 @@ export const auditActionEnum = pgEnum('audit_action', [
   'email_verification_request', 'email_verification_complete',
   'bulk_delete',
   'public_profile_enable', 'public_profile_disable',
-  'digest_send',
 ])
 
 export const auditLog = pgTable('audit_log', {

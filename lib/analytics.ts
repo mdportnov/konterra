@@ -32,7 +32,6 @@ export const ANALYTICS_EVENTS = {
   mcpTokenCreated: 'mcp_token_created',
 
   exportDownloaded: 'export_downloaded',
-  digestOpened: 'digest_opened',
 } as const
 
 export type AnalyticsEvent = (typeof ANALYTICS_EVENTS)[keyof typeof ANALYTICS_EVENTS]

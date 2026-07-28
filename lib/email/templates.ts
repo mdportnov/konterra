@@ -74,38 +74,10 @@ export function verificationEmail(name: string | null, link: string, ttlHours: n
       heading: 'Confirm your email',
       body:
         paragraph(greeting) +
-        paragraph('Confirm this address so you can recover your account and receive your atlas digest.') +
+        paragraph('Confirm this address so you can recover your account if you ever lose your password.') +
         button(link, 'Confirm email') +
         paragraph(`The link expires in ${ttlHours} hours.`),
     }),
     text: `${name ? `Hi ${name},` : 'Hi,'}\n\nConfirm your email for Konterra (expires in ${ttlHours} hours):\n${link}`,
-  }
-}
-
-export interface DigestSection {
-  title: string
-  items: string[]
-}
-
-export function digestEmail(name: string | null, sections: DigestSection[], unsubscribeUrl: string) {
-  const body = sections
-    .map(
-      (s) => `<p style="margin:24px 0 8px;font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:#8a8175;">${escapeHtml(s.title)}</p>
-      <ul style="margin:0;padding-left:18px;color:#c9c2b5;font-size:15px;line-height:1.7;">
-        ${s.items.map((i) => `<li>${i}</li>`).join('')}
-      </ul>`,
-    )
-    .join('')
-
-  return {
-    subject: 'Your Konterra digest',
-    html: layout({
-      heading: name ? `${escapeHtml(name)}, here is your week` : 'Here is your week',
-      body: body + button(appUrl() + '/app', 'Open Konterra'),
-      footerNote: `<a href="${unsubscribeUrl}" style="color:#6f675c;">Unsubscribe from digests</a>`,
-    }),
-    text:
-      sections.map((s) => `${s.title.toUpperCase()}\n${s.items.map((i) => `- ${i.replace(/<[^>]+>/g, '')}`).join('\n')}`).join('\n\n') +
-      `\n\nOpen Konterra: ${appUrl()}/app\nUnsubscribe: ${unsubscribeUrl}`,
   }
 }

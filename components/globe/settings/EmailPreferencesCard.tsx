@@ -2,18 +2,9 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { Skeleton } from '@/components/ui/skeleton'
 import { BadgeCheck, MailWarning, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
-
-type Frequency = 'off' | 'weekly' | 'monthly'
-
-const FREQUENCIES: { value: Frequency; label: string }[] = [
-  { value: 'weekly', label: 'Weekly' },
-  { value: 'monthly', label: 'Monthly' },
-  { value: 'off', label: 'Off' },
-]
 
 const CARD = 'rounded-lg border border-border bg-muted/20 p-4'
 const SECTION_LABEL = 'meta-label text-[10px]'
@@ -24,50 +15,25 @@ interface VerificationState {
   deliveryConfigured: boolean
 }
 
+/**
+ * Konterra sends no newsletters or digests — the only mail it ever sends is a link the
+ * user asked for. This card exists solely so account recovery can be set up.
+ */
 export default function EmailPreferencesCard() {
-  const [frequency, setFrequency] = useState<Frequency | null>(null)
-  const [saving, setSaving] = useState(false)
   const [verification, setVerification] = useState<VerificationState | null>(null)
-  const [sendingVerification, setSendingVerification] = useState(false)
+  const [sending, setSending] = useState(false)
 
   useEffect(() => {
     const controller = new AbortController()
-    Promise.all([
-      fetch('/api/me/digest', { signal: controller.signal }).then((r) => (r.ok ? r.json() : null)),
-      fetch('/api/me/verify-email', { signal: controller.signal }).then((r) => (r.ok ? r.json() : null)),
-    ])
-      .then(([digest, verify]) => {
-        if (digest) setFrequency(digest.frequency)
-        if (verify) setVerification(verify)
-      })
+    fetch('/api/me/verify-email', { signal: controller.signal })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: VerificationState | null) => { if (data) setVerification(data) })
       .catch(() => {})
     return () => controller.abort()
   }, [])
 
-  const handleChange = useCallback(async (value: string) => {
-    if (!value) return
-    const next = value as Frequency
-    const previous = frequency
-    setFrequency(next)
-    setSaving(true)
-    try {
-      const res = await fetch('/api/me/digest', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ frequency: next }),
-      })
-      if (!res.ok) throw new Error()
-      toast.success(next === 'off' ? 'Digest turned off' : `Digest set to ${next}`)
-    } catch {
-      setFrequency(previous)
-      toast.error('Failed to update digest preference')
-    } finally {
-      setSaving(false)
-    }
-  }, [frequency])
-
-  const handleResendVerification = useCallback(async () => {
-    setSendingVerification(true)
+  const handleResend = useCallback(async () => {
+    setSending(true)
     try {
       const res = await fetch('/api/me/verify-email', { method: 'POST' })
       const data = await res.json().catch(() => ({}))
@@ -76,7 +42,7 @@ export default function EmailPreferencesCard() {
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to send confirmation email')
     } finally {
-      setSendingVerification(false)
+      setSending(false)
     }
   }, [])
 
@@ -105,41 +71,19 @@ export default function EmailPreferencesCard() {
               size="sm"
               variant="outline"
               className="h-7 text-[11px]"
-              onClick={handleResendVerification}
-              disabled={sendingVerification || !verification.deliveryConfigured}
+              onClick={handleResend}
+              disabled={sending || !verification.deliveryConfigured}
             >
-              {sendingVerification && <Loader2 className="h-3 w-3 animate-spin" />}
+              {sending && <Loader2 className="h-3 w-3 animate-spin" />}
               {verification.deliveryConfigured ? 'Send confirmation link' : 'Email delivery not configured'}
             </Button>
           </div>
         )}
 
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Digest</span>
-            {saving && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
-          </div>
-          {frequency === null ? (
-            <Skeleton className="h-8 w-full" />
-          ) : (
-            <ToggleGroup
-              type="single"
-              value={frequency}
-              onValueChange={handleChange}
-              className="w-full"
-            >
-              {FREQUENCIES.map((f) => (
-                <ToggleGroupItem key={f.value} value={f.value} className="flex-1 text-xs">
-                  {f.label}
-                </ToggleGroupItem>
-              ))}
-            </ToggleGroup>
-          )}
-          <p className="text-[10px] text-muted-foreground/60">
-            Birthdays, follow-ups going past due, relationships going quiet, unsettled favors, and who
-            you can catch on upcoming trips. Sent only when there is something to say.
-          </p>
-        </div>
+        <p className="text-[10px] text-muted-foreground/60">
+          Konterra never sends newsletters or digests. The only email you will get is one you asked
+          for: a password reset or this confirmation link.
+        </p>
       </div>
     </div>
   )

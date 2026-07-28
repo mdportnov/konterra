@@ -1718,30 +1718,7 @@ export async function setUserPassword(userId: string, passwordHash: string) {
   return row ?? null
 }
 
-export async function getOrCreateUnsubscribeToken(userId: string, generate: () => string) {
-  const existing = await db.query.users.findFirst({
-    where: eq(users.id, userId),
-    columns: { unsubscribeToken: true },
-  })
-  if (existing?.unsubscribeToken) return existing.unsubscribeToken
 
-  const token = generate()
-  const [row] = await db
-    .update(users)
-    .set({ unsubscribeToken: token })
-    .where(eq(users.id, userId))
-    .returning({ unsubscribeToken: users.unsubscribeToken })
-  return row?.unsubscribeToken ?? token
-}
-
-export async function unsubscribeByToken(token: string) {
-  const [row] = await db
-    .update(users)
-    .set({ digestFrequency: 'off' })
-    .where(eq(users.unsubscribeToken, token))
-    .returning({ id: users.id, email: users.email })
-  return row ?? null
-}
 
 export async function purgeExpiredAuthTokens() {
   const now = new Date()
@@ -1806,62 +1783,6 @@ export async function getInteractionDatesByUserId(userId: string) {
     else map.set(row.contactId, [row.date])
   }
   return map
-}
-
-// ---------------------------------------------------------------------------
-// Digest scheduling
-// ---------------------------------------------------------------------------
-
-export async function getUsersDueForDigest(limit = 200) {
-  // Weekly and monthly cadences share one query: a user is due when they have never
-  // received one, or when enough time has passed since the last send.
-  return db
-    .select({
-      id: users.id,
-      email: users.email,
-      name: users.name,
-      digestFrequency: users.digestFrequency,
-      unsubscribeToken: users.unsubscribeToken,
-    })
-    .from(users)
-    .where(
-      and(
-        ne(users.digestFrequency, 'off'),
-        or(
-          isNull(users.digestLastSentAt),
-          and(
-            eq(users.digestFrequency, 'weekly'),
-            lt(users.digestLastSentAt, sql`now() - interval '7 days'`),
-          ),
-          and(
-            eq(users.digestFrequency, 'monthly'),
-            lt(users.digestLastSentAt, sql`now() - interval '30 days'`),
-          ),
-        ),
-      ),
-    )
-    .orderBy(asc(users.digestLastSentAt))
-    .limit(limit)
-}
-
-export async function markDigestSent(userId: string) {
-  await db.update(users).set({ digestLastSentAt: new Date() }).where(eq(users.id, userId))
-}
-
-export async function updateDigestPreference(userId: string, frequency: 'off' | 'weekly' | 'monthly') {
-  const [row] = await db
-    .update(users)
-    .set({ digestFrequency: frequency })
-    .where(eq(users.id, userId))
-    .returning({ digestFrequency: users.digestFrequency })
-  return row ?? null
-}
-
-export async function getDigestPreference(userId: string) {
-  return db.query.users.findFirst({
-    where: eq(users.id, userId),
-    columns: { digestFrequency: true, digestLastSentAt: true },
-  })
 }
 
 // ---------------------------------------------------------------------------

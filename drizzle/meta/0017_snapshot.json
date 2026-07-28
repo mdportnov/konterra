@@ -1,5 +1,5 @@
 {
-  "id": "f3a4132e-6b29-4d27-82b8-f8471b14bb75",
+  "id": "ddcfa2a7-4f31-4173-8670-4524d934b527",
   "prevId": "54c17afe-10bd-4900-9e89-d8696ac91cfd",
   "version": "7",
   "dialect": "postgresql",
@@ -2853,26 +2853,6 @@
           "notNull": true,
           "default": false
         },
-        "digest_frequency": {
-          "name": "digest_frequency",
-          "type": "digest_frequency",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'weekly'"
-        },
-        "digest_last_sent_at": {
-          "name": "digest_last_sent_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "unsubscribe_token": {
-          "name": "unsubscribe_token",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp",
@@ -2927,13 +2907,6 @@
           "nullsNotDistinct": false,
           "columns": [
             "username"
-          ]
-        },
-        "users_unsubscribe_token_unique": {
-          "name": "users_unsubscribe_token_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "unsubscribe_token"
           ]
         }
       },
@@ -3195,8 +3168,7 @@
         "email_verification_complete",
         "bulk_delete",
         "public_profile_enable",
-        "public_profile_disable",
-        "digest_send"
+        "public_profile_disable"
       ]
     },
     "public.communication_style": {
@@ -3219,15 +3191,6 @@
         "reports_to",
         "invested_in",
         "referred_by"
-      ]
-    },
-    "public.digest_frequency": {
-      "name": "digest_frequency",
-      "schema": "public",
-      "values": [
-        "off",
-        "weekly",
-        "monthly"
       ]
     },
     "public.favor_direction": {

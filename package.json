@@ -16,7 +16,8 @@
     "mcp": "tsx mcp/server.ts",
     "prepare": "husky",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "cron:secret": "tsx scripts/print-cron-secret.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server'
-import { env } from '@/lib/env'
 import {
   purgeExpiredRetentionData,
   AUDIT_LOG_RETENTION_DAYS,
   GEOCODE_CACHE_RETENTION_DAYS,
 } from '@/lib/db/queries'
+import { isAuthorizedCron } from '@/lib/cron-auth'
 
 export const maxDuration = 120
 
@@ -14,8 +14,7 @@ export const maxDuration = 120
  * about, so this runs nightly rather than on request.
  */
 export async function GET(req: Request) {
-  const secret = env.CRON_SECRET
-  if (!secret || req.headers.get('authorization') !== `Bearer ${secret}`) {
+  if (!isAuthorizedCron(req)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

@@ -34,7 +34,7 @@ const SECTIONS = [
     title: 'Lawful Basis',
     content: [
       'Performance of a contract (GDPR art. 6(1)(b)): running your account, storing the records you enter, and delivering the product features you asked for.',
-      'Legitimate interests (art. 6(1)(f)): keeping the service secure (audit log, rate limiting), preventing abuse, and sending the product digest you can switch off at any time. We have weighed these against your rights and limited each to what the purpose needs.',
+      'Legitimate interests (art. 6(1)(f)): keeping the service secure (audit log, rate limiting) and preventing abuse. We have weighed these against your rights and limited each to what the purpose needs.',
       'Consent (art. 6(1)(a)): publishing your atlas at a public URL, allowing search engines to index it, and analytics cookies. Each is off unless you turn it on, and each can be withdrawn without affecting anything else.',
     ],
   },
@@ -91,7 +91,7 @@ const SECTIONS = [
       'Access and portability: export everything from Settings in JSON, CSV or vCard at any time. No request or waiting period.',
       'Rectification: edit or correct any record directly in the app.',
       'Erasure: delete your account from Settings. It is immediate and irreversible.',
-      'Restriction and objection: switch off the digest, unpublish your atlas, remove it from search engines, or decline analytics — each independently, in Settings.',
+      'Restriction and objection: unpublish your atlas, remove it from search engines, or decline analytics — each independently, in Settings.',
       'Withdrawing consent does not affect processing that already happened lawfully before you withdrew it.',
       'You may lodge a complaint with your local data protection supervisory authority. We would rather you write to us first at privacy@konterra.space.',
     ],
@@ -101,7 +101,7 @@ const SECTIONS = [
     content: [
       'Neon (neon.tech) — database hosting in the EU. Holds all account and content data.',
       'Vercel (vercel.com) — application hosting and compute. Processes requests; stores no records.',
-      'Resend (resend.com) — transactional and digest email. Receives your email address, your name, and the digest content itself.',
+      'Resend (resend.com) — transactional email only: password reset and address confirmation. Receives your email address and your name. Konterra sends no newsletters, digests or marketing email of any kind.',
       'OpenCage (opencagedata.com) and OpenStreetMap Nominatim — geocoding. Receive only a place name such as "Lisbon, Portugal". No names, emails or identifiers are sent.',
       'OpenRouter (openrouter.ai) — the AI features you invoke explicitly, such as drafting an introduction or generating contact insights. Receives only the contact details relevant to that request, and only when you press the button.',
       'Google Analytics (google.com) — usage measurement. Receives page paths and product events, never contact data or note content.',
