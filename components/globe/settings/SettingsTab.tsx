@@ -17,7 +17,6 @@ import { PASSWORD_MIN_LENGTH, PASSWORD_MAX_LENGTH } from '@/lib/validation'
 import type { ArcMode } from '@/types/display'
 import type { SettingsTabProps } from './types'
 import { saveDefaultTab } from '@/hooks/use-dashboard-routing'
-import EmailPreferencesCard from './EmailPreferencesCard'
 
 const ARC_MODES: { value: ArcMode; label: string }[] = [
   { value: 'animated', label: 'Animated' },
@@ -337,8 +336,6 @@ export function SettingsTab({
             )}
           </div>
         </div>
-
-        <EmailPreferencesCard />
 
         <div className={CARD}>
           <div className="space-y-3">

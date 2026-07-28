@@ -22,7 +22,7 @@ const SECTIONS = [
   {
     title: 'What We Collect',
     content: [
-      'Account data: name, email address, a bcrypt hash of your password, optional profile image URL, optional username and bio, sign-in timestamps, and the invite you arrived through if any.',
+      'Account data: name, email address (used only as your sign-in identifier), a bcrypt hash of your password, optional profile image URL, optional username and bio, sign-in timestamps, and the invite you arrived through if any.',
       'Contact records you create: names, emails, phone numbers, social handles, cities, countries, coordinates, companies, job titles, tags, free-text notes, birthdays, and the relationship attributes you choose to fill in.',
       'Activity you log: interactions (type, date, location, notes), connections between contacts, introductions, favors, and the location history you record for a contact.',
       'Travel data: visited countries, trips (city, country, arrival and departure dates, notes, coordinates), and your country wishlist.',
@@ -52,7 +52,7 @@ const SECTIONS = [
     content: [
       'Database: Neon PostgreSQL in the EU (Frankfurt, aws-eu-central-1), encrypted at rest and in transit. Backups stay in the same region.',
       'Application hosting: Vercel serverless compute on a global edge network. Vercel processes requests but stores no user records.',
-      'Transfers outside the EEA to US-based processors (Vercel, Google Analytics, Resend, OpenRouter) rely on the EU Standard Contractual Clauses and, where applicable, the EU–US Data Privacy Framework.',
+      'Transfers outside the EEA to US-based processors (Vercel, Google Analytics, OpenRouter) rely on the EU Standard Contractual Clauses and, where applicable, the EU–US Data Privacy Framework.',
     ],
   },
   {
@@ -68,7 +68,7 @@ const SECTIONS = [
     title: 'Security Measures',
     content: [
       'HTTPS everywhere with HSTS preload, and a Content-Security-Policy restricting where the page may load code and connect.',
-      'Passwords hashed with bcrypt at cost factor 12. Password reset and email confirmation links are single-use, expiring, and stored only as SHA-256 hashes.',
+      'Passwords hashed with bcrypt at cost factor 12, never stored or recoverable in plain text.',
       'Sign-in attempts are rate limited per email and per IP across all servers, and repeated failures are throttled persistently.',
       'Account deletion and full data wipes require re-entering your password. Cross-site request protection is enforced on every state-changing request.',
       'Deleting your account cascades through every table that references it, so no orphaned records survive.',
@@ -79,7 +79,6 @@ const SECTIONS = [
     content: [
       'Account and content data: kept while your account exists, and erased when you delete it. There is no soft-delete and no recovery window.',
       'Security audit log: 400 days, then automatically deleted. It is kept beyond account deletion only as evidence that the deletion happened.',
-      'Password reset and email confirmation tokens: deleted as soon as they expire, at most 24 hours after issue.',
       'Rate-limit counters: deleted once their window closes.',
       'Cached geocoding results (place name to coordinates, containing no personal identifiers): 365 days.',
       'A scheduled job enforces this schedule nightly — these are the periods the system actually applies, not aspirations.',
@@ -97,11 +96,17 @@ const SECTIONS = [
     ],
   },
   {
+    title: 'Email',
+    content: [
+      'Konterra does not send email. There are no newsletters, no digests, no marketing and no automated notifications, and no email provider processes your address on our behalf.',
+      'Your email address exists only as your sign-in identifier. Because we send nothing, password recovery is handled by an administrator on request rather than by an automated reset link.',
+    ],
+  },
+  {
     title: 'Processors We Use',
     content: [
       'Neon (neon.tech) — database hosting in the EU. Holds all account and content data.',
       'Vercel (vercel.com) — application hosting and compute. Processes requests; stores no records.',
-      'Resend (resend.com) — transactional email only: password reset and address confirmation. Receives your email address and your name. Konterra sends no newsletters, digests or marketing email of any kind.',
       'OpenCage (opencagedata.com) and OpenStreetMap Nominatim — geocoding. Receive only a place name such as "Lisbon, Portugal". No names, emails or identifiers are sent.',
       'OpenRouter (openrouter.ai) — the AI features you invoke explicitly, such as drafting an introduction or generating contact insights. Receives only the contact details relevant to that request, and only when you press the button.',
       'Google Analytics (google.com) — usage measurement. Receives page paths and product events, never contact data or note content.',

@@ -1,6 +1,6 @@
 import { db } from './index'
-import { users, contacts, interactions, contactConnections, contactCountryConnections, introductions, favors, visitedCountries, waitlist, tags, trips, countryWishlist, appSettings, socialPreviews, invites, auditLog, apiTokens, passwordResetTokens, emailVerificationTokens, rateLimitBuckets, onboardingProgress, contactLocationHistory, geocodeCache } from './schema'
-import { and, arrayContains, asc, desc, eq, gte, inArray, isNull, lt, lte, ne, or, sql } from 'drizzle-orm'
+import { users, contacts, interactions, contactConnections, contactCountryConnections, introductions, favors, visitedCountries, waitlist, tags, trips, countryWishlist, appSettings, socialPreviews, invites, auditLog, apiTokens, rateLimitBuckets, onboardingProgress, contactLocationHistory, geocodeCache } from './schema'
+import { and, arrayContains, desc, eq, gte, inArray, lt, lte, or, sql } from 'drizzle-orm'
 import type { Trip, NewContact, NewContactConnection, NewContactCountryConnection, NewIntroduction, NewFavor, NewTrip, NewCountryWishlistEntry, NewSocialPreview, NewAuditLogEntry, NewContactLocationHistoryEntry } from './schema'
 import { DEFAULT_MAX_INVITES, SETTING_KEY_MAX_INVITES } from '@/lib/constants/invites'
 
@@ -1619,122 +1619,6 @@ export async function getAuditLogs(page = 1, limit = 50) {
 }
 
 // ---------------------------------------------------------------------------
-// Password reset & email verification
-// ---------------------------------------------------------------------------
-
-export async function createPasswordResetToken(userId: string, tokenHash: string, expiresAt: Date, ip: string | null) {
-  // Older outstanding links are invalidated so a leaked earlier email cannot be replayed
-  // after the user has requested a fresh one.
-  await db
-    .update(passwordResetTokens)
-    .set({ usedAt: new Date() })
-    .where(and(eq(passwordResetTokens.userId, userId), isNull(passwordResetTokens.usedAt)))
-
-  const [row] = await db
-    .insert(passwordResetTokens)
-    .values({ userId, tokenHash, expiresAt, requestedIp: ip })
-    .returning()
-  return row
-}
-
-export async function consumePasswordResetToken(tokenHash: string) {
-  return db.transaction(async (tx) => {
-    const [claimed] = await tx
-      .update(passwordResetTokens)
-      .set({ usedAt: new Date() })
-      .where(
-        and(
-          eq(passwordResetTokens.tokenHash, tokenHash),
-          isNull(passwordResetTokens.usedAt),
-          gte(passwordResetTokens.expiresAt, new Date()),
-        ),
-      )
-      .returning({ userId: passwordResetTokens.userId })
-    return claimed ?? null
-  })
-}
-
-export async function countRecentPasswordResets(userId: string, sinceMs: number) {
-  const since = new Date(Date.now() - sinceMs)
-  const [{ count }] = await db
-    .select({ count: sql<number>`cast(count(*) as int)` })
-    .from(passwordResetTokens)
-    .where(and(eq(passwordResetTokens.userId, userId), gte(passwordResetTokens.createdAt, since)))
-  return count
-}
-
-export async function createEmailVerificationToken(userId: string, email: string, tokenHash: string, expiresAt: Date) {
-  await db
-    .update(emailVerificationTokens)
-    .set({ usedAt: new Date() })
-    .where(and(eq(emailVerificationTokens.userId, userId), isNull(emailVerificationTokens.usedAt)))
-
-  const [row] = await db
-    .insert(emailVerificationTokens)
-    .values({ userId, email, tokenHash, expiresAt })
-    .returning()
-  return row
-}
-
-export async function consumeEmailVerificationToken(tokenHash: string) {
-  return db.transaction(async (tx) => {
-    const [claimed] = await tx
-      .update(emailVerificationTokens)
-      .set({ usedAt: new Date() })
-      .where(
-        and(
-          eq(emailVerificationTokens.tokenHash, tokenHash),
-          isNull(emailVerificationTokens.usedAt),
-          gte(emailVerificationTokens.expiresAt, new Date()),
-        ),
-      )
-      .returning({ userId: emailVerificationTokens.userId, email: emailVerificationTokens.email })
-    if (!claimed) return null
-
-    // Only confirm if the address still matches the one the link was issued for —
-    // otherwise changing the email after requesting would verify the wrong address.
-    const [updated] = await tx
-      .update(users)
-      .set({ emailVerified: new Date() })
-      .where(and(eq(users.id, claimed.userId), eq(users.email, claimed.email)))
-      .returning({ id: users.id, email: users.email })
-    return updated ?? null
-  })
-}
-
-export async function getUserAuthState(id: string) {
-  return db.query.users.findFirst({
-    where: eq(users.id, id),
-    columns: { id: true, email: true, name: true, emailVerified: true },
-  })
-}
-
-export async function setUserPassword(userId: string, passwordHash: string) {
-  const [row] = await db
-    .update(users)
-    .set({ password: passwordHash })
-    .where(eq(users.id, userId))
-    .returning({ id: users.id, email: users.email, name: users.name })
-  return row ?? null
-}
-
-
-
-export async function purgeExpiredAuthTokens() {
-  const now = new Date()
-  const [reset, verification, buckets] = await Promise.all([
-    db.delete(passwordResetTokens).where(lte(passwordResetTokens.expiresAt, now)),
-    db.delete(emailVerificationTokens).where(lte(emailVerificationTokens.expiresAt, now)),
-    db.delete(rateLimitBuckets).where(lte(rateLimitBuckets.resetAt, now)),
-  ])
-  return {
-    passwordResetTokens: reset.rowCount ?? 0,
-    emailVerificationTokens: verification.rowCount ?? 0,
-    rateLimitBuckets: buckets.rowCount ?? 0,
-  }
-}
-
-// ---------------------------------------------------------------------------
 // Contact location history
 // ---------------------------------------------------------------------------
 
@@ -1798,16 +1682,16 @@ export async function purgeExpiredRetentionData() {
   const auditCutoff = new Date(Date.now() - AUDIT_LOG_RETENTION_DAYS * 86_400_000)
   const geocodeCutoff = new Date(Date.now() - GEOCODE_CACHE_RETENTION_DAYS * 86_400_000)
 
-  const [audit, geo, tokens] = await Promise.all([
+  const [audit, geo, buckets] = await Promise.all([
     db.delete(auditLog).where(lt(auditLog.createdAt, auditCutoff)),
     db.delete(geocodeCache).where(lt(geocodeCache.createdAt, geocodeCutoff)),
-    purgeExpiredAuthTokens(),
+    db.delete(rateLimitBuckets).where(lte(rateLimitBuckets.resetAt, new Date())),
   ])
 
   return {
     auditLogRows: audit.rowCount ?? 0,
     geocodeCacheRows: geo.rowCount ?? 0,
-    ...tokens,
+    rateLimitBuckets: buckets.rowCount ?? 0,
   }
 }
 

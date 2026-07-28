@@ -127,6 +127,13 @@
       "when": 1785264368289,
       "tag": "0017_flimsy_unus",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1785266956343,
+      "tag": "0018_great_demogoblin",
+      "breakpoints": true
     }
   ]
 }

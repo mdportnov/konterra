@@ -187,9 +187,6 @@ env.OPENCAGE_API_KEY // string | undefined (optional)
 |---|---|---|
 | `DATABASE_URL` | yes | app will not boot |
 | `AUTH_SECRET` | yes | app will not boot |
-| `RESEND_API_KEY` | no | password reset and email verification links are logged to the console instead of sent |
-| `EMAIL_FROM` | no | falls back to `Konterra <hello@konterra.space>` |
-| `APP_URL` | no | falls back to the Vercel URL, then `https://konterra.space` in production |
 | `CRON_SECRET` | no | derived from `AUTH_SECRET`; run `npm run cron:secret` to print the value Vercel Cron must send |
 | `OPENCAGE_API_KEY` | no | geocoding falls back to Nominatim (rate limited to 1 req/s) |
 | `OPENROUTER_API_KEY` | no | AI insights and introduction drafts return a clear error |
@@ -197,9 +194,12 @@ env.OPENCAGE_API_KEY // string | undefined (optional)
 Exception: CLI scripts (`drizzle.config.ts`, `lib/db/migrate.ts`, `scripts/seed.ts`) use `dotenv` + `process.env` directly since they run outside Next.js.
 
 ## Email
-Konterra sends transactional mail only — password reset and address confirmation, each in
-response to a user action. There is no digest, newsletter or marketing mail, and no code
-path that sends unsolicited email. Keep it that way.
+Konterra sends no email. There is no mail transport, no provider dependency and no code
+path that sends anything — not digests, not notifications, not password resets. An email
+address is a sign-in identifier only.
+
+The consequence is deliberate: a forgotten password can only be reset by an administrator
+from `/admin`. Do not reintroduce an automated reset without agreeing to bring email back.
 
 ## Scheduled Jobs
 Configured in `vercel.json`, authorised with `CRON_SECRET` as a bearer token. The path is

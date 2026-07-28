@@ -2,7 +2,6 @@ import { badRequest, success, serverError, tooManyRequests } from '@/lib/api-uti
 import { safeParseBody, PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from '@/lib/validation'
 import { registerUser, registerViaInvite, writeAuditLog } from '@/lib/db/queries'
 import { rateLimitShared, getClientIp } from '@/lib/rate-limit'
-import { sendVerificationEmail } from '@/lib/email/send'
 import { hash } from 'bcryptjs'
 
 export async function POST(req: Request) {
@@ -52,12 +51,6 @@ export async function POST(req: Request) {
       ip,
       detail: inviteCode ? 'Self-registration via invite' : 'Self-registration',
     })
-
-    // Verification is advisory at this point — a failed send must not block the account
-    // that was already created, the user can re-request it from settings.
-    sendVerificationEmail(result.user.id, result.user.email).catch((e) =>
-      console.error('[register] verification email failed:', e),
-    )
 
     return success({ id: result.user.id, email: result.user.email, name: result.user.name }, 201)
   } catch (err) {

@@ -1,7 +1,7 @@
 import { auth } from '@/auth'
 import { unauthorized, badRequest, success, serverError } from '@/lib/api-utils'
 import { safeParseBody } from '@/lib/validation'
-import { deleteUserAccount, getUserAuthState, getUserPasswordHash, writeAuditLog } from '@/lib/db/queries'
+import { deleteUserAccount, getUserById, getUserPasswordHash, writeAuditLog } from '@/lib/db/queries'
 import { getClientIp, rateLimitShared } from '@/lib/rate-limit'
 import { compare } from 'bcryptjs'
 
@@ -30,7 +30,7 @@ export async function DELETE(req: Request) {
     const valid = await compare(password, storedHash)
     if (!valid) return badRequest('Password is incorrect')
 
-    const user = await getUserAuthState(session.user.id)
+    const user = await getUserById(session.user.id)
 
     await deleteUserAccount(session.user.id)
 

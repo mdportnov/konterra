@@ -7,9 +7,6 @@ const envSchema = z.object({
   GOOGLE_CLIENT_SECRET: z.string().optional(),
   OPENCAGE_API_KEY: z.string().optional(),
   OPENROUTER_API_KEY: z.string().optional(),
-  RESEND_API_KEY: z.string().optional(),
-  EMAIL_FROM: z.string().optional(),
-  APP_URL: z.string().url().optional(),
   CRON_SECRET: z.string().optional(),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
 })

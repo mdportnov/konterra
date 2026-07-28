@@ -58,11 +58,7 @@ export default auth((req) => {
   const isPrivacyPage = pathname === '/privacy'
   const isTermsPage = pathname === '/terms'
   const isOfflinePage = pathname === '/offline'
-  // Account-recovery pages must stay reachable to signed-out users; they carry their own
-  // single-use tokens instead of a session.
-  const isRecoveryPage = pathname === '/reset-password' || pathname === '/verify-email'
-
-  if (isApiAuth || isApiWaitlist || isLandingPage || isLocaleLanding || isPublicProfile || isPublicApi || isPrivacyPage || isTermsPage || isOfflinePage || isRecoveryPage) {
+  if (isApiAuth || isApiWaitlist || isLandingPage || isLocaleLanding || isPublicProfile || isPublicApi || isPrivacyPage || isTermsPage || isOfflinePage) {
     return NextResponse.next()
   }
 

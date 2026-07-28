@@ -407,6 +407,9 @@ export const auditActionEnum = pgEnum('audit_action', [
   'export_data',
   'token_create', 'token_revoke',
   'account_delete',
+  // Retired with the removal of email. Postgres cannot drop an enum label without
+  // recreating the type, so they stay listed to keep this file and the database in
+  // agreement. Nothing writes them.
   'password_reset_request', 'password_reset_complete',
   'email_verification_request', 'email_verification_complete',
   'bulk_delete',
@@ -448,35 +451,9 @@ export const apiTokens = pgTable('api_tokens', {
 export type ApiToken = typeof apiTokens.$inferSelect
 export type NewApiToken = typeof apiTokens.$inferInsert
 
-export const passwordResetTokens = pgTable('password_reset_tokens', {
-  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
-  userId: text('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
-  tokenHash: text('token_hash').notNull().unique(),
-  expiresAt: timestamp('expires_at').notNull(),
-  usedAt: timestamp('used_at'),
-  requestedIp: text('requested_ip'),
-  createdAt: timestamp('created_at').defaultNow(),
-}, (t) => [
-  index('password_reset_tokens_user_id_idx').on(t.userId),
-  index('password_reset_tokens_expires_at_idx').on(t.expiresAt),
-])
 
-export type PasswordResetToken = typeof passwordResetTokens.$inferSelect
 
-export const emailVerificationTokens = pgTable('email_verification_tokens', {
-  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
-  userId: text('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
-  email: text('email').notNull(),
-  tokenHash: text('token_hash').notNull().unique(),
-  expiresAt: timestamp('expires_at').notNull(),
-  usedAt: timestamp('used_at'),
-  createdAt: timestamp('created_at').defaultNow(),
-}, (t) => [
-  index('email_verification_tokens_user_id_idx').on(t.userId),
-  index('email_verification_tokens_expires_at_idx').on(t.expiresAt),
-])
 
-export type EmailVerificationToken = typeof emailVerificationTokens.$inferSelect
 
 export const rateLimitBuckets = pgTable('rate_limit_buckets', {
   key: text('key').primaryKey(),
